@@ -142,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               validator: (value) {
                                 final v = value?.trim() ?? '';
                                 if (v.isEmpty) return 'Informe seu e-mail';
-                                final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+);
+                                final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
                                 if (!emailRegex.hasMatch(v)) return 'E-mail inválido';
                                 return null;
                               },

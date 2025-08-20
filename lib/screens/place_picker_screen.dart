@@ -4,6 +4,7 @@ import 'package:geocoding/geocoding.dart';
 
 import '../services/location_service.dart';
 import '../models/favorite_location.dart';
+import '../services/map_style_service.dart';
 // removed: import '../../theme/app_theme.dart';
 
 class PlacePickerScreen extends StatefulWidget {
@@ -69,6 +70,8 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+    // Apply centralized map style based on current theme
+    MapStyleService.applyForContext(controller, context);
   }
 
   Future<void> _onMapTap(LatLng position) async {

@@ -1,0 +1,35 @@
+name: Supabase Backup
+on:
+  schedule:
+    # Executar backup diário às 2:00 AM
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Permite execução manual
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Create backup directory
+        run: |
+          mkdir -p supabase_backups/database
+          mkdir -p supabase_backups/storage
+
+      - name: Database backup
+        run: |
+          supabase db dump --project-ref ${{ secrets.SUPABASE_PROJECT_ID }} --file supabase_backups/database/backup_$(date +"%Y%m%d_%H%M%S").sql
+          gzip supabase_backups/database/backup_$(date +"%Y%m%d_%H%M%S").sql
+
+      - name: Upload backup
+        uses: actions/upload-artifact@v3
+        with:
+          name: supabase-backup-${{ github.run_id }}
+          path: supabase_backups/
+          retention-days: 7

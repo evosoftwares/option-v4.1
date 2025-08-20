@@ -1,0 +1,8 @@
+# Script de backup automático do Supabase
+# Executa backups diários do banco de dados e storage
+
+# Executar backup todos os dias às 2:00 AM
+0 2 * * * /Users/gabrielggcx/option-v4.1/scripts/supabase_backup.sh >> /Users/gabrielggcx/option-v4.1/logs/supabase_backup.log 2>&1
+
+# Executar backup completo (incluindo storage) aos domingos às 3:00 AM
+0 3 * * 0 /Users/gabrielggcx/option-v4.1/scripts/supabase_backup.sh --full >> /Users/gabrielggcx/option-v4.1/logs/supabase_backup.log 2>&1

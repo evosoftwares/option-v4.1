@@ -14,6 +14,7 @@ import 'package:uber_clone/screens/profile/profile_edit_screen.dart';
 import 'package:uber_clone/screens/menu/driver_menu_screen.dart';
 import 'package:uber_clone/screens/menu/user_menu_screen.dart';
 import 'package:uber_clone/screens/wallet/wallet_screen.dart';
+import 'package:uber_clone/screens/driver/driver_home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,7 @@ class MyApp extends StatelessWidget {
           '/registration_stepper': (context) => const UserRegistrationStepper(),
           '/profile_edit': (context) => const ProfileEditScreen(),
           '/driver_menu': (context) => const DriverMenuScreen(),
+          '/driver_home': (context) => const DriverHomeScreen(),
           '/user_menu': (context) => const UserMenuScreen(),
           '/wallet': (context) => const WalletScreen(),
         },

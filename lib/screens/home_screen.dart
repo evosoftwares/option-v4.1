@@ -9,6 +9,7 @@ import 'package:uber_clone/services/location_service.dart';
 import 'package:uber_clone/services/user_service.dart';
 import 'package:uber_clone/models/user.dart' as app_user;
 import 'package:uber_clone/widgets/logo_branding.dart';
+import '../services/map_style_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -194,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = await _userFuture;
     if (user != null) {
       if (user.userType == 'driver') {
-        Navigator.pushNamed(context, '/driver-menu');
+        Navigator.pushNamed(context, '/driver_menu');
       } else {
         Navigator.pushNamed(context, '/user-menu');
       }
@@ -227,6 +228,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (!_mapControllerCompleter.isCompleted) {
                   _mapControllerCompleter.complete(c);
                 }
+                // Apply centralized map style based on current theme
+                MapStyleService.applyForContext(c, context);
               },
               initialCameraPosition: _initialPos,
               myLocationEnabled: true,
