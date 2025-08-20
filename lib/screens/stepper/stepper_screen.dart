@@ -48,6 +48,7 @@ class _StepperScreenState extends State<StepperScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Configuração do Perfil'),
@@ -71,8 +72,8 @@ class _StepperScreenState extends State<StepperScreen> {
                         height: 8,
                         decoration: BoxDecoration(
                           color: index <= controller.currentStep
-                              ? Theme.of(context).primaryColor
-                              : Colors.grey[300],
+                              ? colors.primary
+                              : colors.surfaceVariant,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       );

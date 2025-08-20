@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/stepper_controller.dart';
-import '../../theme/app_theme.dart';
 import '../../widgets/stepper_navigation.dart';
 
 class Step2PhotoScreen extends StatefulWidget {
@@ -50,10 +49,14 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
         controller.setProfilePhoto(File(pickedFile.path));
       }
     } catch (e) {
+      final colors = Theme.of(context).colorScheme;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao selecionar imagem: ${e.toString()}'),
-          backgroundColor: AppTheme.uberRed,
+          backgroundColor: colors.error,
+          content: Text(
+            'Erro ao selecionar imagem: ${e.toString()}',
+            style: TextStyle(color: colors.onError),
+          ),
         ),
       );
     } finally {
@@ -74,23 +77,28 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
   }
 
   void _showImageSourceDialog() {
+    final colors = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (BuildContext context) {
         return SafeArea(
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Tirar foto'),
+                leading: Icon(Icons.camera_alt, color: colors.primary),
+                title: Text('Tirar foto', style: TextStyle(color: colors.onSurface)),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage(ImageSource.camera);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Escolher da galeria'),
+                leading: Icon(Icons.photo_library, color: colors.primary),
+                title: Text('Escolher da galeria', style: TextStyle(color: colors.onSurface)),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage(ImageSource.gallery);
@@ -105,27 +113,26 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 32),
-          const Text(
+          Text(
             'Adicione uma foto de perfil',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.uberBlack,
-            ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colors.onSurface,
+                ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Isso ajuda os motoristas a reconhecê-lo',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppTheme.uberMediumGray,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
           ),
           const SizedBox(height: 48),
           
@@ -138,9 +145,9 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
                 height: 150,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTheme.uberLightGray,
+                  color: colors.surfaceVariant,
                   border: Border.all(
-                    color: AppTheme.uberMediumGray.withOpacity(0.3),
+                    color: colors.outline.withOpacity(0.3),
                     width: 2,
                   ),
                 ),
@@ -153,14 +160,14 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
                           height: 150,
                         ),
                       )
-                    : const Icon(
+                    : Icon(
                         Icons.person,
                         size: 60,
-                        color: AppTheme.uberMediumGray,
+                        color: colors.onSurfaceVariant,
                       ),
               ),
               if (_isLoading)
-                const CircularProgressIndicator(),
+                CircularProgressIndicator(color: colors.primary),
             ],
           ),
           
@@ -176,8 +183,8 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
                   icon: const Icon(Icons.delete_outline, size: 20),
                   label: const Text('Remover'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.uberRed,
-                    foregroundColor: Colors.white,
+                    backgroundColor: colors.error,
+                    foregroundColor: colors.onError,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -186,6 +193,10 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
                 onPressed: _showImageSourceDialog,
                 icon: const Icon(Icons.camera_alt, size: 20),
                 label: Text(_imageFile != null ? 'Trocar foto' : 'Adicionar foto'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.primary,
+                  foregroundColor: colors.onPrimary,
+                ),
               ),
             ],
           ),
@@ -197,12 +208,11 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
             _imageFile != null
                 ? 'Foto adicionada com sucesso!'
                 : 'Você pode pular esta etapa e adicionar depois',
-            style: TextStyle(
-              fontSize: 14,
-              color: _imageFile != null
-                  ? AppTheme.uberGreen
-                  : AppTheme.uberMediumGray,
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: _imageFile != null
+                      ? colors.tertiary
+                      : colors.onSurfaceVariant,
+                ),
           ),
         ],
       ),

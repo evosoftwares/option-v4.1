@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/stepper_controller.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/phone_mask.dart';
 import '../../utils/phone_validator.dart';
 
@@ -42,40 +41,42 @@ class _PhoneStepState extends State<PhoneStep> {
   }
 
   Future<void> _submitPhone() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _isLoading = true);
-
     try {
       final controller = Provider.of<StepperController>(context, listen: false);
-      final phone = _phoneController.text;
-      
+      final phone = _phoneController.text.trim();
       controller.setPhone(phone);
       widget.onSave?.call(phone);
-      
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      if (mounted) {
-        widget.onNext();
-      }
+
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted) widget.onNext();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao salvar telefone: $e'),
-            backgroundColor: AppTheme.uberRed,
-          ),
-        );
-      }
+      if (!mounted) return;
+      final colorScheme = Theme.of(context).colorScheme;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao salvar telefone: $e', style: TextStyle(color: colorScheme.onError)),
+          backgroundColor: colorScheme.error,
+        ),
+      );
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _onNextPressed() {
+    final controller = Provider.of<StepperController>(context, listen: false);
+    controller.setPhone(_phoneController.text.trim());
+    widget.onNext();
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Form(
@@ -86,42 +87,42 @@ class _PhoneStepState extends State<PhoneStep> {
             const SizedBox(height: 40),
             Text(
               'Qual é o seu número?',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.white,
+              style: textTheme.headlineSmall?.copyWith(
+                color: colorScheme.onSurface,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Vamos enviar um código para verificar seu número',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppTheme.uberLightGray,
+              style: textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 40),
             TextFormField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: colorScheme.onSurface),
               inputFormatters: [PhoneInputFormatter()],
               decoration: InputDecoration(
                 labelText: 'Número de telefone',
-                labelStyle: TextStyle(color: AppTheme.uberLightGray),
+                labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
                 hintText: '(00) 00000-0000',
-                hintStyle: TextStyle(color: AppTheme.uberMediumGray),
+                hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
                 prefixText: '+55 ',
-                prefixStyle: const TextStyle(color: Colors.white),
+                prefixStyle: TextStyle(color: colorScheme.onSurface),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: AppTheme.uberMediumGray),
+                  borderSide: BorderSide(color: colorScheme.outline),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: AppTheme.uberMediumGray),
+                  borderSide: BorderSide(color: colorScheme.outline),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppTheme.uberWhite),
+                  borderSide: BorderSide(color: colorScheme.primary),
                 ),
               ),
               validator: _validatePhone,
@@ -129,23 +130,16 @@ class _PhoneStepState extends State<PhoneStep> {
             const Spacer(),
             SizedBox(
               width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
+              height: 48,
+              child: FilledButton(
                 onPressed: _isLoading ? null : _submitPhone,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.uberWhite,
-                  foregroundColor: AppTheme.uberBlack,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
                 child: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.uberBlack),
+                          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
                         ),
                       )
                     : const Text(

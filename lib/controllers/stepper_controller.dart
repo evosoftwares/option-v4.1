@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/favorite_location.dart';
+import '../services/user_service.dart';
 
 class StepperController extends ChangeNotifier {
   int _currentStep = 0;
   final List<FavoriteLocation> _favoriteLocations = [];
   String? _userType;
   String? _phone;
+  String? _fullName;
+  String? _email;
   File? _profilePhoto;
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -15,6 +19,8 @@ class StepperController extends ChangeNotifier {
   List<FavoriteLocation> get locations => _favoriteLocations;
   String? get userType => _userType;
   String? get phone => _phone;
+  String? get fullName => _fullName;
+  String? get email => _email;
   File? get profilePhoto => _profilePhoto;
 
   void setUserType(String type) {
@@ -24,6 +30,16 @@ class StepperController extends ChangeNotifier {
 
   void setPhone(String phone) {
     _phone = phone;
+    notifyListeners();
+  }
+
+  void setFullName(String name) {
+    _fullName = name;
+    notifyListeners();
+  }
+
+  void setEmail(String email) {
+    _email = email;
     notifyListeners();
   }
 
@@ -116,9 +132,31 @@ class StepperController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void completeRegistration() {
-    // Navegar para a home após completar o registro
-    navigatorKey.currentState?.pushReplacementNamed('/home');
+  Future<bool> completeRegistration() async {
+    // Cria o app_user vinculado ao auth somente ao final do stepper 3
+    try {
+      final authUser = Supabase.instance.client.auth.currentUser;
+      if (authUser == null) {
+        throw Exception('Usuário não autenticado');
+      }
+
+      final exists = await UserService.userExists(authUser.id);
+      if (!exists) {
+        // Criar app_user com dados coletados no stepper
+        await UserService.createUser(
+          authUserId: authUser.id,
+          email: authUser.email ?? (_email ?? ''),
+          fullName: _fullName ?? '',
+          phone: _phone,
+          photoUrl: null, // Upload da foto será implementado depois
+          userType: _userType ?? 'passenger',
+        );
+      }
+
+      return true;
+    } catch (e) {
+      rethrow;
+    }
   }
 
   void reset() {
@@ -126,6 +164,8 @@ class StepperController extends ChangeNotifier {
     _favoriteLocations.clear();
     _userType = null;
     _phone = null;
+    _fullName = null;
+    _email = null;
     _profilePhoto = null;
     notifyListeners();
   }

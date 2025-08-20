@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:uber_clone/screens/placePicker_screen.dart';
+import '../../models/favorite_location.dart';
+import '../place_picker_screen.dart';
 
 class FavoritesStep extends StatefulWidget {
-  final List<String> initialFavorites;
-  final Function(List<String>) onSave;
+  final List<FavoriteLocation> initialFavorites;
+  final Function(List<FavoriteLocation>) onSave;
   final VoidCallback onNext;
 
   const FavoritesStep({
@@ -18,7 +19,7 @@ class FavoritesStep extends StatefulWidget {
 }
 
 class _FavoritesStepState extends State<FavoritesStep> {
-  final List<String> _favoritePlaces = [];
+  final List<FavoriteLocation> _favoritePlaces = [];
   bool _isLoading = false;
 
   @override
@@ -33,7 +34,6 @@ class _FavoritesStepState extends State<FavoritesStep> {
     });
 
     await Future.delayed(const Duration(milliseconds: 500));
-    
     widget.onSave(_favoritePlaces);
     widget.onNext();
   }
@@ -46,9 +46,12 @@ class _FavoritesStepState extends State<FavoritesStep> {
       ),
     );
 
-    if (result != null && result is String) {
+    if (result != null && result is FavoriteLocation) {
       setState(() {
-        if (!_favoritePlaces.contains(result)) {
+        final exists = _favoritePlaces.any((f) =>
+            (f.placeId != null && f.placeId == result.placeId) ||
+            (f.latitude == result.latitude && f.longitude == result.longitude));
+        if (!exists) {
           _favoritePlaces.add(result);
         }
       });
@@ -63,26 +66,27 @@ class _FavoritesStepState extends State<FavoritesStep> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 40),
-          const Text(
+          Text(
             'Locais favoritos',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 28,
+            style: textTheme.headlineSmall?.copyWith(
+              color: colorScheme.onSurface,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Adicione seus locais favoritos para viagens mais rápidas',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 16,
+            style: textTheme.bodyLarge?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 30),
@@ -90,13 +94,13 @@ class _FavoritesStepState extends State<FavoritesStep> {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: _addFavoritePlace,
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text(
+              icon: Icon(Icons.add, color: colorScheme.onSurface),
+              label: Text(
                 'Adicionar local',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: colorScheme.onSurface),
               ),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white),
+                side: BorderSide(color: colorScheme.outlineVariant),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -114,14 +118,13 @@ class _FavoritesStepState extends State<FavoritesStep> {
                         Icon(
                           Icons.favorite_border,
                           size: 64,
-                          color: Colors.grey[600],
+                          color: colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(height: 16),
-                        const Text(
+                        Text(
                           'Nenhum local favorito ainda',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 16,
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -130,22 +133,27 @@ class _FavoritesStepState extends State<FavoritesStep> {
                 : ListView.builder(
                     itemCount: _favoritePlaces.length,
                     itemBuilder: (context, index) {
+                      final loc = _favoritePlaces[index];
                       return Card(
-                        color: Colors.grey[850],
+                        color: colorScheme.surfaceVariant,
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
-                          leading: const Icon(
-                            Icons.place,
-                            color: Colors.white,
+                          leading: Icon(
+                            loc.type.icon,
+                            color: colorScheme.primary,
                           ),
                           title: Text(
-                            _favoritePlaces[index],
-                            style: const TextStyle(color: Colors.white),
+                            loc.name,
+                            style: TextStyle(color: colorScheme.onSurface),
+                          ),
+                          subtitle: Text(
+                            loc.address,
+                            style: TextStyle(color: colorScheme.onSurfaceVariant),
                           ),
                           trailing: IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.close,
-                              color: Colors.grey,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                             onPressed: () => _removeFavoritePlace(index),
                           ),
@@ -159,12 +167,10 @@ class _FavoritesStepState extends State<FavoritesStep> {
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: _isLoading
-                  ? null
-                  : _handleNext,
+              onPressed: _isLoading ? null : _handleNext,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -173,10 +179,7 @@ class _FavoritesStepState extends State<FavoritesStep> {
                   ? const SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                      ),
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Text(
                       'Finalizar',
@@ -194,10 +197,10 @@ class _FavoritesStepState extends State<FavoritesStep> {
                 widget.onSave(_favoritePlaces);
                 widget.onNext();
               },
-              child: const Text(
+              child: Text(
                 'Pular esta etapa',
                 style: TextStyle(
-                  color: Colors.grey,
+                  color: colorScheme.onSurfaceVariant,
                   fontSize: 16,
                 ),
               ),

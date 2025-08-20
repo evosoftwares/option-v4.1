@@ -274,7 +274,7 @@ class _PhoneInputWidgetState extends State<PhoneInputWidget> {
       ],
       decoration: const InputDecoration(
         hintText: '(00) 0 0000-0000',
-        prefixIcon: Icon(Icons.phone, color: AppTheme.uberGreen),
+        prefixIcon: Icon(Icons.phone, color: Theme.of(context).colorScheme.primary),
       ),
       onChanged: widget.onPhoneChanged,
     );
@@ -324,10 +324,10 @@ class TelefoneInputFormatter extends TextInputFormatter {
 
 ## Integração com Tema Existente
 
-O stepper utilizará o tema preto do Uber já definido:
-- Background: `AppTheme.uberBlack`
-- Textos: `AppTheme.uberWhite`
-- Acentos: `AppTheme.uberGreen`
+O stepper utilizará o tema baseado em ColorScheme do app:
+- Background: `surface`
+- Textos: `onSurface`
+- Acentos: `primary`
 - Inputs: Seguir o padrão do tema existente
 
 ## Próximos Passos

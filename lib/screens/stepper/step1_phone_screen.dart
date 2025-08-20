@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/stepper_controller.dart';
-import '../../theme/app_theme.dart';
 import '../../widgets/stepper_navigation.dart';
 
 class Step1PhoneScreen extends StatefulWidget {
@@ -36,7 +35,7 @@ class _Step1PhoneScreenState extends State<Step1PhoneScreen> {
     if (cleanText.isEmpty) return '';
     
     if (cleanText.length <= 2) {
-      return '(${cleanText.padRight(2, ' ')}';
+      return '(${cleanText.padRight(2, ' ') }';
     } else if (cleanText.length <= 6) {
       return '(${cleanText.substring(0, 2)}) ${cleanText.substring(2)}';
     } else if (cleanText.length <= 10) {
@@ -71,26 +70,27 @@ class _Step1PhoneScreenState extends State<Step1PhoneScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 32),
-          const Text(
+          Text(
             'Qual é o seu número?',
-            style: TextStyle(
-              fontSize: 24,
+            style: textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w600,
-              color: AppTheme.uberBlack,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Vamos enviar um código de verificação para este número',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppTheme.uberMediumGray,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 48),
@@ -106,10 +106,10 @@ class _Step1PhoneScreenState extends State<Step1PhoneScreen> {
           ),
           const SizedBox(height: 16),
           if (!_isValid && _phoneController.text.isNotEmpty)
-            const Text(
+            Text(
               'Por favor, insira um número de telefone válido com DDD',
               style: TextStyle(
-                color: AppTheme.uberRed,
+                color: colorScheme.error,
                 fontSize: 12,
               ),
             ),

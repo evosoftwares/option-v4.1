@@ -4,7 +4,6 @@ import '../../controllers/stepper_controller.dart';
 import '../../models/favorite_location.dart';
 import '../../services/location_service.dart';
 import 'place_search_screen.dart';
-import '../../theme/app_theme.dart';
 
 class Step3LocationsScreen extends StatefulWidget {
   const Step3LocationsScreen({super.key});
@@ -32,6 +31,8 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<StepperController>(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -39,20 +40,18 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 32),
-          const Text(
+          Text(
             'Adicione seus locais favoritos',
-            style: TextStyle(
-              fontSize: 24,
+            style: textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Esses locais serão usados para sugerir rotas personalizadas',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
           ),
@@ -71,8 +70,8 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
               icon: const Icon(Icons.add_location),
               label: const Text('Adicionar Local'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.uberGreen,
-                foregroundColor: Colors.white,
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -86,6 +85,9 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
   }
 
   Widget _buildEmptyState() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -93,22 +95,20 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
           Icon(
             Icons.location_on_outlined,
             size: 64,
-            color: Colors.grey.shade400,
+            color: colorScheme.outline,
           ),
           const SizedBox(height: 16),
           Text(
             'Nenhum local adicionado ainda',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade600,
+            style: textTheme.titleMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Toque no botão + para adicionar seu primeiro local',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -128,15 +128,17 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
   }
 
   Widget _buildLocationCard(FavoriteLocation location, StepperController controller) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       elevation: 2,
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: Colors.blue.shade100,
+          backgroundColor: colorScheme.primaryContainer,
           child: Icon(
             location.type.icon,
-            color: Colors.blue.shade800,
+            color: colorScheme.onPrimaryContainer,
           ),
         ),
         title: Text(
@@ -148,11 +150,11 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
+              icon: Icon(Icons.edit, color: colorScheme.primary),
               onPressed: () => _showEditLocationDialog(context, location),
             ),
             IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
+              icon: Icon(Icons.delete, color: colorScheme.error),
               onPressed: () => _deleteLocation(controller, location.id),
             ),
           ],
@@ -259,7 +261,7 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
                       Navigator.pop(context);
                     }
                   },
-                  child: Text(isEditing ? 'SALVAR' : 'ADICIONAR'),
+                  child: Text(isEditing ? 'Salvar' : 'Adicionar'),
                 ),
               ],
             );
@@ -270,28 +272,6 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
   }
 
   void _deleteLocation(StepperController controller, String id) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar exclusão'),
-        content: const Text('Tem certeza que deseja excluir este local?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCELAR'),
-          ),
-          TextButton(
-            onPressed: () {
-              controller.removeLocationById(id);
-              Navigator.pop(context);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('EXCLUIR'),
-          ),
-        ],
-      ),
-    );
+    controller.removeLocationById(id);
   }
-
-  // Método removido - conclusão será gerenciada pelo stepper
 }

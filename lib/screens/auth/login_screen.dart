@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uber_clone/widgets/logo_branding.dart';
+import 'package:uber_clone/services/user_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -32,13 +32,32 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final supabase = Supabase.instance.client;
-      await supabase.auth.signInWithPassword(
+      final authResponse = await supabase.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
+      final user = authResponse.user ?? Supabase.instance.client.auth.currentUser;
+
+      if (user == null) {
+        throw AuthException('Falha ao obter usuário autenticado');
+      }
+
+      // Verificar se o app_user existe
+      final exists = await UserService.userExists(user.id);
+
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/home');
+      if (!exists) {
+        // Redirecionar obrigatoriamente para seleção de tipo de usuário
+        Navigator.of(context).pushReplacementNamed(
+          '/select_user_type',
+          arguments: {
+            'email': user.email,
+          },
+        );
+      } else {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
     } on AuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -106,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                validator: (value) {
                                  final v = value?.trim() ?? '';
                                  if (v.isEmpty) return 'Informe seu e-mail';
-                                 final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                                 final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+);
                                  if (!emailRegex.hasMatch(v)) return 'E-mail inválido';
                                  return null;
                                },
@@ -135,10 +154,25 @@ class _LoginScreenState extends State<LoginScreen> {
                                  return null;
                                },
                              ),
-                             const SizedBox(height: 24),
+                             const SizedBox(height: 8),
+                             Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: _isSubmitting ? null : () => Navigator.pushNamed(context, '/forgot-password'),
+                                child: Text(
+                                  'Esqueceu sua senha?',
+                                  style: textTheme.labelLarge?.copyWith(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                             const SizedBox(height: 16),
                              SizedBox(
+                               width: double.infinity,
                                height: 48,
-                               child: ElevatedButton(
+                               child: FilledButton(
                                  onPressed: _isSubmitting ? null : _onSubmit,
                                  child: _isSubmitting
                                      ? SizedBox(
@@ -153,15 +187,19 @@ class _LoginScreenState extends State<LoginScreen> {
                                ),
                              ),
                              const SizedBox(height: 12),
-                             TextButton(
-                               onPressed: _isSubmitting
-                                   ? null
-                                   : () => Navigator.of(context).pushReplacementNamed('/register'),
-                               child: Text(
-                                 'Criar uma conta',
-                                 style: textTheme.labelLarge?.copyWith(
-                                   color: colorScheme.primary,
-                                   fontWeight: FontWeight.w600,
+                             SizedBox(
+                               width: double.infinity,
+                               height: 48,
+                               child: TextButton(
+                                 onPressed: _isSubmitting
+                                     ? null
+                                     : () => Navigator.of(context).pushReplacementNamed('/register'),
+                                 child: Text(
+                                   'Criar uma conta',
+                                   style: textTheme.labelLarge?.copyWith(
+                                     color: colorScheme.primary,
+                                     fontWeight: FontWeight.w600,
+                                   ),
                                  ),
                                ),
                              ),
@@ -170,12 +208,12 @@ class _LoginScreenState extends State<LoginScreen> {
                        ),
                      ),
                    ),
-                 ],
-               ),
-             ),
-           ),
-         ),
-       ),
-     );
-   }
- }
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

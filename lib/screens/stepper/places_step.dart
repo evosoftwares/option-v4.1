@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/stepper_controller.dart';
 import '../../models/favorite_location.dart';
-import '../../theme/app_theme.dart';
 import '../place_picker_screen.dart';
 
 class PlacesStep extends StatefulWidget {
@@ -56,10 +55,12 @@ class _PlacesStepState extends State<PlacesStep> {
       }
     } catch (e) {
       if (mounted) {
+        final colorScheme = Theme.of(context).colorScheme;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erro ao salvar locais: $e'),
-            backgroundColor: AppTheme.uberRed,
+            backgroundColor: colorScheme.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -72,6 +73,9 @@ class _PlacesStepState extends State<PlacesStep> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Consumer<StepperController>(
       builder: (context, controller, child) {
         return Padding(
@@ -82,31 +86,34 @@ class _PlacesStepState extends State<PlacesStep> {
               const SizedBox(height: 40),
               Text(
                 'Locais favoritos',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
+                style: textTheme.headlineSmall?.copyWith(
+                  color: colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Adicione seus locais favoritos para viagens rápidas',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.uberLightGray,
+                style: textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: _addPlace,
-                icon: const Icon(Icons.add, color: AppTheme.uberBlack),
-                label: const Text(
-                  'Adicionar local',
-                  style: TextStyle(color: AppTheme.uberBlack),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.uberWhite,
-                  minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _addPlace,
+                  icon: Icon(Icons.add, color: colorScheme.onSurface),
+                  label: Text(
+                    'Adicionar local',
+                    style: TextStyle(color: colorScheme.onSurface),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: colorScheme.outlineVariant),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ),
@@ -120,14 +127,13 @@ class _PlacesStepState extends State<PlacesStep> {
                             Icon(
                               Icons.location_on_outlined,
                               size: 64,
-                              color: AppTheme.uberMediumGray,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(height: 16),
                             Text(
                               'Nenhum local favorito ainda',
-                              style: TextStyle(
-                                color: AppTheme.uberLightGray,
-                                fontSize: 16,
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -138,25 +144,25 @@ class _PlacesStepState extends State<PlacesStep> {
                         itemBuilder: (context, index) {
                           final location = controller.favoriteLocations[index];
                           return Card(
-                            color: AppTheme.uberDarkGray,
+                            color: colorScheme.surfaceVariant,
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
-                              leading: const Icon(
+                              leading: Icon(
                                 Icons.location_on,
-                                color: AppTheme.uberWhite,
+                                color: colorScheme.primary,
                               ),
                               title: Text(
                                 location.name,
-                                style: const TextStyle(color: Colors.white),
+                                style: TextStyle(color: colorScheme.onSurface),
                               ),
                               subtitle: Text(
                                 location.address,
-                                style: TextStyle(color: AppTheme.uberLightGray),
+                                style: TextStyle(color: colorScheme.onSurfaceVariant),
                               ),
                               trailing: IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.delete_outline,
-                                  color: AppTheme.uberRed,
+                                  color: colorScheme.error,
                                 ),
                                 onPressed: () => _removePlace(index),
                               ),
@@ -172,19 +178,19 @@ class _PlacesStepState extends State<PlacesStep> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _submitPlaces,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.uberWhite,
-                    foregroundColor: AppTheme.uberBlack,
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 24,
                           height: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.uberBlack),
+                            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
                           ),
                         )
                       : const Text(

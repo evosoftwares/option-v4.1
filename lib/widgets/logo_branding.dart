@@ -45,7 +45,7 @@ class LogoAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Row(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             child: Image.asset(
               'assets/images/Logotipo Horizontal Color.png',
               height: 28,

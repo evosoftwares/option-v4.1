@@ -28,6 +28,7 @@ class UserService {
     try {
       final userData = {
         'id': authUserId,
+        'user_id': authUserId, // Cópia do UUID do AUTH user
         'email': email,
         'full_name': fullName,
         'phone': phone,

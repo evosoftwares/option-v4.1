@@ -59,11 +59,14 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Buscar Local'),
-        backgroundColor: Colors.blue.shade800,
-        foregroundColor: Colors.white,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
       ),
       body: Column(
         children: [
@@ -85,20 +88,20 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 filled: true,
-                fillColor: Colors.grey.shade100,
+                fillColor: colorScheme.surfaceVariant,
               ),
               autofocus: true,
             ),
           ),
           Expanded(
-            child: _buildSearchResults(),
+            child: _buildSearchResults(textTheme, colorScheme),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchResults() {
+  Widget _buildSearchResults(TextTheme textTheme, ColorScheme colorScheme) {
     if (_searchResults.isEmpty) {
       return Center(
         child: Column(
@@ -107,16 +110,15 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
             Icon(
               Icons.search_outlined,
               size: 64,
-              color: Colors.grey.shade400,
+              color: colorScheme.outline,
             ),
             const SizedBox(height: 16),
             Text(
               _searchController.text.isEmpty
                   ? 'Digite para buscar locais'
                   : 'Nenhum resultado encontrado',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],

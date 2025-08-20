@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uber_clone/widgets/logo_branding.dart';
 
@@ -143,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               validator: (value) {
                                 final v = value?.trim() ?? '';
                                 if (v.isEmpty) return 'Informe seu e-mail';
-                                final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                                final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+);
                                 if (!emailRegex.hasMatch(v)) return 'E-mail inválido';
                                 return null;
                               },
@@ -195,10 +194,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Ao se cadastrar, você aceita nossos Termos de Uso e Política de Privacidade.',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
                             SizedBox(
+                              width: double.infinity,
                               height: 48,
-                              child: ElevatedButton(
+                              child: FilledButton(
                                 onPressed: _isSubmitting ? null : _onSubmit,
                                 child: _isSubmitting
                                     ? SizedBox(
@@ -213,13 +221,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            TextButton(
-                              onPressed: _isSubmitting
-                                  ? null
-                                  : () => Navigator.of(context).pushReplacementNamed('/login'),
-                              child: Text(
-                                'Já tem uma conta? Entrar',
-                                style: textTheme.labelLarge?.copyWith(color: colorScheme.primary),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: TextButton(
+                                onPressed: _isSubmitting
+                                    ? null
+                                    : () => Navigator.of(context).pushReplacementNamed('/login'),
+                                child: Text(
+                                  'Já tem uma conta? Entrar',
+                                  style: textTheme.labelLarge?.copyWith(color: colorScheme.primary),
+                                ),
                               ),
                             ),
                           ],

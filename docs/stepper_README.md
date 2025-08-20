@@ -11,7 +11,7 @@ Implementação da primeira etapa do stepper de cadastro com validação de tele
 ## Funcionalidades Implementadas
 - ✅ Máscara de telefone brasileiro: (##) # ####-####
 - ✅ Validação de 11 dígitos (DDD + número)
-- ✅ Tema AppTheme.uberBlack aplicado
+- ✅ Tema via ColorScheme aplicado
 - ✅ Botões Próximo e Voltar
 - ✅ Integração com StepperController via Provider
 - ✅ Validação em tempo real

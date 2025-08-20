@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uber_clone/widgets/logo_branding.dart';
 import 'package:uber_clone/services/user_service.dart';
 import 'package:uber_clone/exceptions/app_exceptions.dart';
+import 'package:provider/provider.dart';
+import 'package:uber_clone/controllers/stepper_controller.dart';
 
 class UserTypeScreen extends StatefulWidget {
   const UserTypeScreen({super.key});
@@ -20,7 +22,6 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
 
   void _onContinue() async {
     if (_selectedType == null) return;
-    
     try {
       // Obter o usuário autenticado atual
       final currentUser = Supabase.instance.client.auth.currentUser;
@@ -38,60 +39,24 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
         throw Exception('E-mail do usuário não disponível.');
       }
 
-      final exists = await UserService.userExists(currentUser.id);
+      // Armazenar em App State (StepperController) e seguir para o stepper
+      final controller = Provider.of<StepperController>(context, listen: false);
+      controller.setUserType(_selectedType!);
+      if (fullName != null && fullName.isNotEmpty) controller.setFullName(fullName);
+      controller.setEmail(email);
 
-      if (!exists) {
-        // Criar registro em app_users com o tipo escolhido
-        await UserService.createUser(
-          authUserId: currentUser.id,
-          email: email,
-          fullName: fullName ?? '',
-          userType: _selectedType!,
-        );
-      } else {
-        // Atualizar somente o tipo
-        await UserService.updateUserType(currentUser.id, _selectedType!);
-      }
-      
       if (!mounted) return;
-      // Navegar para o stepper de registro
       Navigator.of(context).pushReplacementNamed(
         '/registration_stepper',
         arguments: {
           'userType': _selectedType,
         },
       );
-    } on UserAlreadyExistsException {
-      // Em caso de condição de corrida, garantir update do tipo
-      try {
-        final currentUser = Supabase.instance.client.auth.currentUser;
-        if (currentUser != null) {
-          await UserService.updateUserType(currentUser.id, _selectedType!);
-        }
-        if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed('/registration_stepper');
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao atualizar tipo de usuário: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    } on DatabaseException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro de banco de dados: ${e.message}'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao salvar tipo de usuário: $e'),
+          content: Text('Erro ao continuar: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -148,7 +113,7 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
                   SizedBox(
                     width: double.infinity,
                     height: 48,
-                    child: ElevatedButton(
+                    child: FilledButton(
                       onPressed: _selectedType == null ? null : _onContinue,
                       child: const Text('Continuar'),
                     ),

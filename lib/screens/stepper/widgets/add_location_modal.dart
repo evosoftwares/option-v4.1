@@ -115,6 +115,8 @@ class _AddLocationModalState extends State<AddLocationModal> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -171,7 +173,7 @@ class _AddLocationModalState extends State<AddLocationModal> {
                   Container(
                     margin: const EdgeInsets.only(top: 8),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
+                      border: Border.all(color: colors.outline),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: ListView.builder(

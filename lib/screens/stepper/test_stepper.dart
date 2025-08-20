@@ -13,7 +13,6 @@ class TestStepper extends StatelessWidget {
       child: MaterialApp(
         title: 'Teste Stepper',
         theme: ThemeData(
-          primarySwatch: Colors.blue,
           useMaterial3: true,
         ),
         home: const TestStepperScreen(),
@@ -27,11 +26,12 @@ class TestStepperScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Teste Step 3 - Locais'),
-        backgroundColor: Colors.blue.shade800,
-        foregroundColor: Colors.white,
+        backgroundColor: colors.primary,
+        foregroundColor: colors.onPrimary,
       ),
       body: const Step3LocationsScreen(),
     );

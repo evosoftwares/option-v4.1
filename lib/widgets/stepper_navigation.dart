@@ -24,6 +24,9 @@ class StepperNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Column(
       children: [
         if (showSkip && onSkip != null) ...[
@@ -31,9 +34,8 @@ class StepperNavigation extends StatelessWidget {
             onPressed: onSkip,
             child: Text(
               skipLabel ?? 'Pular',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
+              style: textTheme.labelLarge?.copyWith(
+                color: colors.onSurfaceVariant,
               ),
             ),
           ),
@@ -47,17 +49,9 @@ class StepperNavigation extends StatelessWidget {
                   onPressed: onPrevious,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: BorderSide(color: Theme.of(context).primaryColor),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
                   ),
                   child: Text(
                     previousLabel ?? 'Voltar',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Theme.of(context).primaryColor,
-                    ),
                   ),
                 ),
               ),
@@ -68,17 +62,9 @@ class StepperNavigation extends StatelessWidget {
                 onPressed: onNext,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Theme.of(context).primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
                 ),
                 child: Text(
                   nextLabel,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
                 ),
               ),
             ),

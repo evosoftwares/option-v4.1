@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/stepper_controller.dart';
-import '../../theme/app_theme.dart';
 
 class PhotoStep extends StatefulWidget {
   final VoidCallback onNext;
@@ -41,10 +40,14 @@ class _PhotoStepState extends State<PhotoStep> {
       }
     } catch (e) {
       if (mounted) {
+        final colors = Theme.of(context).colorScheme;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao selecionar foto: $e'),
-            backgroundColor: AppTheme.uberRed,
+            backgroundColor: colors.error,
+            content: Text(
+              'Erro ao selecionar foto: $e',
+              style: TextStyle(color: colors.onError),
+            ),
           ),
         );
       }
@@ -71,10 +74,14 @@ class _PhotoStepState extends State<PhotoStep> {
       }
     } catch (e) {
       if (mounted) {
+        final colors = Theme.of(context).colorScheme;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao continuar: $e'),
-            backgroundColor: AppTheme.uberRed,
+            backgroundColor: colors.error,
+            content: Text(
+              'Erro ao continuar: $e',
+              style: TextStyle(color: colors.onError),
+            ),
           ),
         );
       }
@@ -87,6 +94,7 @@ class _PhotoStepState extends State<PhotoStep> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Consumer<StepperController>(
       builder: (context, controller, child) {
         return Padding(
@@ -98,7 +106,7 @@ class _PhotoStepState extends State<PhotoStep> {
               Text(
                 'Adicione uma foto',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
+                  color: colors.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -106,7 +114,7 @@ class _PhotoStepState extends State<PhotoStep> {
               Text(
                 'As pessoas gostam de ver quem está dirigindo',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.uberLightGray,
+                  color: colors.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 40),
@@ -117,10 +125,10 @@ class _PhotoStepState extends State<PhotoStep> {
                     width: 150,
                     height: 150,
                     decoration: BoxDecoration(
-                      color: AppTheme.uberMediumGray,
+                      color: colors.surfaceVariant,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppTheme.uberWhite,
+                        color: colors.outline,
                         width: 2,
                       ),
                     ),
@@ -131,10 +139,10 @@ class _PhotoStepState extends State<PhotoStep> {
                               fit: BoxFit.cover,
                             ),
                           )
-                        : const Icon(
+                        : Icon(
                             Icons.camera_alt,
                             size: 50,
-                            color: AppTheme.uberLightGray,
+                            color: colors.onSurfaceVariant,
                           ),
                   ),
                 ),
@@ -144,10 +152,12 @@ class _PhotoStepState extends State<PhotoStep> {
                 Center(
                   child: TextButton(
                     onPressed: _removePhoto,
+                    style: TextButton.styleFrom(
+                      foregroundColor: colors.error,
+                    ),
                     child: const Text(
                       'Remover foto',
                       style: TextStyle(
-                        color: AppTheme.uberRed,
                         fontSize: 16,
                       ),
                     ),
@@ -158,41 +168,31 @@ class _PhotoStepState extends State<PhotoStep> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isLoading ? null : _submitPhoto,
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppTheme.uberWhite),
-                        foregroundColor: AppTheme.uberWhite,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                    child: SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: _isLoading ? null : _submitPhoto,
+                        child: const Text('Pular'),
                       ),
-                      child: const Text('Pular'),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _submitPhoto,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.uberWhite,
-                        foregroundColor: AppTheme.uberBlack,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                    child: SizedBox(
+                      height: 48,
+                      child: FilledButton(
+                        onPressed: _isLoading ? null : _submitPhoto,
+                        child: _isLoading
+                            ? SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(colors.onPrimary),
+                                ),
+                              )
+                            : const Text('Continuar'),
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.uberBlack),
-                              ),
-                            )
-                          : const Text('Continuar'),
                     ),
                   ),
                 ],
@@ -206,9 +206,10 @@ class _PhotoStepState extends State<PhotoStep> {
   }
 
   void _showImageSourceDialog() {
+    final colors = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.uberDarkGray,
+      backgroundColor: colors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -220,25 +221,20 @@ class _PhotoStepState extends State<PhotoStep> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: const Icon(Icons.camera_alt, color: Colors.white),
-                  title: const Text('Tirar foto', style: TextStyle(color: Colors.white)),
+                  leading: Icon(Icons.camera_alt, color: colors.primary),
+                  title: Text('Tirar foto', style: TextStyle(color: colors.onSurface)),
                   onTap: () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.camera);
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.photo_library, color: Colors.white),
-                  title: const Text('Escolher da galeria', style: TextStyle(color: Colors.white)),
+                  leading: Icon(Icons.photo_library, color: colors.primary),
+                  title: Text('Escolher da galeria', style: TextStyle(color: colors.onSurface)),
                   onTap: () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.gallery);
                   },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.close, color: Colors.white),
-                  title: const Text('Cancelar', style: TextStyle(color: Colors.white)),
-                  onTap: () => Navigator.pop(context),
                 ),
               ],
             ),

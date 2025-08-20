@@ -22,6 +22,9 @@ class _StepperMainScreenState extends State<StepperMainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       body: Consumer<StepperController>(
         builder: (context, controller, child) {
@@ -40,7 +43,7 @@ class _StepperMainScreenState extends State<StepperMainScreen> {
           return Column(
             children: [
               // Barra de progresso
-              _buildProgressBar(controller),
+              _buildProgressBar(controller, colors, textTheme),
               // Conteúdo das etapas
               Expanded(
                 child: PageView(
@@ -59,26 +62,29 @@ class _StepperMainScreenState extends State<StepperMainScreen> {
     );
   }
 
-  Widget _buildProgressBar(StepperController controller) {
+  Widget _buildProgressBar(
+    StepperController controller,
+    ColorScheme colors,
+    TextTheme textTheme,
+  ) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 50, 16, 16),
       child: Column(
         children: [
           Row(
             children: [
-              const Text(
+              Text(
                 'Complete seu cadastro',
-                style: TextStyle(
-                  fontSize: 20,
+                style: textTheme.titleLarge?.copyWith(
+                  color: colors.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const Spacer(),
               Text(
                 '${controller.currentStep + 1} de 2',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
                 ),
               ),
             ],
@@ -89,9 +95,9 @@ class _StepperMainScreenState extends State<StepperMainScreen> {
             child: LinearProgressIndicator(
               value: (controller.currentStep + 1) / 2,
               minHeight: 6,
-              backgroundColor: Colors.grey[200],
+              backgroundColor: colors.surfaceVariant,
               valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).primaryColor,
+                colors.primary,
               ),
             ),
           ),

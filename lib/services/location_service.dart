@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:geolocator/geolocator.dart';
 
 class LocationService {
   final String apiKey;
@@ -73,8 +74,28 @@ class LocationService {
   }
 
   Future<Map<String, dynamic>?> getCurrentLocation() async {
-    // Implementação para obter localização atual
-    // Requer permissões de localização
-    return null;
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.unableToDetermine ||
+          permission == LocationPermission.denied) {
+        return null;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      return {
+        'lat': position.latitude,
+        'lng': position.longitude,
+      };
+    } catch (e) {
+      print('Erro ao obter localização atual: $e');
+      return null;
+    }
   }
 }
