@@ -43,7 +43,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao enviar email de recuperação: $e')),
+        SnackBar(content: Text('Erro ao enviar e-mail de recuperação. Por favor, tente novamente mais tarde.')),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -122,7 +122,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Email enviado!',
+              'E-mail enviado!',
               style: textTheme.headlineSmall?.copyWith(
                 color: colorScheme.onSurface,
                 fontWeight: FontWeight.w600,

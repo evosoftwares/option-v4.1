@@ -66,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text('Erro de autenticação. Por favor, verifique suas credenciais e tente novamente.')),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

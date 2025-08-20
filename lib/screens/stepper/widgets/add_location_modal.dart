@@ -69,7 +69,7 @@ class _AddLocationModalState extends State<AddLocationModal> {
     } catch (e) {
       setState(() => _isSearching = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao buscar locais: $e')),
+        SnackBar(content: Text('Erro ao buscar locais. Por favor, tente novamente mais tarde.')),
       );
     }
   }

@@ -57,7 +57,7 @@ class _PhoneStepState extends State<PhoneStep> {
       final colorScheme = Theme.of(context).colorScheme;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao salvar telefone: $e', style: TextStyle(color: colorScheme.onError)),
+          content: Text('Erro ao salvar telefone. Por favor, tente novamente mais tarde.'),
           backgroundColor: colorScheme.error,
         ),
       );

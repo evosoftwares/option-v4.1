@@ -68,7 +68,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text('Erro ao criar conta. Por favor, verifique os dados e tente novamente.')),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

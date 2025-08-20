@@ -197,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (user.userType == 'driver') {
         Navigator.pushNamed(context, '/driver_menu');
       } else {
-        Navigator.pushNamed(context, '/user-menu');
+        Navigator.pushNamed(context, '/user_menu');
       }
     }
   }

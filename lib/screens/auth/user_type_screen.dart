@@ -56,7 +56,7 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao continuar: $e'),
+          content: Text('Erro ao continuar. Por favor, tente novamente mais tarde.'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );

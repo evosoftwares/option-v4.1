@@ -75,7 +75,7 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
       final colorScheme = Theme.of(context).colorScheme;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao finalizar cadastro: $e', style: TextStyle(color: colorScheme.onError)),
+          content: Text('Erro ao finalizar cadastro. Por favor, tente novamente mais tarde.'),
           backgroundColor: colorScheme.error,
         ),
       );

@@ -17,6 +17,7 @@ class ProfileEditScreen extends StatefulWidget {
 class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
+  final _nameController = TextEditingController();
   String? _selectedType; // 'passenger' | 'driver'
 
   bool _loading = true;
@@ -52,6 +53,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       }
 
       _currentUser = user;
+      _nameController.text = user.fullName;
       _phoneController.text = user.phone != null && user.phone!.isNotEmpty
           ? PhoneValidator.format(user.phone!)
           : '';
@@ -60,7 +62,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao carregar dados: $e'),
+          content: Text('Erro ao carregar dados. Por favor, tente novamente mais tarde.'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -82,6 +84,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
       final updated = await UserService.updateUser(
         userId: _currentUser!.id,
+        fullName: _nameController.text.trim(),
         phone: unformattedPhone,
         userType: _selectedType,
       );
@@ -100,7 +103,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao salvar: $e'),
+          content: Text('Erro ao salvar. Por favor, verifique os dados e tente novamente.'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -112,6 +115,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   @override
   void dispose() {
     _phoneController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
@@ -170,6 +174,26 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                           ],
                         ),
                       ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Full name field
+                    Text('Nome completo', style: textTheme.titleMedium),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextFormField(
+                      controller: _nameController,
+                      textInputAction: TextInputAction.next,
+                      keyboardType: TextInputType.name,
+                      decoration: const InputDecoration(
+                        hintText: 'Seu nome e sobrenome',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Informe seu nome completo';
+                        }
+                        return null;
+                      },
                     ),
 
                     const SizedBox(height: AppSpacing.lg),

@@ -54,7 +54,7 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
         SnackBar(
           backgroundColor: colors.error,
           content: Text(
-            'Erro ao selecionar imagem: ${e.toString()}',
+            'Erro ao selecionar imagem. Por favor, tente novamente.',
             style: TextStyle(color: colors.onError),
           ),
         ),

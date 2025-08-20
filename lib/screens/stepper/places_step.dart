@@ -58,7 +58,7 @@ class _PlacesStepState extends State<PlacesStep> {
         final colorScheme = Theme.of(context).colorScheme;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao salvar locais: $e'),
+            content: Text('Erro ao salvar locais. Por favor, tente novamente mais tarde.'),
             backgroundColor: colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),

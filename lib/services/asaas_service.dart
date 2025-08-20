@@ -44,7 +44,7 @@ class AsaasService {
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
-      throw NetworkException('Asaas error (${resp.statusCode}): ${resp.body}');
+      throw NetworkException('Erro na integração com o serviço de pagamentos. Por favor, tente novamente mais tarde.');
     } catch (e) {
       if (e is AppException) rethrow;
       throw NetworkException('Falha ao garantir cliente Asaas: $e');
@@ -60,6 +60,6 @@ class AsaasService {
       if (items.isNotEmpty) return items.first as Map<String, dynamic>;
       return null;
     }
-    throw NetworkException('Asaas error (${resp.statusCode}): ${resp.body}');
+    throw NetworkException('Erro na integração com o serviço de pagamentos. Por favor, tente novamente mais tarde.');
   }
 }

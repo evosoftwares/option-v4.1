@@ -35,6 +35,8 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
   late final LocationService _locationService;
   Map<String, dynamic>? _selectedDetails;
   LatLng? _selectedLatLng;
+  // Multi-select support
+  final List<FavoriteLocation> _multiSelected = [];
 
   static const CameraPosition _initialCameraPosition = CameraPosition(
     target: LatLng(-23.5505, -46.6333), // São Paulo
@@ -75,15 +77,48 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
   }
 
   Future<void> _onMapTap(LatLng position) async {
+    if (widget.allowMultiple) {
+      // For multi-select, each tap adds a marker and a favorite location entry
+      try {
+        final placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        final p = placemarks.isNotEmpty ? placemarks.first : null;
+        final street = (p?.street ?? '').trim();
+        final subLocality = (p?.subLocality ?? '').trim();
+        final locality = (p?.locality ?? '').trim();
+        final address = [street, subLocality, locality].where((s) => s.isNotEmpty).join(', ');
+        final fav = FavoriteLocation(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: street.isNotEmpty ? street : 'Parada',
+          address: address.isNotEmpty ? address : 'Endereço não informado',
+          type: LocationType.other,
+          latitude: position.latitude,
+          longitude: position.longitude,
+          placeId: null,
+        );
+        setState(() {
+          _multiSelected.add(fav);
+          _markers.add(
+            Marker(
+              markerId: MarkerId('marker_${_markers.length + 1}'),
+              position: position,
+              icon: BitmapDescriptor.defaultMarker,
+            ),
+          );
+          _selectedDetails = null;
+          _selectedLatLng = null;
+        });
+      } catch (e) {
+        // Ignore reverse geocoding errors silently for UX
+      }
+      return;
+    }
+
     setState(() {
       if (widget.allowMultiple) {
-        _markers.add(
-          Marker(
-            markerId: MarkerId('marker_${_markers.length}'),
-            position: position,
-            icon: BitmapDescriptor.defaultMarker,
-          ),
-        );
+        // handled above
       } else {
         _markers
           ..clear()
@@ -154,6 +189,35 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
       CameraUpdate.newLatLngZoom(location, 15),
     );
 
+    if (widget.allowMultiple) {
+      // Add without clearing existing markers
+      final fav = FavoriteLocation(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: (details['name'] as String?)?.trim().isNotEmpty == true
+            ? details['name'] as String
+            : (prediction['mainText'] as String? ?? 'Parada'),
+        address: (details['formattedAddress'] as String?) ?? (prediction['description'] as String? ?? ''),
+        type: LocationType.other,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        placeId: details['placeId'] as String?,
+      );
+      setState(() {
+        _markers.add(
+          Marker(
+            markerId: MarkerId(placeId),
+            position: location,
+            icon: BitmapDescriptor.defaultMarker,
+          ),
+        );
+        _suggestions = [];
+        _searchController.clear();
+        _searchFocus.unfocus();
+        _multiSelected.add(fav);
+      });
+      return;
+    }
+
     setState(() {
       _markers
         ..clear()
@@ -223,6 +287,14 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
   }
 
   void _savePlaces() async {
+    // If multiple selection mode, return all selected places
+    if (widget.allowMultiple) {
+      if (_multiSelected.isNotEmpty) {
+        Navigator.of(context).pop(_multiSelected);
+      }
+      return;
+    }
+
     // Compose a FavoriteLocation from the selected details or map tap
     final type = await _chooseType();
     if (type == null) return;

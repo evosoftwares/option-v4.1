@@ -45,7 +45,7 @@ class _PhotoStepState extends State<PhotoStep> {
           SnackBar(
             backgroundColor: colors.error,
             content: Text(
-              'Erro ao selecionar foto: $e',
+              'Erro ao selecionar foto. Por favor, tente novamente.',
               style: TextStyle(color: colors.onError),
             ),
           ),
@@ -79,7 +79,7 @@ class _PhotoStepState extends State<PhotoStep> {
           SnackBar(
             backgroundColor: colors.error,
             content: Text(
-              'Erro ao continuar: $e',
+              'Erro ao continuar. Por favor, tente novamente mais tarde.',
               style: TextStyle(color: colors.onError),
             ),
           ),

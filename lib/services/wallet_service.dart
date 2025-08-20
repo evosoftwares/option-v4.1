@@ -20,9 +20,9 @@ class WalletService {
           .maybeSingle();
       return data != null ? (data['id'] as String) : null;
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar motorista do usuário: ${e.message}', e.code);
+      throw DatabaseException('Erro ao buscar motorista do usuário. Por favor, tente novamente mais tarde.', e.code);
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar motorista do usuário: $e');
+      throw DatabaseException('Erro inesperado ao buscar motorista do usuário. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -35,9 +35,9 @@ class WalletService {
           .maybeSingle();
       return data as Map<String, dynamic>?;
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar carteira: ${e.message}', e.code);
+      throw DatabaseException('Erro ao buscar carteira. Por favor, tente novamente mais tarde.', e.code);
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar carteira: $e');
+      throw DatabaseException('Erro inesperado ao buscar carteira. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -51,9 +51,9 @@ class WalletService {
           .limit(limit);
       return (data as List).cast<Map<String, dynamic>>();
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar transações: ${e.message}', e.code);
+      throw DatabaseException('Erro ao buscar transações. Por favor, tente novamente mais tarde.', e.code);
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar transações: $e');
+      throw DatabaseException('Erro inesperado ao buscar transações. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -94,9 +94,9 @@ class WalletService {
           .single();
       return data as Map<String, dynamic>;
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao solicitar saque: ${e.message}', e.code);
+      throw DatabaseException('Erro ao solicitar saque. Por favor, verifique os dados e tente novamente.', e.code);
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao solicitar saque: $e');
+      throw DatabaseException('Erro inesperado ao solicitar saque. Por favor, tente novamente mais tarde.');
     }
   }
 }

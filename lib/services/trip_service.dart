@@ -32,34 +32,40 @@ class TripService {
     String? destinationNeighborhood,
   }) async {
     try {
-      final response = await _supabase.from('trip_requests').insert({
-        'passenger_id': passengerId,
-        'origin_address': originAddress,
-        'origin_latitude': originLatitude,
-        'origin_longitude': originLongitude,
-        'origin_neighborhood': originNeighborhood,
-        'destination_address': destinationAddress,
-        'destination_latitude': destinationLatitude,
-        'destination_longitude': destinationLongitude,
-        'destination_neighborhood': destinationNeighborhood,
-        'vehicle_category': vehicleCategory,
-        'needs_pet': needsPet,
-        'needs_grocery_space': needsGrocerySpace,
-        'is_condo_destination': isCondoDestination,
-        'is_condo_origin': isCondoOrigin,
-        'needs_ac': needsAc,
-        'number_of_stops': numberOfStops,
-        'estimated_distance_km': estimatedDistanceKm,
-        'estimated_duration_minutes': estimatedDurationMinutes,
-        'estimated_fare': estimatedFare,
-        'status': 'pending',
-      }).select().single();
+      final response = await _supabase
+          .from('trip_requests')
+          .insert({
+            'passenger_id': passengerId,
+            'origin_address': originAddress,
+            'origin_latitude': originLatitude,
+            'origin_longitude': originLongitude,
+            'origin_neighborhood': originNeighborhood,
+            'destination_address': destinationAddress,
+            'destination_latitude': destinationLatitude,
+            'destination_longitude': destinationLongitude,
+            'destination_neighborhood': destinationNeighborhood,
+            'vehicle_category': vehicleCategory,
+            'needs_pet': needsPet,
+            'needs_grocery_space': needsGrocerySpace,
+            'is_condo_destination': isCondoDestination,
+            'is_condo_origin': isCondoOrigin,
+            'needs_ac': needsAc,
+            'number_of_stops': numberOfStops,
+            'estimated_distance_km': estimatedDistanceKm,
+            'estimated_duration_minutes': estimatedDurationMinutes,
+            'estimated_fare': estimatedFare,
+            'status': 'pending',
+          })
+          .select()
+          .single();
 
       return TripRequest.fromJson(response);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao criar solicitação de viagem: ${e.message}');
+      throw DatabaseException(
+          'Erro ao criar solicitação de viagem. Por favor, verifique os dados e tente novamente.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao criar solicitação de viagem');
+      throw DatabaseException(
+          'Erro inesperado ao criar solicitação de viagem. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -69,7 +75,7 @@ class TripService {
     int? limit,
   }) async {
     try {
-      var query = _supabase.from('trip_requests').select();
+      dynamic query = _supabase.from('trip_requests').select();
 
       if (passengerId != null) {
         query = query.eq('passenger_id', passengerId);
@@ -84,31 +90,32 @@ class TripService {
       }
 
       final response = await query.order('created_at', ascending: false);
-      
+
       return response.map((json) => TripRequest.fromJson(json)).toList();
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar solicitações: ${e.message}');
+      throw DatabaseException(
+          'Erro ao buscar solicitações. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar solicitações');
+      throw DatabaseException(
+          'Erro inesperado ao buscar solicitações. Por favor, tente novamente mais tarde.');
     }
   }
 
   Future<TripRequest?> getTripRequest(String id) async {
     try {
-      final response = await _supabase
-          .from('trip_requests')
-          .select()
-          .eq('id', id)
-          .single();
+      final response =
+          await _supabase.from('trip_requests').select().eq('id', id).single();
 
       return TripRequest.fromJson(response);
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') {
         return null;
       }
-      throw DatabaseException('Erro ao buscar solicitação: ${e.message}');
+      throw DatabaseException(
+          'Erro ao buscar solicitação. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar solicitação');
+      throw DatabaseException(
+          'Erro inesperado ao buscar solicitação. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -137,9 +144,11 @@ class TripService {
 
       return TripRequest.fromJson(response);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao atualizar status: ${e.message}');
+      throw DatabaseException(
+          'Erro ao atualizar status. Por favor, verifique os dados e tente novamente.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao atualizar status');
+      throw DatabaseException(
+          'Erro inesperado ao atualizar status. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -161,49 +170,54 @@ class TripService {
     String? promoCodeId,
   }) async {
     try {
-      final response = await _supabase.from('trips').insert({
-        'trip_request_id': tripRequestId,
-        'driver_id': driverId,
-        'passenger_id': passengerId,
-        'origin_address': originAddress,
-        'origin_latitude': originLatitude,
-        'origin_longitude': originLongitude,
-        'destination_address': destinationAddress,
-        'destination_latitude': destinationLatitude,
-        'destination_longitude': destinationLongitude,
-        'actual_distance_km': actualDistanceKm,
-        'actual_duration_minutes': actualDurationMinutes,
-        'base_fare': baseFare,
-        'final_fare': finalFare,
-        'status': 'ongoing',
-        'start_time': DateTime.now().toIso8601String(),
-        'promo_code_id': promoCodeId,
-      }).select().single();
+      final response = await _supabase
+          .from('trips')
+          .insert({
+            'trip_request_id': tripRequestId,
+            'driver_id': driverId,
+            'passenger_id': passengerId,
+            'origin_address': originAddress,
+            'origin_latitude': originLatitude,
+            'origin_longitude': originLongitude,
+            'destination_address': destinationAddress,
+            'destination_latitude': destinationLatitude,
+            'destination_longitude': destinationLongitude,
+            'actual_distance_km': actualDistanceKm,
+            'actual_duration_minutes': actualDurationMinutes,
+            'base_fare': baseFare,
+            'final_fare': finalFare,
+            'status': 'ongoing',
+            'start_time': DateTime.now().toIso8601String(),
+            'promo_code_id': promoCodeId,
+          })
+          .select()
+          .single();
 
       return Trip.fromJson(response);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao criar viagem: ${e.message}');
+      throw DatabaseException(
+          'Erro ao criar viagem. Por favor, verifique os dados e tente novamente.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao criar viagem');
+      throw DatabaseException(
+          'Erro inesperado ao criar viagem. Por favor, tente novamente mais tarde.');
     }
   }
 
   Future<Trip?> getTrip(String id) async {
     try {
-      final response = await _supabase
-          .from('trips')
-          .select()
-          .eq('id', id)
-          .single();
+      final response =
+          await _supabase.from('trips').select().eq('id', id).single();
 
       return Trip.fromJson(response);
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') {
         return null;
       }
-      throw DatabaseException('Erro ao buscar viagem: ${e.message}');
+      throw DatabaseException(
+          'Erro ao buscar viagem. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar viagem');
+      throw DatabaseException(
+          'Erro inesperado ao buscar viagem. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -214,7 +228,7 @@ class TripService {
     int? limit,
   }) async {
     try {
-      var query = _supabase.from('trips').select();
+      dynamic query = _supabase.from('trips').select();
 
       if (passengerId != null) {
         query = query.eq('passenger_id', passengerId);
@@ -233,12 +247,14 @@ class TripService {
       }
 
       final response = await query.order('created_at', ascending: false);
-      
+
       return response.map((json) => Trip.fromJson(json)).toList();
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar viagens: ${e.message}');
+      throw DatabaseException(
+          'Erro ao buscar viagens. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar viagens');
+      throw DatabaseException(
+          'Erro inesperado ao buscar viagens. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -265,9 +281,11 @@ class TripService {
 
       return Trip.fromJson(response);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao completar viagem: ${e.message}');
+      throw DatabaseException(
+          'Erro ao completar viagem. Por favor, verifique os dados e tente novamente.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao completar viagem');
+      throw DatabaseException(
+          'Erro inesperado ao completar viagem. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -298,9 +316,11 @@ class TripService {
 
       return Trip.fromJson(response);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao avaliar viagem: ${e.message}');
+      throw DatabaseException(
+          'Erro ao avaliar viagem. Por favor, verifique os dados e tente novamente.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao avaliar viagem');
+      throw DatabaseException(
+          'Erro inesperado ao avaliar viagem. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -317,23 +337,29 @@ class TripService {
     String? locationType,
   }) async {
     try {
-      final response = await _supabase.from('locations').insert({
-        'user_id': userId,
-        'name': name,
-        'address': address,
-        'latitude': latitude,
-        'longitude': longitude,
-        'neighborhood': neighborhood,
-        'notes': notes,
-        'is_favorite': isFavorite,
-        'location_type': locationType,
-      }).select().single();
+      final response = await _supabase
+          .from('locations')
+          .insert({
+            'user_id': userId,
+            'name': name,
+            'address': address,
+            'latitude': latitude,
+            'longitude': longitude,
+            'neighborhood': neighborhood,
+            'notes': notes,
+            'is_favorite': isFavorite,
+            'location_type': locationType,
+          })
+          .select()
+          .single();
 
       return Location.fromJson(response);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao salvar localização: ${e.message}');
+      throw DatabaseException(
+          'Erro ao salvar localização. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao salvar localização');
+      throw DatabaseException(
+          'Erro inesperado ao salvar localização. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -347,28 +373,29 @@ class TripService {
 
       return response.map((json) => Location.fromJson(json)).toList();
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar localizações: ${e.message}');
+      throw DatabaseException(
+          'Erro ao buscar localizações. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar localizações');
+      throw DatabaseException(
+          'Erro inesperado ao buscar localizações. Por favor, tente novamente mais tarde.');
     }
   }
 
   Future<Location?> getLocation(String id) async {
     try {
-      final response = await _supabase
-          .from('locations')
-          .select()
-          .eq('id', id)
-          .single();
+      final response =
+          await _supabase.from('locations').select().eq('id', id).single();
 
       return Location.fromJson(response);
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') {
         return null;
       }
-      throw DatabaseException('Erro ao buscar localização: ${e.message}');
+      throw DatabaseException(
+          'Erro ao buscar localização. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar localização');
+      throw DatabaseException(
+          'Erro inesperado ao buscar localização. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -406,22 +433,23 @@ class TripService {
 
       return Location.fromJson(response);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao atualizar localização: ${e.message}');
+      throw DatabaseException(
+          'Erro ao atualizar localização. Por favor, verifique os dados e tente novamente.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao atualizar localização');
+      throw DatabaseException(
+          'Erro inesperado ao atualizar localização. Por favor, tente novamente mais tarde.');
     }
   }
 
   Future<void> deleteLocation(String id) async {
     try {
-      await _supabase
-          .from('locations')
-          .delete()
-          .eq('id', id);
+      await _supabase.from('locations').delete().eq('id', id);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao deletar localização: ${e.message}');
+      throw DatabaseException(
+          'Erro ao deletar localização. Por favor, verifique os dados e tente novamente.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao deletar localização');
+      throw DatabaseException(
+          'Erro inesperado ao deletar localização. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -430,7 +458,7 @@ class TripService {
     String? passengerId,
     String? status,
   }) {
-    var query = _supabase.from('trip_requests').stream(primaryKey: ['id']);
+    dynamic query = _supabase.from('trip_requests').stream(primaryKey: ['id']);
 
     if (passengerId != null) {
       query = query.eq('passenger_id', passengerId);
@@ -440,8 +468,9 @@ class TripService {
       query = query.eq('status', status);
     }
 
-    return query.order('created_at').map((data) =>
-        data.map((json) => TripRequest.fromJson(json)).toList());
+    return query
+        .order('created_at')
+        .map((data) => data.map((json) => TripRequest.fromJson(json)).toList());
   }
 
   Stream<Trip?> subscribeToTrip(String tripId) {

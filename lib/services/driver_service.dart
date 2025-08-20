@@ -1,6 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/supabase/driver.dart';
-import '../models/supabase/vehicle.dart';
 import '../models/supabase/driver_offer.dart';
 import '../models/supabase/trip.dart';
 import '../exceptions/app_exceptions.dart';
@@ -13,68 +12,159 @@ class DriverService {
   // Get driver profile
   Future<Driver?> getDriver(String driverId) async {
     try {
-      final response = await _supabase
-          .from('drivers')
-          .select()
-          .eq('id', driverId)
-          .single();
+      final response =
+          await _supabase.from('drivers').select().eq('id', driverId).single();
 
       return Driver.fromJson(response);
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') {
         return null;
       }
-      throw DatabaseException('Erro ao buscar motorista: ${e.message}');
+      throw DatabaseException(
+          'Erro ao buscar motorista. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar motorista');
+      throw DatabaseException(
+          'Erro inesperado ao buscar motorista. Por favor, tente novamente mais tarde.');
     }
   }
 
-  // Create driver profile
+  // Create driver profile aligned with drivers table schema
   Future<Driver> createDriver({
     required String userId,
-    required String name,
-    required String cpf,
-    required String phone,
-    required String licenseNumber,
-    required DateTime licenseExpiry,
-    String? photoUrl,
+    required String cnhNumber,
+    required DateTime cnhExpiryDate,
+    String? cnhPhotoUrl,
+    // Vehicle details
+    required String brand,
+    required String model,
+    required int year,
+    required String color,
+    required String plate,
+    required String category,
+    String? crlvPhotoUrl,
+    // Preferences and settings
+    bool acceptsPet = false,
+    bool acceptsGrocery = false,
+    bool acceptsCondo = false,
+    Map<String, dynamic> fees = const {},
+    String? acPolicy,
+    double? customPricePerKm,
+    double? customPricePerMinute,
+    Map<String, dynamic>? bankData,
+    Map<String, dynamic>? pixData,
+    double? currentLatitude,
+    double? currentLongitude,
   }) async {
     try {
-      final response = await _supabase.from('drivers').insert({
+      final insertData = {
         'user_id': userId,
-        'name': name,
-        'cpf': cpf,
-        'phone': phone,
-        'license_number': licenseNumber,
-        'license_expiry': licenseExpiry.toIso8601String(),
-        'photo_url': photoUrl,
-        'is_verified': false,
-        'rating': 0.0,
-        'total_trips': 0,
-      }).select().single();
+        'cnh_number': cnhNumber,
+        'cnh_expiry_date': cnhExpiryDate.toIso8601String(),
+        'cnh_photo_url': cnhPhotoUrl,
+        'brand': brand,
+        'model': model,
+        'year': year,
+        'color': color,
+        'plate': plate,
+        'category': category,
+        'crlv_photo_url': crlvPhotoUrl,
+        'approval_status': 'pending',
+        'is_online': false,
+        'accepts_pet': acceptsPet,
+        'accepts_grocery': acceptsGrocery,
+        'accepts_condo': acceptsCondo,
+        'fees': fees,
+        'ac_policy': acPolicy,
+        'custom_price_per_km': customPricePerKm,
+        'custom_price_per_minute': customPricePerMinute,
+        'bank_data': bankData,
+        'pix_data': pixData,
+        'current_latitude': currentLatitude,
+        'current_longitude': currentLongitude,
+        'ratings': 0.0,
+        'trips': 0,
+        'cancellations': 0,
+      };
+
+      final response =
+          await _supabase.from('drivers').insert(insertData).select().single();
 
       return Driver.fromJson(response);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao criar perfil de motorista: ${e.message}');
+      throw DatabaseException(
+          'Erro ao criar perfil de motorista. Por favor, verifique os dados e tente novamente.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao criar perfil de motorista');
+      throw DatabaseException(
+          'Erro inesperado ao criar perfil de motorista. Por favor, tente novamente mais tarde.');
     }
   }
 
-  // Update driver profile
-  Future<Driver> updateDriver(String driverId, {
-    String? name,
-    String? phone,
-    String? photoUrl,
-    bool? isAvailable,
+  // Update driver profile aligned with drivers table schema
+  Future<Driver> updateDriver(
+    String driverId, {
+    // CNH
+    String? cnhNumber,
+    DateTime? cnhExpiryDate,
+    String? cnhPhotoUrl,
+    // Vehicle details
+    String? brand,
+    String? model,
+    int? year,
+    String? color,
+    String? plate,
+    String? category,
+    String? crlvPhotoUrl,
+    // Status & availability
+    String? approvalStatus,
+    bool? isOnline,
+    // Preferences and settings
+    bool? acceptsPet,
+    bool? acceptsGrocery,
+    bool? acceptsCondo,
+    Map<String, dynamic>? fees,
+    String? acPolicy,
+    double? customPricePerKm,
+    double? customPricePerMinute,
+    Map<String, dynamic>? bankData,
+    Map<String, dynamic>? pixData,
+    double? currentLatitude,
+    double? currentLongitude,
   }) async {
     try {
       final updates = <String, dynamic>{};
-      if (name != null) updates['name'] = name;
-      if (phone != null) updates['phone'] = phone;
-      if (photoUrl != null) updates['photo_url'] = photoUrl;
-      if (isAvailable != null) updates['is_available'] = isAvailable;
+      if (cnhNumber != null) updates['cnh_number'] = cnhNumber;
+      if (cnhExpiryDate != null)
+        updates['cnh_expiry_date'] = cnhExpiryDate.toIso8601String();
+      if (cnhPhotoUrl != null) updates['cnh_photo_url'] = cnhPhotoUrl;
+
+      if (brand != null) updates['brand'] = brand;
+      if (model != null) updates['model'] = model;
+      if (year != null) updates['year'] = year;
+      if (color != null) updates['color'] = color;
+      if (plate != null) updates['plate'] = plate;
+      if (category != null) updates['category'] = category;
+      if (crlvPhotoUrl != null) updates['crlv_photo_url'] = crlvPhotoUrl;
+
+      if (approvalStatus != null) updates['approval_status'] = approvalStatus;
+      if (isOnline != null) updates['is_online'] = isOnline;
+
+      if (acceptsPet != null) updates['accepts_pet'] = acceptsPet;
+      if (acceptsGrocery != null) updates['accepts_grocery'] = acceptsGrocery;
+      if (acceptsCondo != null) updates['accepts_condo'] = acceptsCondo;
+
+      if (fees != null) updates['fees'] = fees;
+      if (acPolicy != null) updates['ac_policy'] = acPolicy;
+      if (customPricePerKm != null)
+        updates['custom_price_per_km'] = customPricePerKm;
+      if (customPricePerMinute != null)
+        updates['custom_price_per_minute'] = customPricePerMinute;
+      if (bankData != null) updates['bank_data'] = bankData;
+      if (pixData != null) updates['pix_data'] = pixData;
+
+      if (currentLatitude != null)
+        updates['current_latitude'] = currentLatitude;
+      if (currentLongitude != null)
+        updates['current_longitude'] = currentLongitude;
 
       final response = await _supabase
           .from('drivers')
@@ -85,88 +175,55 @@ class DriverService {
 
       return Driver.fromJson(response);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao atualizar motorista: ${e.message}');
+      throw DatabaseException(
+          'Erro ao atualizar motorista. Por favor, verifique os dados e tente novamente.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao atualizar motorista');
-    }
-  }
-
-  // Create vehicle
-  Future<Vehicle> createVehicle({
-    required String driverId,
-    required String brand,
-    required String model,
-    required int year,
-    required String color,
-    required String licensePlate,
-    required String renavam,
-    required String fuelType,
-    required int capacity,
-    String? photoUrl,
-  }) async {
-    try {
-      final response = await _supabase.from('vehicles').insert({
-        'driver_id': driverId,
-        'brand': brand,
-        'model': model,
-        'year': year,
-        'color': color,
-        'license_plate': licensePlate,
-        'renavam': renavam,
-        'fuel_type': fuelType,
-        'capacity': capacity,
-        'photo_url': photoUrl,
-        'is_verified': false,
-      }).select().single();
-
-      return Vehicle.fromJson(response);
-    } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao criar veículo: ${e.message}');
-    } catch (e) {
-      throw DatabaseException('Erro inesperado ao criar veículo');
-    }
-  }
-
-  // Get driver's vehicles
-  Future<List<Vehicle>> getDriverVehicles(String driverId) async {
-    try {
-      final response = await _supabase
-          .from('vehicles')
-          .select()
-          .eq('driver_id', driverId)
-          .order('created_at', ascending: false);
-
-      return response.map((vehicle) => Vehicle.fromJson(vehicle)).toList();
-    } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar veículos: ${e.message}');
-    } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar veículos');
+      throw DatabaseException(
+          'Erro inesperado ao atualizar motorista. Por favor, tente novamente mais tarde.');
     }
   }
 
   // Create driver offer
   Future<DriverOffer> createOffer({
     required String driverId,
-    required String tripId,
-    required double price,
-    required Duration estimatedDuration,
+    required String requestId,
+    double? driverDistanceKm,
+    int? driverEtaMinutes,
+    double? baseFare,
+    double? additionalFees,
+    double? totalFare,
+    bool isAvailable = true,
+    bool wasSelected = false,
     String? notes,
   }) async {
     try {
-      final response = await _supabase.from('driver_offers').insert({
+      final data = <String, dynamic>{
         'driver_id': driverId,
-        'trip_id': tripId,
-        'price': price,
-        'estimated_duration_minutes': estimatedDuration.inMinutes,
-        'notes': notes,
-        'status': 'pending',
-      }).select().single();
+        'request_id': requestId,
+        'is_available': isAvailable,
+        'was_selected': wasSelected,
+      };
+      if (driverDistanceKm != null)
+        data['driver_distance_km'] = driverDistanceKm;
+      if (driverEtaMinutes != null)
+        data['driver_eta_minutes'] = driverEtaMinutes;
+      if (baseFare != null) data['base_fare'] = baseFare;
+      if (additionalFees != null) data['additional_fees'] = additionalFees;
+      final computedTotal =
+          totalFare ?? ((baseFare ?? 0) + (additionalFees ?? 0));
+      data['total_fare'] = computedTotal;
+      if (notes != null) data['notes'] = notes;
+
+      final response =
+          await _supabase.from('driver_offers').insert(data).select().single();
 
       return DriverOffer.fromJson(response);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao criar oferta: ${e.message}');
+      throw DatabaseException(
+          'Erro ao criar oferta. Por favor, verifique os dados e tente novamente.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao criar oferta');
+      throw DatabaseException(
+          'Erro inesperado ao criar oferta. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -175,10 +232,7 @@ class DriverService {
     try {
       final response = await _supabase
           .from('driver_offers')
-          .select('''
-            *,
-            trip:trips(*)
-          ''')
+          .select('*')
           .eq('driver_id', driverId)
           .order('created_at', ascending: false);
 
@@ -186,7 +240,8 @@ class DriverService {
     } on PostgrestException catch (e) {
       throw DatabaseException('Erro ao buscar ofertas: ${e.message}');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar ofertas');
+      throw DatabaseException(
+          'Erro inesperado ao buscar ofertas. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -195,12 +250,10 @@ class DriverService {
     try {
       final response = await _supabase
           .from('driver_offers')
-          .select('''
-            *,
-            trip:trips(*)
-          ''')
+          .select('*')
           .eq('driver_id', driverId)
-          .eq('status', 'pending')
+          .eq('is_available', true)
+          .eq('was_selected', false)
           .order('created_at', ascending: false);
 
       return response.map((offer) => DriverOffer.fromJson(offer)).toList();
@@ -211,12 +264,32 @@ class DriverService {
     }
   }
 
-  // Update offer status
+  // Update offer status -> map to availability/selection flags
   Future<DriverOffer> updateOfferStatus(String offerId, String status) async {
     try {
+      final updates = <String, dynamic>{};
+      switch (status) {
+        case 'accepted':
+          updates['was_selected'] = true;
+          updates['is_available'] = false;
+          break;
+        case 'pending':
+          updates['was_selected'] = false;
+          updates['is_available'] = true;
+          break;
+        case 'inactive':
+        case 'cancelled':
+        case 'rejected':
+          updates['is_available'] = false;
+          break;
+        default:
+          // No-op for unknown statuses
+          break;
+      }
+
       final response = await _supabase
           .from('driver_offers')
-          .update({'status': status})
+          .update(updates)
           .eq('id', offerId)
           .select()
           .single();
@@ -234,11 +307,8 @@ class DriverService {
     try {
       final response = await _supabase
           .from('trips')
-          .select('''
-            *,
-            driver_offer:driver_offers!inner(*)
-          ''')
-          .eq('driver_offer.driver_id', driverId)
+          .select('*')
+          .eq('driver_id', driverId)
           .or('status.eq.accepted,status.eq.in_progress')
           .order('created_at', ascending: false);
 
@@ -251,60 +321,65 @@ class DriverService {
   }
 
   // Get driver's trip history
-  Future<List<Trip>> getDriverTripHistory(String driverId, {int limit = 50}) async {
+  Future<List<Trip>> getDriverTripHistory(String driverId,
+      {int limit = 50}) async {
     try {
       final response = await _supabase
           .from('trips')
-          .select('''
-            *,
-            driver_offer:driver_offers!inner(*)
-          ''')
-          .eq('driver_offer.driver_id', driverId)
+          .select('*')
+          .eq('driver_id', driverId)
           .or('status.eq.completed,status.eq.cancelled')
           .order('created_at', ascending: false)
           .limit(limit);
 
       return response.map((trip) => Trip.fromJson(trip)).toList();
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar histórico: ${e.message}');
+      throw DatabaseException(
+          'Erro ao buscar histórico. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar histórico');
+      throw DatabaseException(
+          'Erro inesperado ao buscar histórico. Por favor, tente novamente mais tarde.');
     }
   }
 
   // Update driver location
-  Future<void> updateLocation(String driverId, double latitude, double longitude) async {
+  Future<void> updateLocation(
+      String driverId, double latitude, double longitude) async {
     try {
       await _supabase.from('drivers').update({
         'current_latitude': latitude,
         'current_longitude': longitude,
-        'last_location_update': DateTime.now().toIso8601String(),
       }).eq('id', driverId);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao atualizar localização: ${e.message}');
+      throw DatabaseException(
+          'Erro ao atualizar localização. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao atualizar localização');
+      throw DatabaseException(
+          'Erro inesperado ao atualizar localização. Por favor, tente novamente mais tarde.');
     }
   }
 
-  // Update driver availability
-  Future<void> updateAvailability(String driverId, bool isAvailable) async {
+  // Update driver availability (online/offline)
+  Future<void> updateAvailability(String driverId, bool isOnline) async {
     try {
       await _supabase.from('drivers').update({
-        'is_available': isAvailable,
+        'is_online': isOnline,
       }).eq('id', driverId);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao atualizar disponibilidade: ${e.message}');
+      throw DatabaseException(
+          'Erro ao atualizar disponibilidade. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao atualizar disponibilidade');
+      throw DatabaseException(
+          'Erro inesperado ao atualizar disponibilidade. Por favor, tente novamente mais tarde.');
     }
   }
 
   // Stream driver profile updates
   Stream<Driver> streamDriver(String driverId) {
     return _supabase
-        .from('drivers:id=eq.$driverId')
+        .from('drivers')
         .stream(primaryKey: ['id'])
+        .eq('id', driverId)
         .map((data) => Driver.fromJson(data.first));
   }
 
@@ -313,12 +388,10 @@ class DriverService {
     return _supabase
         .from('trips')
         .stream(primaryKey: ['id'])
+        .eq('driver_id', driverId)
         .map((data) => data
             .where((trip) {
-              final driverOffer = trip['driver_offer'] as Map<String, dynamic>?;
-              return driverOffer != null && 
-                     driverOffer['driver_id'] == driverId &&
-                     ['accepted', 'in_progress'].contains(trip['status']);
+              return ['accepted', 'in_progress'].contains(trip['status']);
             })
             .map((trip) => Trip.fromJson(trip))
             .toList());

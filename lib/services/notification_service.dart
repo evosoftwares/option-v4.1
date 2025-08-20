@@ -24,9 +24,9 @@ class NotificationService {
         'is_read': false,
       });
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao criar notificação: ${e.message}');
+      throw DatabaseException('Erro ao criar notificação. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao criar notificação');
+      throw DatabaseException('Erro inesperado ao criar notificação. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -42,9 +42,9 @@ class NotificationService {
 
       return response.map((notif) => NotificationModel.fromJson(notif)).toList();
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar notificações: ${e.message}');
+      throw DatabaseException('Erro ao buscar notificações. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar notificações');
+      throw DatabaseException('Erro inesperado ao buscar notificações. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -59,9 +59,9 @@ class NotificationService {
 
       return response.first['count'] as int;
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar contador: ${e.message}');
+      throw DatabaseException('Erro ao buscar contador. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar contador');
+      throw DatabaseException('Erro inesperado ao buscar contador. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -73,9 +73,9 @@ class NotificationService {
           .update({'is_read': true})
           .eq('id', notificationId);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao marcar como lida: ${e.message}');
+      throw DatabaseException('Erro ao marcar como lida. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao marcar como lida');
+      throw DatabaseException('Erro inesperado ao marcar como lida. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -88,9 +88,9 @@ class NotificationService {
           .eq('user_id', userId)
           .eq('is_read', false);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao marcar todas como lidas: ${e.message}');
+      throw DatabaseException('Erro ao marcar todas como lidas. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao marcar todas como lidas');
+      throw DatabaseException('Erro inesperado ao marcar todas como lidas. Por favor, tente novamente mais tarde.');
     }
   }
 

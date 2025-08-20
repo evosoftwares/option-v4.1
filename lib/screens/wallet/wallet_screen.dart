@@ -192,7 +192,7 @@ class _DriverWalletContentState extends State<_DriverWalletContent> {
           content: TextField(
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Valor (R$)'),
+            decoration: const InputDecoration(labelText: 'Valor (R\$)'),
           ),
           actions: [
             TextButton(
@@ -225,7 +225,7 @@ class _DriverWalletContentState extends State<_DriverWalletContent> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao solicitar saque: $e', style: AppTypography.bodyMedium.copyWith(color: cs.onInverseSurface))),
+            SnackBar(content: Text('Erro ao solicitar saque. Por favor, tente novamente mais tarde.', style: AppTypography.bodyMedium.copyWith(color: cs.onInverseSurface))),
           );
         }
       }
@@ -255,14 +255,14 @@ class _BalanceCard extends StatelessWidget {
         children: [
           Text('Saldo disponível', style: AppTypography.bodyMedium.copyWith(color: cs.onPrimaryContainer)),
           const SizedBox(height: AppSpacing.xs),
-          Text('R$ $available', style: AppTypography.displaySmall.copyWith(color: cs.onPrimaryContainer)),
+          Text('R\$ $available', style: AppTypography.displaySmall.copyWith(color: cs.onPrimaryContainer)),
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
               Expanded(
                 child: _StatChip(
                   label: 'Pendente',
-                  value: 'R$ $pending',
+                  value: 'R\$ $pending',
                   background: cs.secondaryContainer,
                   foreground: cs.onSecondaryContainer,
                 ),
@@ -271,7 +271,7 @@ class _BalanceCard extends StatelessWidget {
               Expanded(
                 child: _StatChip(
                   label: 'Total ganho',
-                  value: 'R$ $total',
+                  value: 'R\$ $total',
                   background: cs.tertiaryContainer,
                   foreground: cs.onTertiaryContainer,
                 ),
@@ -361,7 +361,7 @@ class _TransactionTile extends StatelessWidget {
             ),
           ),
           Text(
-            (isCredit ? '+ R$ ' : '- R$ ') + amount,
+            (isCredit ? '+ R\$ ' : '- R\$ ') + amount,
             style: AppTypography.bodyMedium.copyWith(color: cs.onSurface, fontWeight: FontWeight.w600),
           ),
         ],

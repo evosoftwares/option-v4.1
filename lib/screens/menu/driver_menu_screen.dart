@@ -61,7 +61,13 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               _MenuTile(
                 icon: Icons.person_outline,
                 label: 'Perfil',
-                onTap: () => _showComingSoon('Perfil'),
+                onTap: () => Navigator.pushNamed(context, '/profile_edit').then((result) {
+                  if (result == true) {
+                    setState(() {
+                      _userFuture = UserService.getCurrentUser();
+                    });
+                  }
+                }),
               ),
               _MenuTile(
                 icon: Icons.directions_car_outlined,

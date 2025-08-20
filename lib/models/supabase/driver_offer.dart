@@ -1,13 +1,12 @@
 class DriverOffer {
   final String id;
-  final String? tripId;
+  final String? tripId; // request_id (fallback trip_id)
   final String? driverId;
-  final double? driverEtaMinutes;
+  final double? driverDistanceKm;
+  final int? driverEtaMinutes;
   final double? baseFare;
   final double? additionalFees;
   final double? totalFare;
-  final double? distanceComponent;
-  final double? timeComponent;
   final bool? isAvailable;
   final bool? wasSelected;
   final String? notes;
@@ -17,12 +16,11 @@ class DriverOffer {
     required this.id,
     this.tripId,
     this.driverId,
+    this.driverDistanceKm,
     this.driverEtaMinutes,
     this.baseFare,
     this.additionalFees,
     this.totalFare,
-    this.distanceComponent,
-    this.timeComponent,
     this.isAvailable,
     this.wasSelected,
     this.notes,
@@ -32,32 +30,32 @@ class DriverOffer {
   factory DriverOffer.fromJson(Map<String, dynamic> json) {
     return DriverOffer(
       id: json['id'] as String,
-      tripId: json['trip_id'] as String?,
+      tripId: (json['request_id'] as String?) ?? (json['trip_id'] as String?),
       driverId: json['driver_id'] as String?,
-      driverEtaMinutes: (json['driver_eta_minutes'] as num?)?.toDouble(),
+      driverDistanceKm: (json['driver_distance_km'] as num?)?.toDouble(),
+      driverEtaMinutes: json['driver_eta_minutes'] as int?,
       baseFare: (json['base_fare'] as num?)?.toDouble(),
       additionalFees: (json['additional_fees'] as num?)?.toDouble(),
       totalFare: (json['total_fare'] as num?)?.toDouble(),
-      distanceComponent: (json['distance_component'] as num?)?.toDouble(),
-      timeComponent: (json['time_component'] as num?)?.toDouble(),
       isAvailable: json['is_available'] as bool?,
       wasSelected: json['was_selected'] as bool?,
       notes: json['notes'] as String?,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'trip_id': tripId,
+      'request_id': tripId,
       'driver_id': driverId,
+      'driver_distance_km': driverDistanceKm,
       'driver_eta_minutes': driverEtaMinutes,
       'base_fare': baseFare,
       'additional_fees': additionalFees,
       'total_fare': totalFare,
-      'distance_component': distanceComponent,
-      'time_component': timeComponent,
       'is_available': isAvailable,
       'was_selected': wasSelected,
       'notes': notes,
@@ -69,12 +67,11 @@ class DriverOffer {
     String? id,
     String? tripId,
     String? driverId,
-    double? driverEtaMinutes,
+    double? driverDistanceKm,
+    int? driverEtaMinutes,
     double? baseFare,
     double? additionalFees,
     double? totalFare,
-    double? distanceComponent,
-    double? timeComponent,
     bool? isAvailable,
     bool? wasSelected,
     String? notes,
@@ -84,12 +81,11 @@ class DriverOffer {
       id: id ?? this.id,
       tripId: tripId ?? this.tripId,
       driverId: driverId ?? this.driverId,
+      driverDistanceKm: driverDistanceKm ?? this.driverDistanceKm,
       driverEtaMinutes: driverEtaMinutes ?? this.driverEtaMinutes,
       baseFare: baseFare ?? this.baseFare,
       additionalFees: additionalFees ?? this.additionalFees,
       totalFare: totalFare ?? this.totalFare,
-      distanceComponent: distanceComponent ?? this.distanceComponent,
-      timeComponent: timeComponent ?? this.timeComponent,
       isAvailable: isAvailable ?? this.isAvailable,
       wasSelected: wasSelected ?? this.wasSelected,
       notes: notes ?? this.notes,
