@@ -1,19 +1,4 @@
 class PassengerRequest {
-  final String id;
-  final String passengerId;
-  final String originAddress;
-  final double originLat;
-  final double originLng;
-  final String destinationAddress;
-  final double destinationLat;
-  final double destinationLng;
-  final DateTime? scheduledTime;
-  final double maxPrice;
-  final String paymentMethod;
-  final String? notes;
-  final String status;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   PassengerRequest({
     required this.id,
@@ -54,9 +39,23 @@ class PassengerRequest {
       updatedAt: DateTime.parse(json['updated_at']),
     );
   }
+  final String id;
+  final String passengerId;
+  final String originAddress;
+  final double originLat;
+  final double originLng;
+  final String destinationAddress;
+  final double destinationLat;
+  final double destinationLng;
+  final DateTime? scheduledTime;
+  final double maxPrice;
+  final String paymentMethod;
+  final String? notes;
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'passenger_id': passengerId,
       'origin_address': originAddress,
@@ -73,7 +72,6 @@ class PassengerRequest {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
 
   PassengerRequest copyWith({
     String? id,
@@ -91,8 +89,7 @@ class PassengerRequest {
     String? status,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return PassengerRequest(
+  }) => PassengerRequest(
       id: id ?? this.id,
       passengerId: passengerId ?? this.passengerId,
       originAddress: originAddress ?? this.originAddress,
@@ -109,5 +106,4 @@ class PassengerRequest {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 }

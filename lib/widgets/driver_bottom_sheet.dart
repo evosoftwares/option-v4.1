@@ -4,9 +4,6 @@ import '../models/driver_status.dart';
 import '../controllers/driver_status_controller.dart';
 
 class DriverBottomSheet extends StatefulWidget {
-  final DriverStatusController statusController;
-  final double minHeight;
-  final double maxHeight;
 
   const DriverBottomSheet({
     super.key,
@@ -14,6 +11,9 @@ class DriverBottomSheet extends StatefulWidget {
     this.minHeight = 140,
     this.maxHeight = 300,
   });
+  final DriverStatusController statusController;
+  final double minHeight;
+  final double maxHeight;
 
   @override
   State<DriverBottomSheet> createState() => _DriverBottomSheetState();
@@ -43,20 +43,20 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
     );
 
     _pulseAnimation = Tween<double>(
-      begin: 1.0,
+      begin: 1,
       end: 1.1,
     ).animate(CurvedAnimation(
       parent: _pulseController,
       curve: Curves.easeInOut,
-    ));
+    ),);
 
     _scaleAnimation = Tween<double>(
-      begin: 1.0,
+      begin: 1,
       end: 0.95,
     ).animate(CurvedAnimation(
       parent: _scaleController,
       curve: Curves.easeInOut,
-    ));
+    ),);
 
     widget.statusController.addListener(_onStatusChanged);
   }
@@ -82,7 +82,7 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
     setState(() {});
   }
 
-  void _onGoButtonPressed() async {
+  Future<void> _onGoButtonPressed() async {
     HapticFeedback.mediumImpact();
     
     _scaleController.forward().then((_) {
@@ -108,7 +108,7 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       height: _isExpanded ? widget.maxHeight : widget.minHeight,
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -236,7 +236,7 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant,
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -298,7 +298,7 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
     String buttonText;
 
     if (status.isTransitioning) {
-      buttonColor = colorScheme.surfaceVariant;
+      buttonColor = colorScheme.surfaceContainerHighest;
       textColor = colorScheme.onSurfaceVariant;
       buttonText = '...';
     } else if (status.isOnline) {
@@ -339,23 +339,19 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
     if (status.isOnline) {
       button = AnimatedBuilder(
         animation: _pulseAnimation,
-        builder: (context, child) {
-          return Transform.scale(
+        builder: (context, child) => Transform.scale(
             scale: _pulseAnimation.value,
             child: button,
-          );
-        },
+          ),
       );
     }
 
     button = AnimatedBuilder(
       animation: _scaleAnimation,
-      builder: (context, child) {
-        return Transform.scale(
+      builder: (context, child) => Transform.scale(
           scale: _scaleAnimation.value,
           child: button,
-        );
-      },
+        ),
     );
 
     return GestureDetector(

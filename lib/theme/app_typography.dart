@@ -167,8 +167,8 @@ abstract class AppTypography {
   
   // Get text theme with colors
   static TextTheme getTextTheme({required bool isDark}) {
-    final Color textColor = isDark ? AppColors.darkOnSurface : AppColors.lightOnSurface;
-    final Color secondaryTextColor = isDark ? AppColors.darkOnSurfaceVariant : AppColors.lightOnSurfaceVariant;
+    final textColor = isDark ? AppColors.darkOnSurface : AppColors.lightOnSurface;
+    final secondaryTextColor = isDark ? AppColors.darkOnSurfaceVariant : AppColors.lightOnSurfaceVariant;
     
     return TextTheme(
       displayLarge: displayLarge.copyWith(color: textColor),

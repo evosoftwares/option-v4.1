@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uber_clone/services/user_service.dart';
-import 'package:uber_clone/models/user.dart' as app;
-import 'package:uber_clone/theme/app_spacing.dart';
-import 'package:uber_clone/utils/phone_mask.dart';
-import 'package:uber_clone/utils/phone_validator.dart';
+import '../../services/user_service.dart';
+import '../../models/user.dart' as app;
+import '../../theme/app_spacing.dart';
+import '../../utils/phone_mask.dart';
+import '../../utils/phone_validator.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key});
@@ -62,7 +62,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao carregar dados. Por favor, tente novamente mais tarde.'),
+          content: const Text('Erro ao carregar dados. Por favor, tente novamente mais tarde.'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -103,7 +103,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao salvar. Por favor, verifique os dados e tente novamente.'),
+          content: const Text('Erro ao salvar. Por favor, verifique os dados e tente novamente.'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -127,25 +127,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Editar perfil'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: FilledButton.icon(
-              onPressed: _saving ? null : _onSave,
-              icon: _saving
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: colorScheme.onPrimary,
-                      ),
-                    )
-                  : const Icon(Icons.save),
-              label: const Text('Salvar'),
-            ),
-          )
-        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -263,10 +244,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 }
 
 class _TypeChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final String? groupValue;
-  final ValueChanged<String> onSelected;
 
   const _TypeChip({
     required this.label,
@@ -274,11 +251,15 @@ class _TypeChip extends StatelessWidget {
     required this.groupValue,
     required this.onSelected,
   });
+  final String label;
+  final String value;
+  final String? groupValue;
+  final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final bool selected = value == groupValue;
+    final selected = value == groupValue;
 
     return ChoiceChip(
       label: Text(label),

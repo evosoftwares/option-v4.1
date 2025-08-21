@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 
 class StepperTransition extends StatelessWidget {
-  final Widget child;
-  final Animation<double> animation;
 
   const StepperTransition({
     super.key,
     required this.child,
     required this.animation,
   });
+  final Widget child;
+  final Animation<double> animation;
 
   @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
+  Widget build(BuildContext context) => SlideTransition(
       position: Tween<Offset>(
         begin: const Offset(1.0, 0.0),
         end: Offset.zero,
@@ -25,11 +24,9 @@ class StepperTransition extends StatelessWidget {
         child: child,
       ),
     );
-  }
 }
 
 class StepperPageRoute extends PageRouteBuilder {
-  final Widget child;
 
   StepperPageRoute({required this.child})
       : super(
@@ -42,4 +39,5 @@ class StepperPageRoute extends PageRouteBuilder {
           },
           transitionDuration: const Duration(milliseconds: 300),
         );
+  final Widget child;
 }

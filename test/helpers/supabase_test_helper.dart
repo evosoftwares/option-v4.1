@@ -1,5 +1,7 @@
-import 'package:supabase/supabase.dart';
 import 'dart:io';
+
+import 'package:supabase/supabase.dart';
+
 import 'test_constants.dart';
 
 class SupabaseTestHelper {

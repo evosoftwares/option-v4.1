@@ -28,15 +28,11 @@ class AppTheme {
     BuildContext context, {
     required Color lightColor,
     required Color darkColor,
-  }) {
-    return isDarkMode(context) ? darkColor : lightColor;
-  }
+  }) => isDarkMode(context) ? darkColor : lightColor;
   
   static TextStyle getAdaptiveTextStyle(
     BuildContext context, {
     required TextStyle lightStyle,
     required TextStyle darkStyle,
-  }) {
-    return isDarkMode(context) ? darkStyle : lightStyle;
-  }
+  }) => isDarkMode(context) ? darkStyle : lightStyle;
 }

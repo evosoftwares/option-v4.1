@@ -17,7 +17,7 @@ class VerticalBrandLogo extends StatelessWidget {
             border: Border.all(color: colorScheme.outlineVariant),
           ),
           child: Image.asset(
-            'assets/images/Logotipo Vertical Color.png',
+            'assets/images/Logotipo Vertical Color.webp',
             fit: BoxFit.contain,
             height: 80,
           ),
@@ -47,7 +47,7 @@ class LogoAppBar extends StatelessWidget implements PreferredSizeWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             child: Image.asset(
-              'assets/images/Logotipo Horizontal Color.png',
+              'assets/images/Logotipo Horizontal Color.webp',
               height: 28,
               fit: BoxFit.contain,
             ),

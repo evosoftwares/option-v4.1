@@ -1,14 +1,4 @@
 class User {
-  final String id;
-  final String userId; // UUID do usuário de autenticação
-  final String email;
-  final String fullName;
-  final String? phone;
-  final String? photoUrl;
-  final String userType; // 'passenger' or 'driver'
-  final String status; // 'active', 'inactive', 'suspended'
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   const User({
     required this.id,
@@ -38,10 +28,19 @@ class User {
       updatedAt: DateTime.parse(map['updated_at'] as String),
     );
   }
+  final String id;
+  final String userId; // UUID do usuário de autenticação
+  final String email;
+  final String fullName;
+  final String? phone;
+  final String? photoUrl;
+  final String userType; // 'passenger' or 'driver'
+  final String status; // 'active', 'inactive', 'suspended'
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   /// Converte o User para um Map (para enviar ao Supabase)
-  Map<String, dynamic> toMap() {
-    return {
+  Map<String, dynamic> toMap() => {
       'id': id,
       'user_id': userId,
       'email': email,
@@ -53,11 +52,9 @@ class User {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
 
   /// Converte para Map apenas com campos necessários para inserção
-  Map<String, dynamic> toInsertMap() {
-    return {
+  Map<String, dynamic> toInsertMap() => {
       'id': id,
       'user_id': userId,
       'email': email,
@@ -67,7 +64,6 @@ class User {
       'user_type': userType,
       'status': status,
     };
-  }
 
   /// Cria uma cópia do User com campos atualizados
   User copyWith({
@@ -81,8 +77,7 @@ class User {
     String? status,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return User(
+  }) => User(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       email: email ?? this.email,
@@ -94,12 +89,9 @@ class User {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 
   @override
-  String toString() {
-    return 'User(id: $id, email: $email, fullName: $fullName, userType: $userType, status: $status)';
-  }
+  String toString() => 'User(id: $id, email: $email, fullName: $fullName, userType: $userType, status: $status)';
 
   @override
   bool operator ==(Object other) {

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase/supabase.dart';
-import 'package:uber_clone/services/driver_service.dart';
-import 'package:uber_clone/services/trip_service.dart';
-import 'package:uber_clone/models/supabase/driver_offer.dart';
+import 'package:option/services/driver_service.dart';
+import 'package:option/services/trip_service.dart';
+import 'package:option/models/supabase/driver_offer.dart';
 import '../../helpers/supabase_test_helper.dart';
 
 void main() {
@@ -45,7 +45,7 @@ void main() {
         numberOfStops: 0,
         estimatedDistanceKm: 10.5,
         estimatedDurationMinutes: 25,
-        estimatedFare: 25.0,
+        estimatedFare: 25,
       );
 
       // Act: driver creates an offer
@@ -54,10 +54,8 @@ void main() {
         requestId: tripRequest.id,
         driverDistanceKm: 1.2,
         driverEtaMinutes: 3,
-        baseFare: 20.0,
-        additionalFees: 5.0,
-        wasSelected: false,
-        isAvailable: true,
+        baseFare: 20,
+        additionalFees: 5,
         notes: 'Chego rápido',
       );
 

@@ -1,17 +1,4 @@
 class PromoCode {
-  final String id;
-  final String code;
-  final String description;
-  final double discountAmount;
-  final String discountType;
-  final double? minimumFare;
-  final int? maxUses;
-  final int? maxUsesPerUser;
-  final DateTime? validFrom;
-  final DateTime? validUntil;
-  final bool isActive;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   PromoCode({
     required this.id,
@@ -50,9 +37,21 @@ class PromoCode {
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
   }
+  final String id;
+  final String code;
+  final String description;
+  final double discountAmount;
+  final String discountType;
+  final double? minimumFare;
+  final int? maxUses;
+  final int? maxUsesPerUser;
+  final DateTime? validFrom;
+  final DateTime? validUntil;
+  final bool isActive;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'code': code,
       'description': description,
@@ -67,7 +66,6 @@ class PromoCode {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
 
   PromoCode copyWith({
     String? id,
@@ -83,8 +81,7 @@ class PromoCode {
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return PromoCode(
+  }) => PromoCode(
       id: id ?? this.id,
       code: code ?? this.code,
       description: description ?? this.description,
@@ -99,7 +96,6 @@ class PromoCode {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 
   // Helper methods
   bool get isValid {
@@ -118,6 +114,6 @@ class PromoCode {
     } else if (discountType == 'fixed') {
       return discountAmount;
     }
-    return 0.0;
+    return 0;
   }
 }

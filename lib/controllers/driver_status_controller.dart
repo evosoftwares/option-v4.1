@@ -27,7 +27,7 @@ class DriverStatusController extends ChangeNotifier {
     _updateStatus(_status.copyWith(
       status: DriverOnlineStatus.transitioning,
       lastStatusChange: DateTime.now(),
-    ));
+    ),);
 
     await Future.delayed(const Duration(seconds: 2));
 
@@ -43,7 +43,7 @@ class DriverStatusController extends ChangeNotifier {
     _updateStatus(_status.copyWith(
       status: DriverOnlineStatus.online,
       lastStatusChange: DateTime.now(),
-    ));
+    ),);
 
     _startOnlineTimer();
     _startEarningsSimulation();
@@ -57,7 +57,7 @@ class DriverStatusController extends ChangeNotifier {
     _updateStatus(_status.copyWith(
       status: DriverOnlineStatus.offline,
       lastStatusChange: DateTime.now(),
-    ));
+    ),);
   }
 
   void _startOnlineTimer() {
@@ -79,7 +79,7 @@ class DriverStatusController extends ChangeNotifier {
       _updateStatus(_status.copyWith(
         todayEarnings: newEarnings,
         tripsCompleted: newTrips,
-      ));
+      ),);
     });
   }
 

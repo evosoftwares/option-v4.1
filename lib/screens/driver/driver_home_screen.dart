@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../config/app_config.dart';
 import '../../controllers/driver_status_controller.dart';
 import '../../services/location_service.dart';
 import '../../widgets/driver_earnings_widget.dart';
@@ -32,7 +33,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   void initState() {
     super.initState();
     _locationService = LocationService(
-      apiKey: const String.fromEnvironment('GOOGLE_MAPS_API_KEY', defaultValue: ''),
+      apiKey: AppConfig.googleMapsApiKey,
     );
     _statusController = DriverStatusController();
     _initLocation();
@@ -54,7 +55,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       final latLng = LatLng((current['lat'] as num).toDouble(), (current['lng'] as num).toDouble());
       controller.animateCamera(CameraUpdate.newCameraPosition(
         CameraPosition(target: latLng, zoom: 15),
-      ));
+      ),);
       _startPositionStream();
     }
   }
@@ -68,7 +69,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _positionSub?.cancel();
     _positionSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.best,
         distanceFilter: 10,
       ),
     ).listen((pos) async {
@@ -83,7 +83,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           position: here,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
           infoWindow: const InfoWindow(title: 'Sua localização'),
-        ));
+        ),);
       });
 
       if (_statusController.isOnline) {
@@ -175,7 +175,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             child: GoogleMap(
               onMapCreated: _onMapCreated,
               initialCameraPosition: _initialPos,
-              myLocationEnabled: false,
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
               mapToolbarEnabled: false,
@@ -187,12 +186,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             left: 16,
             child: ListenableBuilder(
               listenable: _statusController,
-              builder: (context, _) {
-                return DriverEarningsWidget(
+              builder: (context, _) => DriverEarningsWidget(
                   driverStatus: _statusController.status,
                   onTap: _showEarningsDetails,
-                );
-              },
+                ),
             ),
           ),
           Positioned(
@@ -212,8 +209,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             bottom: 0,
             child: DriverBottomSheet(
               statusController: _statusController,
-              minHeight: 140,
-              maxHeight: 300,
             ),
           ),
         ],

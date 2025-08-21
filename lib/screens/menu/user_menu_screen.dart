@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:uber_clone/theme/app_spacing.dart';
-import 'package:uber_clone/theme/app_typography.dart';
-import 'package:uber_clone/services/user_service.dart';
-import 'package:uber_clone/models/user.dart' as app_user;
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
+import '../../services/user_service.dart';
+import '../../models/user.dart' as app_user;
 
 class UserMenuScreen extends StatefulWidget {
   const UserMenuScreen({super.key});
@@ -79,7 +79,7 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
               _MenuTile(
                 icon: Icons.place_outlined,
                 label: 'Locais salvos',
-                onTap: () => _showComingSoon('Locais salvos'),
+                onTap: () => Navigator.pushNamed(context, '/saved_places'),
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
@@ -87,7 +87,7 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
               _MenuTile(
                 icon: Icons.history,
                 label: 'Histórico de viagens',
-                onTap: () => _showComingSoon('Histórico de viagens'),
+                onTap: () => Navigator.pushNamed(context, '/trip_history'),
               ),
               _MenuTile(
                 icon: Icons.card_giftcard_outlined,
@@ -100,7 +100,7 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
               _MenuTile(
                 icon: Icons.notifications_none,
                 label: 'Notificações',
-                onTap: () => _showComingSoon('Notificações'),
+                onTap: () => Navigator.pushNamed(context, '/notifications'),
               ),
               _MenuTile(
                 icon: Icons.security_outlined,
@@ -133,13 +133,13 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
 }
 
 class _HeaderCard extends StatelessWidget {
-  final String name;
-  final String email;
 
   const _HeaderCard({
     required this.name,
     required this.email,
   });
+  final String name;
+  final String email;
 
   @override
   Widget build(BuildContext context) {
@@ -151,10 +151,9 @@ class _HeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        border: Border.all(color: cs.outlineVariant, width: AppSpacing.borderThin),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           CircleAvatar(
             radius: AppSpacing.avatarMd / 2,
@@ -179,8 +178,8 @@ class _HeaderCard extends StatelessWidget {
 }
 
 class _SectionTitle extends StatelessWidget {
-  final String title;
   const _SectionTitle({required this.title});
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -196,16 +195,16 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _MenuTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Widget? trailing;
   const _MenuTile({
     required this.icon,
     required this.label,
     required this.onTap,
     this.trailing,
   });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -221,7 +220,7 @@ class _MenuTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: cs.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          border: Border.all(color: cs.outlineVariant, width: AppSpacing.borderThin),
+          border: Border.all(color: cs.outlineVariant),
         ),
         margin: const EdgeInsets.only(bottom: AppSpacing.itemSpacing),
         child: Row(

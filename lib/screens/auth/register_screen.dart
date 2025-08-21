@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uber_clone/widgets/logo_branding.dart';
+import '../../widgets/logo_branding.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -35,15 +35,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isSubmitting = true);
 
     try {
+      print('📝 Iniciando registro...');
+      print('📧 Email: ${_emailController.text.trim()}');
+      print('👤 Nome: ${_nameController.text.trim()}');
+      
       final supabase = Supabase.instance.client;
       final res = await supabase.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
+      print('🔐 Resposta do signUp:');
+      print('  - Session: ${res.session != null ? "✅ Criada" : "❌ Null"}');
+      print('  - User: ${res.user?.id ?? "❌ Null"}');
+
       if (!mounted) return;
 
       if (res.session != null) {
+        print('✅ Sessão criada diretamente - navegando para seleção de tipo');
         // Sessão criada diretamente (sem confirmação por e-mail)
         // Não criar app_users aqui. Levar usuário para a seleção de tipo.
         Navigator.of(context).pushReplacementNamed(
@@ -54,6 +63,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           },
         );
       } else {
+        print('📧 Confirmação por e-mail necessária');
         // Confirmação por e-mail necessária
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Verifique seu e-mail para confirmar a conta.')),
@@ -61,14 +71,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         Navigator.of(context).pushReplacementNamed('/login');
       }
     } on AuthException catch (e) {
+      print('❌ AuthException: ${e.message}');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
+        SnackBar(content: Text('Erro de autenticação: ${e.message}')),
       );
     } catch (e) {
+      print('❌ Erro geral no registro: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao criar conta. Por favor, verifique os dados e tente novamente.')),
+        SnackBar(content: Text('Erro ao criar conta: ${e.toString()}')),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -81,7 +93,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: null,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

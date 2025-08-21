@@ -7,8 +7,7 @@ class TestStepper extends StatelessWidget {
   const TestStepper({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
+  Widget build(BuildContext context) => ChangeNotifierProvider<StepperController>(
       create: (_) => StepperController(),
       child: MaterialApp(
         title: 'Teste Stepper',
@@ -18,7 +17,6 @@ class TestStepper extends StatelessWidget {
         home: const TestStepperScreen(),
       ),
     );
-  }
 }
 
 class TestStepperScreen extends StatelessWidget {

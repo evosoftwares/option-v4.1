@@ -53,9 +53,7 @@ class StepperController extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool hasProfilePhoto() {
-    return _profilePhoto != null;
-  }
+  bool hasProfilePhoto() => _profilePhoto != null;
 
   void nextStep() {
     if (_currentStep < 2) {
@@ -135,26 +133,61 @@ class StepperController extends ChangeNotifier {
   Future<bool> completeRegistration() async {
     // Cria o app_user vinculado ao auth somente ao final do stepper 3
     try {
+      print('🔄 Iniciando completeRegistration...');
+      
       final authUser = Supabase.instance.client.auth.currentUser;
       if (authUser == null) {
+        print('❌ Erro: Usuário não autenticado');
         throw Exception('Usuário não autenticado');
       }
+      
+      print('✅ Usuário autenticado: ${authUser.id}');
+      print('📧 Email: ${authUser.email}');
+
+      // Validar dados obrigatórios
+      final email = authUser.email ?? _email;
+      if (email == null || email.isEmpty) {
+        print('❌ Erro: Email não encontrado');
+        throw Exception('Email é obrigatório para completar o cadastro');
+      }
+
+      if (_fullName == null || _fullName!.trim().isEmpty) {
+        print('❌ Erro: Nome completo não encontrado');
+        throw Exception('Nome completo é obrigatório para completar o cadastro');
+      }
+
+      if (_userType == null || _userType!.isEmpty) {
+        print('❌ Erro: Tipo de usuário não selecionado');
+        throw Exception('Tipo de usuário é obrigatório para completar o cadastro');
+      }
+
+      print('📋 Dados validados:');
+      print('  - Email: $email');
+      print('  - Nome: $_fullName');
+      print('  - Telefone: $_phone');
+      print('  - Tipo: $_userType');
 
       final exists = await UserService.userExists(authUser.id);
+      print('🔍 Usuário já existe: $exists');
+      
       if (!exists) {
+        print('🆕 Criando novo usuário...');
         // Criar app_user com dados coletados no stepper
         await UserService.createUser(
           authUserId: authUser.id,
-          email: authUser.email ?? (_email ?? ''),
-          fullName: _fullName ?? '',
-          phone: _phone,
-          photoUrl: null, // Upload da foto será implementado depois
-          userType: _userType ?? 'passenger',
+          email: email,
+          fullName: _fullName!.trim(),
+          phone: _phone?.trim(),
+          userType: _userType!,
         );
+        print('✅ Usuário criado com sucesso!');
+      } else {
+        print('ℹ️ Usuário já existe, pulando criação');
       }
 
       return true;
     } catch (e) {
+      print('❌ Erro ao completar registro: $e');
       rethrow;
     }
   }
@@ -176,9 +209,10 @@ class StepperController extends ChangeNotifier {
   }
 
   void updatePhotoUrl(String? photoUrl) {
-    if (photoUrl != null) {
-      _profilePhoto = File(photoUrl);
-      notifyListeners();
-    }
+    // Não podemos criar um File a partir de uma URL
+    // Este método deve ser usado apenas para notificar que a URL da foto foi atualizada
+    // O File da foto deve ser definido através do setProfilePhoto()
+    print('📸 Photo URL atualizada: $photoUrl');
+    notifyListeners();
   }
 }

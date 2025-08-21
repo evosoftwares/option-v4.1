@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uber_clone/controllers/stepper_controller.dart';
-import 'package:uber_clone/screens/stepper/step1_phone_screen.dart';
-import 'package:uber_clone/screens/stepper/step2_photo_screen.dart';
-import 'package:uber_clone/screens/stepper/step3_locations_screen.dart';
+import '../../controllers/stepper_controller.dart';
+import 'step1_phone_screen.dart';
+import 'step2_photo_screen.dart';
+import 'step3_locations_screen.dart';
 
 class StepperScreen extends StatefulWidget {
   const StepperScreen({super.key});
@@ -60,10 +60,9 @@ class _StepperScreenState extends State<StepperScreen> {
           children: [
             // Indicador de progresso
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Consumer<StepperController>(
-                builder: (context, controller, child) {
-                  return Row(
+                builder: (context, controller, child) => Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(3, (index) {
                       return Container(
@@ -78,8 +77,7 @@ class _StepperScreenState extends State<StepperScreen> {
                         ),
                       );
                     }),
-                  );
-                },
+                  ),
               ),
             ),
             

@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import '../../services/location_service.dart';
 
 class PlaceSearchScreen extends StatefulWidget {
-  final LocationService locationService;
 
   const PlaceSearchScreen({
     super.key,
     required this.locationService,
   });
+  final LocationService locationService;
 
   @override
   State<PlaceSearchScreen> createState() => _PlaceSearchScreenState();
@@ -30,7 +30,7 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
     super.dispose();
   }
 
-  void _onSearchChanged() async {
+  Future<void> _onSearchChanged() async {
     final query = _searchController.text;
     if (query.length < 3) {
       setState(() {
@@ -71,7 +71,7 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -88,7 +88,7 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 filled: true,
-                fillColor: colorScheme.surfaceVariant,
+                fillColor: colorScheme.surfaceContainerHighest,
               ),
               autofocus: true,
             ),

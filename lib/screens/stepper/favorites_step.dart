@@ -3,9 +3,6 @@ import '../../models/favorite_location.dart';
 import '../place_picker_screen.dart';
 
 class FavoritesStep extends StatefulWidget {
-  final List<FavoriteLocation> initialFavorites;
-  final Function(List<FavoriteLocation>) onSave;
-  final VoidCallback onNext;
 
   const FavoritesStep({
     super.key,
@@ -13,6 +10,9 @@ class FavoritesStep extends StatefulWidget {
     required this.onSave,
     required this.onNext,
   });
+  final List<FavoriteLocation> initialFavorites;
+  final Function(List<FavoriteLocation>) onSave;
+  final VoidCallback onNext;
 
   @override
   State<FavoritesStep> createState() => _FavoritesStepState();
@@ -38,11 +38,13 @@ class _FavoritesStepState extends State<FavoritesStep> {
     widget.onNext();
   }
 
-  void _addFavoritePlace() async {
+  Future<void> _addFavoritePlace() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const PlacePickerScreen(),
+        builder: (context) => const PlacePickerScreen(
+          isForFavorites: true,
+        ),
       ),
     );
 
@@ -50,7 +52,7 @@ class _FavoritesStepState extends State<FavoritesStep> {
       setState(() {
         final exists = _favoritePlaces.any((f) =>
             (f.placeId != null && f.placeId == result.placeId) ||
-            (f.latitude == result.latitude && f.longitude == result.longitude));
+            (f.latitude == result.latitude && f.longitude == result.longitude),);
         if (!exists) {
           _favoritePlaces.add(result);
         }
@@ -70,7 +72,7 @@ class _FavoritesStepState extends State<FavoritesStep> {
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -135,7 +137,7 @@ class _FavoritesStepState extends State<FavoritesStep> {
                     itemBuilder: (context, index) {
                       final loc = _favoritePlaces[index];
                       return Card(
-                        color: colorScheme.surfaceVariant,
+                        color: colorScheme.surfaceContainerHighest,
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
                           leading: Icon(

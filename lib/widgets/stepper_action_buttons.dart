@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 
 class StepperActionButtons extends StatelessWidget {
-  final VoidCallback? onBack;
-  final VoidCallback onNext;
-  final String nextLabel;
-  final String? backLabel;
-  final bool isLoading;
-  final bool canSkip;
 
   const StepperActionButtons({
     super.key,
@@ -17,13 +11,19 @@ class StepperActionButtons extends StatelessWidget {
     this.isLoading = false,
     this.canSkip = false,
   });
+  final VoidCallback? onBack;
+  final VoidCallback onNext;
+  final String nextLabel;
+  final String? backLabel;
+  final bool isLoading;
+  final bool canSkip;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
           if (onBack != null) ...[

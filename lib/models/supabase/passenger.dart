@@ -1,10 +1,4 @@
 class Passenger {
-  final String id;
-  final String userId;
-  final double rating;
-  final int totalTrips;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   Passenger({
     required this.id,
@@ -25,9 +19,14 @@ class Passenger {
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
   }
+  final String id;
+  final String userId;
+  final double rating;
+  final int totalTrips;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'user_id': userId,
       'rating': rating,
@@ -35,7 +34,6 @@ class Passenger {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
 
   Passenger copyWith({
     String? id,
@@ -44,8 +42,7 @@ class Passenger {
     int? totalTrips,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return Passenger(
+  }) => Passenger(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       rating: rating ?? this.rating,
@@ -53,5 +50,4 @@ class Passenger {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 }

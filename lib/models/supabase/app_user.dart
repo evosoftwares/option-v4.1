@@ -1,12 +1,4 @@
 class AppUser {
-  final String id;
-  final String userId;
-  final String? phone;
-  final String userType;
-  final bool isActive;
-  final bool isVerified;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   AppUser({
     required this.id,
@@ -31,9 +23,16 @@ class AppUser {
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
   }
+  final String id;
+  final String userId;
+  final String? phone;
+  final String userType;
+  final bool isActive;
+  final bool isVerified;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'user_id': userId,
       'phone': phone,
@@ -43,7 +42,6 @@ class AppUser {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
 
   AppUser copyWith({
     String? id,
@@ -54,8 +52,7 @@ class AppUser {
     bool? isVerified,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return AppUser(
+  }) => AppUser(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       phone: phone ?? this.phone,
@@ -65,7 +62,6 @@ class AppUser {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 
   // Helper methods
   bool get isPassenger => userType == 'passenger';

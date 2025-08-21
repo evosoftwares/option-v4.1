@@ -53,5 +53,7 @@
 	<string>Precisamos acessar sua localização para fornecer serviços de transporte</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Precisamos acessar sua localização para fornecer serviços de transporte mesmo quando o app estiver em segundo plano</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Precisamos enviar notificações para informar sobre novas corridas e atualizações de status</string>
 </dict>
 </plist>

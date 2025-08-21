@@ -1,17 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geocoding/geocoding.dart';
 
+import '../config/app_config.dart';
 import '../services/location_service.dart';
 import '../models/favorite_location.dart';
-import '../services/map_style_service.dart';
-// removed: import '../../theme/app_theme.dart';
 
 class PlacePickerScreen extends StatefulWidget {
-  final String? title;
-  final bool allowMultiple;
-  final List<LatLng>? initialPlaces;
-  final String? apiKey;
 
   const PlacePickerScreen({
     super.key,
@@ -19,47 +12,40 @@ class PlacePickerScreen extends StatefulWidget {
     this.allowMultiple = false,
     this.initialPlaces,
     this.apiKey,
+    this.isForFavorites = false,
   });
+  final String? title;
+  final bool allowMultiple;
+  final List<FavoriteLocation>? initialPlaces;
+  final String? apiKey;
+  final bool isForFavorites;
 
   @override
   State<PlacePickerScreen> createState() => _PlacePickerScreenState();
 }
 
 class _PlacePickerScreenState extends State<PlacePickerScreen> {
-  GoogleMapController? _mapController;
-  final Set<Marker> _markers = {};
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
-  List<Map<String, dynamic>> _suggestions = [];
   bool _isLoading = false;
   late final LocationService _locationService;
   Map<String, dynamic>? _selectedDetails;
-  LatLng? _selectedLatLng;
+  FavoriteLocation? _selectedLocation;
   // Multi-select support
   final List<FavoriteLocation> _multiSelected = [];
-
-  static const CameraPosition _initialCameraPosition = CameraPosition(
-    target: LatLng(-23.5505, -46.6333), // São Paulo
-    zoom: 11,
-  );
+  List<FavoriteLocation> _searchResults = [];
 
   @override
   void initState() {
     super.initState();
     _locationService = LocationService(
-      apiKey: widget.apiKey ?? const String.fromEnvironment('GOOGLE_MAPS_API_KEY', defaultValue: ''),
+      apiKey: widget.apiKey ?? AppConfig.googleMapsApiKey,
     );
+    
+    print('LocationService inicializado com API key: ${widget.apiKey ?? AppConfig.googleMapsApiKey}');
 
     if (widget.initialPlaces != null) {
-      _markers.addAll(
-        widget.initialPlaces!.asMap().entries.map((entry) {
-          return Marker(
-            markerId: MarkerId('marker_${entry.key}'),
-            position: entry.value,
-            icon: BitmapDescriptor.defaultMarker,
-          );
-        }),
-      );
+      _multiSelected.addAll(widget.initialPlaces!);
     }
   }
 
@@ -70,94 +56,27 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
     super.dispose();
   }
 
-  void _onMapCreated(GoogleMapController controller) {
-    _mapController = controller;
-    // Apply centralized map style based on current theme
-    MapStyleService.applyForContext(controller, context);
-  }
-
-  Future<void> _onMapTap(LatLng position) async {
+  void _selectLocation(FavoriteLocation location) {
     if (widget.allowMultiple) {
-      // For multi-select, each tap adds a marker and a favorite location entry
-      try {
-        final placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-        final p = placemarks.isNotEmpty ? placemarks.first : null;
-        final street = (p?.street ?? '').trim();
-        final subLocality = (p?.subLocality ?? '').trim();
-        final locality = (p?.locality ?? '').trim();
-        final address = [street, subLocality, locality].where((s) => s.isNotEmpty).join(', ');
-        final fav = FavoriteLocation(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: street.isNotEmpty ? street : 'Parada',
-          address: address.isNotEmpty ? address : 'Endereço não informado',
-          type: LocationType.other,
-          latitude: position.latitude,
-          longitude: position.longitude,
-          placeId: null,
-        );
-        setState(() {
-          _multiSelected.add(fav);
-          _markers.add(
-            Marker(
-              markerId: MarkerId('marker_${_markers.length + 1}'),
-              position: position,
-              icon: BitmapDescriptor.defaultMarker,
-            ),
-          );
-          _selectedDetails = null;
-          _selectedLatLng = null;
-        });
-      } catch (e) {
-        // Ignore reverse geocoding errors silently for UX
-      }
-      return;
-    }
-
-    setState(() {
-      if (widget.allowMultiple) {
-        // handled above
-      } else {
-        _markers
-          ..clear()
-          ..add(
-            Marker(
-              markerId: const MarkerId('selected_location'),
-              position: position,
-              icon: BitmapDescriptor.defaultMarker,
-            ),
-          );
-      }
-      _selectedDetails = null;
-      _selectedLatLng = position;
-    });
-
-    try {
-      final placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-      if (placemarks.isNotEmpty) {
-        final p = placemarks.first;
-        final street = (p.street ?? '').trim();
-        final subLocality = (p.subLocality ?? '').trim();
-        final locality = (p.locality ?? '').trim();
-        _searchController.text = [street, subLocality, locality]
-            .where((s) => s.isNotEmpty)
-            .join(', ');
-      } else {
-        _searchController.text = 'Localização desconhecida';
-      }
-    } catch (e) {
-      _searchController.text = 'Erro ao obter localização';
+      setState(() {
+        if (_multiSelected.any((l) => l.id == location.id)) {
+          _multiSelected.removeWhere((l) => l.id == location.id);
+        } else {
+          _multiSelected.add(location);
+        }
+      });
+    } else {
+      setState(() {
+        _selectedLocation = location;
+      });
     }
   }
 
   Future<void> _searchPlaces(String query) async {
     if (query.isEmpty) {
-      setState(() => _suggestions = []);
+      setState(() {
+        _searchResults = [];
+      });
       return;
     }
 
@@ -166,75 +85,37 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
     final results = await _locationService.searchPlaces(query);
     if (!mounted) return;
 
+    // Convert search results to FavoriteLocation objects
+    final List<FavoriteLocation> locations = [];
+    for (final result in results) {
+      final placeId = result['placeId'] as String?;
+      if (placeId != null) {
+        final details = await _locationService.getPlaceDetails(placeId);
+        if (details != null) {
+          final lat = details['lat'] as num?;
+          final lng = details['lng'] as num?;
+          if (lat != null && lng != null) {
+            locations.add(FavoriteLocation(
+              id: placeId,
+              name: (result['mainText'] as String?) ?? 'Local',
+              address: (result['description'] as String?) ?? '',
+              type: LocationType.other,
+              latitude: lat.toDouble(),
+              longitude: lng.toDouble(),
+              placeId: placeId,
+            ));
+          }
+        }
+      }
+    }
+
     setState(() {
-      _suggestions = results;
+      _searchResults = locations;
       _isLoading = false;
     });
   }
 
-  Future<void> _selectPlace(Map<String, dynamic> prediction) async {
-    final placeId = prediction['placeId'] as String?;
-    if (placeId == null) return;
 
-    final details = await _locationService.getPlaceDetails(placeId);
-    if (!mounted || details == null) return;
-
-    final lat = details['lat'] as num?;
-    final lng = details['lng'] as num?;
-    if (lat == null || lng == null) return;
-
-    final location = LatLng(lat.toDouble(), lng.toDouble());
-
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(location, 15),
-    );
-
-    if (widget.allowMultiple) {
-      // Add without clearing existing markers
-      final fav = FavoriteLocation(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: (details['name'] as String?)?.trim().isNotEmpty == true
-            ? details['name'] as String
-            : (prediction['mainText'] as String? ?? 'Parada'),
-        address: (details['formattedAddress'] as String?) ?? (prediction['description'] as String? ?? ''),
-        type: LocationType.other,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        placeId: details['placeId'] as String?,
-      );
-      setState(() {
-        _markers.add(
-          Marker(
-            markerId: MarkerId(placeId),
-            position: location,
-            icon: BitmapDescriptor.defaultMarker,
-          ),
-        );
-        _suggestions = [];
-        _searchController.clear();
-        _searchFocus.unfocus();
-        _multiSelected.add(fav);
-      });
-      return;
-    }
-
-    setState(() {
-      _markers
-        ..clear()
-        ..add(
-          Marker(
-            markerId: MarkerId(placeId),
-            position: location,
-            icon: BitmapDescriptor.defaultMarker,
-          ),
-        );
-      _suggestions = [];
-      _searchController.text = prediction['description'] as String? ?? '';
-      _searchFocus.unfocus();
-      _selectedDetails = details;
-      _selectedLatLng = location;
-    });
-  }
 
   Future<LocationType?> _chooseType() async {
     final colorScheme = Theme.of(context).colorScheme;
@@ -246,8 +127,7 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) {
-        return SafeArea(
+      builder: (context) => SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -270,23 +150,23 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
                   shrinkWrap: true,
                   children: [
                     for (final type in LocationType.values)
-                      ListTile(
-                        leading: Icon(type.icon, color: colorScheme.primary),
-                        title: Text(type.label, style: TextStyle(color: colorScheme.onSurface)),
-                        subtitle: Text(type.description, style: TextStyle(color: colorScheme.onSurfaceVariant)),
-                        onTap: () => Navigator.pop(context, type),
-                      ),
+                      if (type != LocationType.favorite) // Filtrar 'favorite' da seleção manual
+                        ListTile(
+                          leading: Icon(type.icon, color: colorScheme.primary),
+                          title: Text(type.label, style: TextStyle(color: colorScheme.onSurface)),
+                          subtitle: Text(type.description, style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                          onTap: () => Navigator.pop(context, type),
+                        ),
                   ],
                 ),
               ),
             ],
           ),
-        );
-      },
+        ),
     );
   }
 
-  void _savePlaces() async {
+  Future<void> _savePlaces() async {
     // If multiple selection mode, return all selected places
     if (widget.allowMultiple) {
       if (_multiSelected.isNotEmpty) {
@@ -295,48 +175,34 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
       return;
     }
 
-    // Compose a FavoriteLocation from the selected details or map tap
-    final type = await _chooseType();
-    if (type == null) return;
+    // Single selection mode
+    if (_selectedLocation != null) {
+      LocationType type;
+      
+      if (widget.isForFavorites) {
+        // Para favoritos, permitir escolha do tipo
+        final selectedType = await _chooseType();
+        if (selectedType == null) return;
+        type = selectedType;
+      } else {
+        // Para seleção de origem/destino, não exibir seleção de tipo
+        // e manter o tipo detectado (padrão: other)
+        type = _selectedLocation!.type;
+      }
 
-    final details = _selectedDetails;
-    final pos = _selectedLatLng ?? (_markers.isNotEmpty ? _markers.first.position : null);
-
-    if (details != null && pos != null) {
-      final fav = FavoriteLocation(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: (details['name'] as String?)?.trim().isNotEmpty == true ? details['name'] as String : 'Local favorito',
-        address: (details['formattedAddress'] as String?) ?? (_searchController.text.isNotEmpty ? _searchController.text : 'Endereço não informado'),
+      final updatedLocation = FavoriteLocation(
+        id: _selectedLocation!.id,
+        name: _selectedLocation!.name,
+        address: _selectedLocation!.address,
         type: type,
-        latitude: pos.latitude,
-        longitude: pos.longitude,
-        placeId: details['placeId'] as String?,
+        latitude: _selectedLocation!.latitude,
+        longitude: _selectedLocation!.longitude,
+        placeId: _selectedLocation!.placeId,
       );
+      
       if (!mounted) return;
-      Navigator.of(context).pop(fav);
-      return;
+      Navigator.of(context).pop(updatedLocation);
     }
-
-    if (pos != null) {
-      final fav = FavoriteLocation(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: _searchController.text.isNotEmpty
-            ? _searchController.text.split(',').first.trim()
-            : 'Local favorito',
-        address: _searchController.text.isNotEmpty
-            ? _searchController.text
-            : 'Endereço não informado',
-        type: type,
-        latitude: pos.latitude,
-        longitude: pos.longitude,
-        placeId: null,
-      );
-      if (!mounted) return;
-      Navigator.of(context).pop(fav);
-      return;
-    }
-
-    // If nothing selected, do nothing
   }
 
   @override
@@ -354,7 +220,8 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
           style: textTheme.titleLarge?.copyWith(color: colorScheme.onSurface),
         ),
         actions: [
-          if (_markers.isNotEmpty)
+          if ((widget.allowMultiple && _multiSelected.isNotEmpty) || 
+              (!widget.allowMultiple && _selectedLocation != null))
             TextButton(
               onPressed: _savePlaces,
               child: Text(
@@ -367,7 +234,7 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: TextField(
               controller: _searchController,
               focusNode: _searchFocus,
@@ -377,7 +244,7 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
                 hintText: 'Buscar lugares... ',
                 prefixIcon: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
                 filled: true,
-                fillColor: colorScheme.surfaceVariant,
+                fillColor: colorScheme.surfaceContainerHighest,
                 hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -389,49 +256,83 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
           ),
           if (_isLoading)
             const LinearProgressIndicator(minHeight: 2),
-          if (_suggestions.isNotEmpty)
-            Container(
-              height: 220,
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceVariant,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListView.separated(
-                itemCount: _suggestions.length,
-                separatorBuilder: (_, __) => Divider(height: 1, color: colorScheme.outlineVariant),
-                itemBuilder: (context, index) {
-                  final s = _suggestions[index];
-                  final mainText = s['mainText'] as String? ?? '';
-                  final secondaryText = s['secondaryText'] as String? ?? '';
-                  return ListTile(
-                    title: Text(
-                      mainText,
-                      style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
-                    ),
-                    subtitle: Text(
-                      secondaryText,
-                      style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
-                    ),
-                    onTap: () => _selectPlace(s),
-                  );
-                },
-              ),
-            ),
           Expanded(
-            child: GoogleMap(
-              onMapCreated: _onMapCreated,
-              initialCameraPosition: _initialCameraPosition,
-              onTap: _onMapTap,
-              markers: _markers,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: true,
-              zoomControlsEnabled: false,
-            ),
+            child: _searchResults.isNotEmpty
+                ? ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _searchResults.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final location = _searchResults[index];
+                      final isSelected = widget.allowMultiple 
+                          ? _multiSelected.any((l) => l.id == location.id)
+                          : _selectedLocation?.id == location.id;
+                      
+                      return Card(
+                        elevation: isSelected ? 4 : 1,
+                        color: isSelected ? colorScheme.primaryContainer : colorScheme.surface,
+                        child: ListTile(
+                          leading: Icon(
+                            location.type.icon,
+                            color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.primary,
+                          ),
+                          title: Text(
+                            location.name,
+                            style: textTheme.titleMedium?.copyWith(
+                              color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+                            ),
+                          ),
+                          subtitle: Text(
+                            location.address,
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          trailing: widget.allowMultiple
+                              ? Checkbox(
+                                  value: isSelected,
+                                  onChanged: (_) => _selectLocation(location),
+                                )
+                              : isSelected
+                                  ? Icon(Icons.check_circle, color: colorScheme.onPrimaryContainer)
+                                  : null,
+                          onTap: () => _selectLocation(location),
+                        ),
+                      );
+                    },
+                  )
+                : Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search,
+                          size: 64,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Busque por locais',
+                          style: textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Digite o nome ou endereço para encontrar locais',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),
-      floatingActionButton: _markers.isNotEmpty
+      floatingActionButton: ((widget.allowMultiple && _multiSelected.isNotEmpty) || 
+                                (!widget.allowMultiple && _selectedLocation != null))
           ? FloatingActionButton.extended(
               onPressed: _savePlaces,
               backgroundColor: colorScheme.primary,

@@ -58,7 +58,7 @@ void main() async {
       final dbFields = (appUserTable['columns'] as List).map((c) => c['name']).toSet();
       final expectedFields = {
         'id', 'user_id', 'phone', 'user_type', 'is_active', 'is_verified', 
-        'created_at', 'updated_at'
+        'created_at', 'updated_at',
       };
       
       final missing = expectedFields.difference(dbFields);
@@ -81,7 +81,7 @@ void main() async {
     // Verificar modelos sem tabelas correspondentes
     final modelsWithoutTables = [
       'trip', 'trip_request', 'driver', 'passenger', 'vehicle', 
-      'passenger_request', 'driver_offer', 'location', 'promo_code'
+      'passenger_request', 'driver_offer', 'location', 'promo_code',
     ];
     
     print('\n  📋 Modelos sem tabelas correspondentes (features futuras):');

@@ -1,15 +1,15 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uber_clone/exceptions/app_exceptions.dart';
-import 'package:uber_clone/models/user.dart' as app_user;
-import 'package:uber_clone/services/asaas_service.dart';
+import '../exceptions/app_exceptions.dart';
+import '../models/user.dart' as app_user;
+import 'asaas_service.dart';
 
 class WalletService {
-  final SupabaseClient _supabase;
-  final AsaasService _asaas;
 
   WalletService({SupabaseClient? client, AsaasService? asaas})
       : _supabase = client ?? Supabase.instance.client,
         _asaas = asaas ?? AsaasService();
+  final SupabaseClient _supabase;
+  final AsaasService _asaas;
 
   Future<String?> getDriverIdForUser(String userId) async {
     try {
@@ -22,7 +22,7 @@ class WalletService {
     } on PostgrestException catch (e) {
       throw DatabaseException('Erro ao buscar motorista do usuário. Por favor, tente novamente mais tarde.', e.code);
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar motorista do usuário. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException('Erro inesperado ao buscar motorista do usuário. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -30,14 +30,14 @@ class WalletService {
     try {
       final data = await _supabase
           .from('driver_wallets')
-          .select('*')
+          .select()
           .eq('driver_id', driverId)
           .maybeSingle();
-      return data as Map<String, dynamic>?;
+      return data;
     } on PostgrestException catch (e) {
       throw DatabaseException('Erro ao buscar carteira. Por favor, tente novamente mais tarde.', e.code);
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar carteira. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException('Erro inesperado ao buscar carteira. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -45,7 +45,7 @@ class WalletService {
     try {
       final data = await _supabase
           .from('wallet_transactions')
-          .select('*')
+          .select()
           .eq('wallet_id', driverId)
           .order('created_at', ascending: false)
           .limit(limit);
@@ -53,7 +53,7 @@ class WalletService {
     } on PostgrestException catch (e) {
       throw DatabaseException('Erro ao buscar transações. Por favor, tente novamente mais tarde.', e.code);
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar transações. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException('Erro inesperado ao buscar transações. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -62,7 +62,6 @@ class WalletService {
       await _asaas.ensureCustomer(
         name: user.fullName,
         email: user.email,
-        cpfCnpj: null, // Pode ser preenchido quando disponível
         mobilePhone: user.phone,
       );
     } catch (e) {
@@ -92,11 +91,11 @@ class WalletService {
           .insert(payload)
           .select()
           .single();
-      return data as Map<String, dynamic>;
+      return data;
     } on PostgrestException catch (e) {
       throw DatabaseException('Erro ao solicitar saque. Por favor, verifique os dados e tente novamente.', e.code);
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao solicitar saque. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException('Erro inesperado ao solicitar saque. Por favor, tente novamente mais tarde.');
     }
   }
 }

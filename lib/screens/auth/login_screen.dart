@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uber_clone/widgets/logo_branding.dart';
-import 'package:uber_clone/services/user_service.dart';
+import '../../widgets/logo_branding.dart';
+import '../../services/user_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -40,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final user = authResponse.user ?? Supabase.instance.client.auth.currentUser;
 
       if (user == null) {
-        throw AuthException('Falha ao obter usuário autenticado');
+        throw const AuthException('Falha ao obter usuário autenticado');
       }
 
       // Verificar se o app_user existe
@@ -66,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro de autenticação. Por favor, verifique suas credenciais e tente novamente.')),
+        const SnackBar(content: Text('Erro de autenticação. Por favor, verifique suas credenciais e tente novamente.')),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -79,7 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: null,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

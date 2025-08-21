@@ -8,7 +8,6 @@ class LightTheme {
   static ThemeData get theme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.black,
-      brightness: Brightness.light,
     ).copyWith(
       // Primary colors
       primary: AppColors.lightPrimary,
@@ -33,10 +32,6 @@ class LightTheme {
       onSurface: AppColors.lightOnSurface,
       surfaceContainerHighest: AppColors.lightSurfaceVariant,
       onSurfaceVariant: AppColors.lightOnSurfaceVariant,
-      
-      // Background colors
-      background: AppColors.lightBackground,
-      onBackground: AppColors.lightOnBackground,
       
       // Error colors
       error: AppColors.error,
@@ -93,7 +88,7 @@ class LightTheme {
         style: ButtonStyle(
           backgroundColor: WidgetStatePropertyAll(colorScheme.primary),
           foregroundColor: WidgetStatePropertyAll(colorScheme.onPrimary),
-          textStyle: WidgetStatePropertyAll(AppTypography.buttonText),
+          textStyle: const WidgetStatePropertyAll(AppTypography.buttonText),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -116,7 +111,7 @@ class LightTheme {
         style: ButtonStyle(
           backgroundColor: WidgetStatePropertyAll(colorScheme.surface),
           foregroundColor: WidgetStatePropertyAll(colorScheme.onSurface),
-          textStyle: WidgetStatePropertyAll(AppTypography.buttonText),
+          textStyle: const WidgetStatePropertyAll(AppTypography.buttonText),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -142,7 +137,7 @@ class LightTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: ButtonStyle(
           foregroundColor: WidgetStatePropertyAll(colorScheme.onSurface),
-          textStyle: WidgetStatePropertyAll(AppTypography.buttonText),
+          textStyle: const WidgetStatePropertyAll(AppTypography.buttonText),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -161,7 +156,7 @@ class LightTheme {
             final color = states.contains(WidgetState.disabled)
                 ? colorScheme.outlineVariant
                 : colorScheme.outline;
-            return BorderSide(color: color, width: AppSpacing.borderThin);
+            return BorderSide(color: color);
           }),
           elevation: const WidgetStatePropertyAll(AppSpacing.elevation0),
         ),

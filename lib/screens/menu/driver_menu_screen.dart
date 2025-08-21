@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:uber_clone/theme/app_spacing.dart';
-import 'package:uber_clone/theme/app_typography.dart';
-import 'package:uber_clone/services/user_service.dart';
-import 'package:uber_clone/models/user.dart' as app_user;
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
+import '../../services/user_service.dart';
+import '../../models/user.dart' as app_user;
 
 class DriverMenuScreen extends StatefulWidget {
   const DriverMenuScreen({super.key});
@@ -57,7 +57,7 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               ),
               const SizedBox(height: AppSpacing.sectionSpacing),
 
-              _SectionTitle(title: 'Conta'),
+              const _SectionTitle(title: 'Conta'),
               _MenuTile(
                 icon: Icons.person_outline,
                 label: 'Perfil',
@@ -81,7 +81,7 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
-              _SectionTitle(title: 'Trabalho'),
+              const _SectionTitle(title: 'Trabalho'),
               _MenuTile(
                 icon: Icons.schedule_outlined,
                 label: 'Horários de trabalho',
@@ -104,11 +104,11 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
-              _SectionTitle(title: 'Atividade'),
+              const _SectionTitle(title: 'Atividade'),
               _MenuTile(
                 icon: Icons.history,
                 label: 'Histórico de viagens',
-                onTap: () => _showComingSoon('Histórico de viagens'),
+                onTap: () => Navigator.pushNamed(context, '/trip_history'),
               ),
               _MenuTile(
                 icon: Icons.stacked_line_chart_outlined,
@@ -118,16 +118,16 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               _MenuTile(
                 icon: Icons.account_balance_wallet_outlined,
                 label: 'Carteira',
-                trailing: const _WalletPill(amountText: 'R\$ 0,00'),
+                trailing: const _WalletPill(amountText: r'R$ 0,00'),
                 onTap: () => Navigator.pushNamed(context, '/wallet'),
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
-              _SectionTitle(title: 'Geral'),
+              const _SectionTitle(title: 'Geral'),
               _MenuTile(
                 icon: Icons.notifications_none,
                 label: 'Notificações',
-                onTap: () => _showComingSoon('Notificações'),
+                onTap: () => Navigator.pushNamed(context, '/notifications'),
               ),
               _MenuTile(
                 icon: Icons.security_outlined,
@@ -160,10 +160,6 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
 }
 
 class _HeaderCard extends StatelessWidget {
-  final String name;
-  final String email;
-  final bool isOnline;
-  final ValueChanged<bool> onToggleOnline;
 
   const _HeaderCard({
     required this.name,
@@ -171,6 +167,10 @@ class _HeaderCard extends StatelessWidget {
     required this.isOnline,
     required this.onToggleOnline,
   });
+  final String name;
+  final String email;
+  final bool isOnline;
+  final ValueChanged<bool> onToggleOnline;
 
   @override
   Widget build(BuildContext context) {
@@ -182,13 +182,12 @@ class _HeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        border: Border.all(color: cs.outlineVariant, width: AppSpacing.borderThin),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               CircleAvatar(
                 radius: AppSpacing.avatarMd / 2,
@@ -233,7 +232,7 @@ class _HeaderCard extends StatelessWidget {
                 Switch(
                   value: isOnline,
                   onChanged: onToggleOnline,
-                  activeColor: cs.onPrimary,
+                  activeThumbColor: cs.onPrimary,
                   activeTrackColor: cs.primary,
                 ),
               ],
@@ -246,8 +245,8 @@ class _HeaderCard extends StatelessWidget {
 }
 
 class _SectionTitle extends StatelessWidget {
-  final String title;
   const _SectionTitle({required this.title});
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -263,16 +262,16 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _MenuTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Widget? trailing;
   const _MenuTile({
     required this.icon,
     required this.label,
     required this.onTap,
     this.trailing,
   });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -288,7 +287,7 @@ class _MenuTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: cs.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          border: Border.all(color: cs.outlineVariant, width: AppSpacing.borderThin),
+          border: Border.all(color: cs.outlineVariant),
         ),
         margin: const EdgeInsets.only(bottom: AppSpacing.itemSpacing),
         child: Row(
@@ -314,8 +313,8 @@ class _MenuTile extends StatelessWidget {
 }
 
 class _WalletPill extends StatelessWidget {
-  final String amountText;
   const _WalletPill({required this.amountText});
+  final String amountText;
 
   @override
   Widget build(BuildContext context) {

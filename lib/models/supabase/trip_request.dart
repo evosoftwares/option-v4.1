@@ -1,31 +1,6 @@
 import 'package:uuid/uuid.dart';
 
 class TripRequest {
-  final String id;
-  final String passengerId;
-  final String originAddress;
-  final double originLatitude;
-  final double originLongitude;
-  final String? originNeighborhood;
-  final String destinationAddress;
-  final double destinationLatitude;
-  final double destinationLongitude;
-  final String? destinationNeighborhood;
-  final String vehicleCategory;
-  final bool needsPet;
-  final bool needsGrocerySpace;
-  final bool isCondoDestination;
-  final bool isCondoOrigin;
-  final bool needsAc;
-  final int numberOfStops;
-  final double estimatedDistanceKm;
-  final int estimatedDurationMinutes;
-  final double estimatedFare;
-  final String status;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final DateTime? acceptedAt;
-  final String? acceptedByDriverId;
 
   TripRequest({
     String? id,
@@ -88,9 +63,33 @@ class TripRequest {
       acceptedByDriverId: json['accepted_by_driver_id'] as String?,
     );
   }
+  final String id;
+  final String passengerId;
+  final String originAddress;
+  final double originLatitude;
+  final double originLongitude;
+  final String? originNeighborhood;
+  final String destinationAddress;
+  final double destinationLatitude;
+  final double destinationLongitude;
+  final String? destinationNeighborhood;
+  final String vehicleCategory;
+  final bool needsPet;
+  final bool needsGrocerySpace;
+  final bool isCondoDestination;
+  final bool isCondoOrigin;
+  final bool needsAc;
+  final int numberOfStops;
+  final double estimatedDistanceKm;
+  final int estimatedDurationMinutes;
+  final double estimatedFare;
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? acceptedAt;
+  final String? acceptedByDriverId;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'passenger_id': passengerId,
       'origin_address': originAddress,
@@ -117,7 +116,6 @@ class TripRequest {
       'accepted_at': acceptedAt?.toIso8601String(),
       'accepted_by_driver_id': acceptedByDriverId,
     };
-  }
 
   TripRequest copyWith({
     String? id,
@@ -145,8 +143,7 @@ class TripRequest {
     DateTime? updatedAt,
     DateTime? acceptedAt,
     String? acceptedByDriverId,
-  }) {
-    return TripRequest(
+  }) => TripRequest(
       id: id ?? this.id,
       passengerId: passengerId ?? this.passengerId,
       originAddress: originAddress ?? this.originAddress,
@@ -173,7 +170,6 @@ class TripRequest {
       acceptedAt: acceptedAt ?? this.acceptedAt,
       acceptedByDriverId: acceptedByDriverId ?? this.acceptedByDriverId,
     );
-  }
 
   // Helper methods for status checking
   bool get isPending => status == 'pending';

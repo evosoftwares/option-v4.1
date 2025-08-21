@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uber_clone/widgets/logo_branding.dart';
-import 'package:uber_clone/services/user_service.dart';
-import 'package:uber_clone/exceptions/app_exceptions.dart';
+import '../../widgets/logo_branding.dart';
+import '../../services/user_service.dart';
+import '../../exceptions/app_exceptions.dart';
 import 'package:provider/provider.dart';
-import 'package:uber_clone/controllers/stepper_controller.dart';
+import '../../controllers/stepper_controller.dart';
 
 class UserTypeScreen extends StatefulWidget {
   const UserTypeScreen({super.key});
@@ -20,32 +20,54 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
     setState(() => _selectedType = type);
   }
 
-  void _onContinue() async {
+  Future<void> _onContinue() async {
     if (_selectedType == null) return;
     try {
+      print('🚀 Iniciando navegação para stepper...');
+      
       // Obter o usuário autenticado atual
       final currentUser = Supabase.instance.client.auth.currentUser;
       if (currentUser == null) {
+        print('❌ Erro: Usuário não autenticado na tela de tipo');
         throw Exception('Usuário não autenticado');
       }
+      
+      print('✅ Usuário autenticado: ${currentUser.id}');
 
       // Dados passados do registro (nome e email)
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      final String? fullName = (args?['fullName'] as String?)?.trim();
-      final String? emailFromArgs = (args?['email'] as String?)?.trim();
-      final String? email = emailFromArgs ?? currentUser.email;
+      final fullName = (args?['fullName'] as String?)?.trim();
+      final emailFromArgs = (args?['email'] as String?)?.trim();
+      final email = emailFromArgs ?? currentUser.email;
+
+      print('📋 Argumentos recebidos:');
+      print('  - fullName: $fullName');
+      print('  - emailFromArgs: $emailFromArgs');
+      print('  - email final: $email');
+      print('  - tipo selecionado: $_selectedType');
 
       if (email == null || email.isEmpty) {
+        print('❌ Erro: E-mail não disponível');
         throw Exception('E-mail do usuário não disponível.');
       }
 
       // Armazenar em App State (StepperController) e seguir para o stepper
       final controller = Provider.of<StepperController>(context, listen: false);
       controller.setUserType(_selectedType!);
-      if (fullName != null && fullName.isNotEmpty) controller.setFullName(fullName);
+      if (fullName != null && fullName.isNotEmpty) {
+        controller.setFullName(fullName);
+      } else {
+        print('⚠️ Nome completo não encontrado nos argumentos');
+      }
       controller.setEmail(email);
 
+      print('📝 Dados salvos no controller:');
+      print('  - userType: ${controller.userType}');
+      print('  - fullName: ${controller.fullName}');
+      print('  - email: ${controller.email}');
+
       if (!mounted) return;
+      print('📱 Navegando para /registration_stepper');
       Navigator.of(context).pushReplacementNamed(
         '/registration_stepper',
         arguments: {
@@ -53,10 +75,11 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
         },
       );
     } catch (e) {
+      print('❌ Erro na navegação: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao continuar. Por favor, tente novamente mais tarde.'),
+          content: Text('Erro ao continuar: ${e.toString()}'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -129,11 +152,6 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
 }
 
 class _OptionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
-  final bool selected;
-  final VoidCallback onTap;
 
   const _OptionCard({
     required this.icon,
@@ -142,25 +160,30 @@ class _OptionCard extends StatelessWidget {
     required this.selected,
     required this.onTap,
   });
+  final IconData icon;
+  final String title;
+  final String description;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final Color containerColor = selected
+    final containerColor = selected
         ? colorScheme.primaryContainer
         : colorScheme.surface;
-    final Color borderColor = selected
+    final borderColor = selected
         ? colorScheme.primary
         : colorScheme.outlineVariant;
-    final Color titleColor = selected
+    final titleColor = selected
         ? colorScheme.onPrimaryContainer
         : colorScheme.onSurface;
-    final Color descColor = selected
+    final descColor = selected
         ? colorScheme.onPrimaryContainer.withOpacity(0.8)
         : colorScheme.onSurfaceVariant;
-    final Color iconColor = selected
+    final iconColor = selected
         ? colorScheme.onPrimaryContainer
         : colorScheme.onSurface;
 

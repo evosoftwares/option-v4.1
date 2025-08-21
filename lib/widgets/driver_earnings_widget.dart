@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import '../models/driver_status.dart';
 
 class DriverEarningsWidget extends StatelessWidget {
-  final DriverStatus driverStatus;
-  final VoidCallback? onTap;
 
   const DriverEarningsWidget({
     super.key,
     required this.driverStatus,
     this.onTap,
   });
+  final DriverStatus driverStatus;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +25,6 @@ class DriverEarningsWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: colorScheme.outlineVariant.withOpacity(0.5),
-            width: 1,
           ),
           boxShadow: [
             BoxShadow(

@@ -12,6 +12,5 @@ class TestConstants {
   // New: optional Service Role key for privileged test operations (cleanup/seed)
   static const String supabaseServiceRoleKey = String.fromEnvironment(
     'SUPABASE_SERVICE_ROLE_KEY',
-    defaultValue: '',
   );
 }

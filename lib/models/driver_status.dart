@@ -5,11 +5,6 @@ enum DriverOnlineStatus {
 }
 
 class DriverStatus {
-  final DriverOnlineStatus status;
-  final double todayEarnings;
-  final int tripsCompleted;
-  final Duration onlineTime;
-  final DateTime lastStatusChange;
 
   const DriverStatus({
     required this.status,
@@ -28,6 +23,11 @@ class DriverStatus {
       lastStatusChange: DateTime.now(),
     );
   }
+  final DriverOnlineStatus status;
+  final double todayEarnings;
+  final int tripsCompleted;
+  final Duration onlineTime;
+  final DateTime lastStatusChange;
 
   DriverStatus copyWith({
     DriverOnlineStatus? status,
@@ -35,15 +35,13 @@ class DriverStatus {
     int? tripsCompleted,
     Duration? onlineTime,
     DateTime? lastStatusChange,
-  }) {
-    return DriverStatus(
+  }) => DriverStatus(
       status: status ?? this.status,
       todayEarnings: todayEarnings ?? this.todayEarnings,
       tripsCompleted: tripsCompleted ?? this.tripsCompleted,
       onlineTime: onlineTime ?? this.onlineTime,
       lastStatusChange: lastStatusChange ?? this.lastStatusChange,
     );
-  }
 
   bool get isOnline => status == DriverOnlineStatus.online;
   bool get isOffline => status == DriverOnlineStatus.offline;
@@ -60,7 +58,5 @@ class DriverStatus {
     }
   }
 
-  String get earningsDisplayText {
-    return 'R\$ ${todayEarnings.toStringAsFixed(2).replaceAll('.', ',')}';
-  }
+  String get earningsDisplayText => 'R\$ ${todayEarnings.toStringAsFixed(2).replaceAll('.', ',')}';
 }

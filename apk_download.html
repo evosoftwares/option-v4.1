@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Option v1.0.0 APK</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .qr-code {
+            margin: 20px 0;
+        }
+        .download-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 18px;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        .download-btn:hover {
+            background-color: #0056b3;
+        }
+        .instructions {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Option v1.0.0 APK</h1>
+        <p>Escaneie o QR code abaixo com seu dispositivo Android para baixar o APK:</p>
+        
+        <div class="qr-code">
+            <canvas id="qrcode"></canvas>
+        </div>
+        
+        <a href="OPTION-v1.0.0.apk" class="download-btn">Download Direto</a>
+        
+        <div class="instructions">
+            <h3>Instruções:</h3>
+            <ol>
+                <li>Escaneie o QR code com a câmera do seu celular</li>
+                <li>Ou clique no botão "Download Direto" se estiver acessando pelo celular</li>
+                <li>Permita a instalação de apps de fontes desconhecidas nas configurações do Android</li>
+                <li>Instale o APK normalmente</li>
+            </ol>
+        </div>
+        
+        <p><small>Servidor local: <span id="server-url"></span></small></p>
+    </div>
+
+    <script>
+        // Get current URL for QR code
+        const currentUrl = window.location.origin + window.location.pathname.replace('apk_download.html', 'OPTION-v1.0.0.apk');
+        
+        // Generate QR code
+        QRCode.toCanvas(document.getElementById('qrcode'), currentUrl, {
+            width: 256,
+            margin: 2,
+            color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+            }
+        });
+        
+        // Display server URL
+        document.getElementById('server-url').textContent = window.location.origin;
+    </script>
+</body>
+</html>

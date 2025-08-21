@@ -12,8 +12,8 @@ class PhoneInputFormatter extends TextInputFormatter {
       return newValue.copyWith(text: '');
     }
     
-    String formatted = '';
-    int selectionIndex = newValue.selection.end;
+    var formatted = '';
+    var selectionIndex = newValue.selection.end;
     
     if (text.length <= 2) {
       formatted = text;

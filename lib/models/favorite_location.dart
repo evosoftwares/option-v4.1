@@ -7,6 +7,7 @@ enum LocationType {
   gym,
   restaurant,
   shopping,
+  favorite,
   other,
 }
 
@@ -25,6 +26,8 @@ extension LocationTypeExtension on LocationType {
         return Icons.restaurant;
       case LocationType.shopping:
         return Icons.shopping_cart;
+      case LocationType.favorite:
+        return Icons.favorite;
       case LocationType.other:
         return Icons.place;
     }
@@ -44,6 +47,8 @@ extension LocationTypeExtension on LocationType {
         return 'Restaurante';
       case LocationType.shopping:
         return 'Shopping';
+      case LocationType.favorite:
+        return 'Favorito';
       case LocationType.other:
         return 'Outro';
     }
@@ -63,6 +68,8 @@ extension LocationTypeExtension on LocationType {
         return 'Seu restaurante favorito';
       case LocationType.shopping:
         return 'Seu shopping favorito';
+      case LocationType.favorite:
+        return 'Local favorito';
       case LocationType.other:
         return 'Outro local importante';
     }
@@ -70,13 +77,6 @@ extension LocationTypeExtension on LocationType {
 }
 
 class FavoriteLocation {
-  final String id;
-  final String name;
-  final String address;
-  final LocationType type;
-  final double? latitude;
-  final double? longitude;
-  final String? placeId;
 
   FavoriteLocation({
     required this.id,
@@ -87,38 +87,6 @@ class FavoriteLocation {
     this.longitude,
     this.placeId,
   });
-
-  FavoriteLocation copyWith({
-    String? id,
-    String? name,
-    String? address,
-    LocationType? type,
-    double? latitude,
-    double? longitude,
-    String? placeId,
-  }) {
-    return FavoriteLocation(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      address: address ?? this.address,
-      type: type ?? this.type,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      placeId: placeId ?? this.placeId,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'address': address,
-      'type': type.toString(),
-      'latitude': latitude,
-      'longitude': longitude,
-      'placeId': placeId,
-    };
-  }
 
   factory FavoriteLocation.fromJson(Map<String, dynamic> json) {
     return FavoriteLocation(
@@ -134,4 +102,39 @@ class FavoriteLocation {
       placeId: json['placeId'],
     );
   }
+  final String id;
+  final String name;
+  final String address;
+  final LocationType type;
+  final double? latitude;
+  final double? longitude;
+  final String? placeId;
+
+  FavoriteLocation copyWith({
+    String? id,
+    String? name,
+    String? address,
+    LocationType? type,
+    double? latitude,
+    double? longitude,
+    String? placeId,
+  }) => FavoriteLocation(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      address: address ?? this.address,
+      type: type ?? this.type,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      placeId: placeId ?? this.placeId,
+    );
+
+  Map<String, dynamic> toJson() => {
+      'id': id,
+      'name': name,
+      'address': address,
+      'type': type.toString(),
+      'latitude': latitude,
+      'longitude': longitude,
+      'placeId': placeId,
+    };
 }

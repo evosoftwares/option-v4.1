@@ -1,14 +1,6 @@
 import 'package:flutter/material.dart';
 
 class StepperNavigation extends StatelessWidget {
-  final VoidCallback onNext;
-  final VoidCallback onPrevious;
-  final VoidCallback? onSkip;
-  final bool showPrevious;
-  final bool showSkip;
-  final String nextLabel;
-  final String? previousLabel;
-  final String? skipLabel;
 
   const StepperNavigation({
     super.key,
@@ -21,6 +13,14 @@ class StepperNavigation extends StatelessWidget {
     this.previousLabel,
     this.skipLabel,
   });
+  final VoidCallback onNext;
+  final VoidCallback onPrevious;
+  final VoidCallback? onSkip;
+  final bool showPrevious;
+  final bool showSkip;
+  final String nextLabel;
+  final String? previousLabel;
+  final String? skipLabel;
 
   @override
   Widget build(BuildContext context) {

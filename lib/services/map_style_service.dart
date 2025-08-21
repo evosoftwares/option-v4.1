@@ -11,9 +11,7 @@ class MapStyleService {
   static const String _darkStyle =
       '[{"featureType":"poi","elementType":"labels","stylers":[{"visibility":"off"}]},{"elementType":"geometry","stylers":[{"saturation":-100},{"lightness":-20}]}]';
 
-  static String styleFor(Brightness brightness) {
-    return brightness == Brightness.dark ? _darkStyle : _lightStyle;
-  }
+  static String styleFor(Brightness brightness) => brightness == Brightness.dark ? _darkStyle : _lightStyle;
 
   static Future<void> applyForContext(
     GoogleMapController controller,

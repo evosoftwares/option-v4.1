@@ -1,11 +1,12 @@
 /// Exceções customizadas para o aplicativo
+library;
 
 /// Exceção base para todas as exceções do aplicativo
 abstract class AppException implements Exception {
-  final String message;
-  final String? code;
   
   const AppException(this.message, [this.code]);
+  final String message;
+  final String? code;
   
   @override
   String toString() => 'AppException: $message${code != null ? ' (Code: $code)' : ''}';

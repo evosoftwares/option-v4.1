@@ -4,8 +4,7 @@ class ThemeShowcase extends StatelessWidget {
   const ThemeShowcase({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
+  Widget build(BuildContext context) => SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,5 +149,4 @@ class ThemeShowcase extends StatelessWidget {
         ],
       ),
     );
-  }
 }

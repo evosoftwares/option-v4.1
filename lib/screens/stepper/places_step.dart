@@ -5,14 +5,14 @@ import '../../models/favorite_location.dart';
 import '../place_picker_screen.dart';
 
 class PlacesStep extends StatefulWidget {
-  final VoidCallback onNext;
-  final Function(List<FavoriteLocation>)? onSave;
 
   const PlacesStep({
     super.key,
     required this.onNext,
     this.onSave,
   });
+  final VoidCallback onNext;
+  final Function(List<FavoriteLocation>)? onSave;
 
   @override
   State<PlacesStep> createState() => _PlacesStepState();
@@ -25,7 +25,9 @@ class _PlacesStepState extends State<PlacesStep> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const PlacePickerScreen(),
+        builder: (context) => const PlacePickerScreen(
+          isForFavorites: true,
+        ),
       ),
     );
 
@@ -58,7 +60,7 @@ class _PlacesStepState extends State<PlacesStep> {
         final colorScheme = Theme.of(context).colorScheme;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao salvar locais. Por favor, tente novamente mais tarde.'),
+            content: const Text('Erro ao salvar locais. Por favor, tente novamente mais tarde.'),
             backgroundColor: colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -77,8 +79,7 @@ class _PlacesStepState extends State<PlacesStep> {
     final textTheme = Theme.of(context).textTheme;
 
     return Consumer<StepperController>(
-      builder: (context, controller, child) {
-        return Padding(
+      builder: (context, controller, child) => Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,8 +206,7 @@ class _PlacesStepState extends State<PlacesStep> {
               const SizedBox(height: 20),
             ],
           ),
-        );
-      },
+        ),
     );
   }
 }

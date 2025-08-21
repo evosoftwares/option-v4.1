@@ -7,8 +7,7 @@ class StepperDemoScreen extends StatelessWidget {
   const StepperDemoScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
+  Widget build(BuildContext context) => ChangeNotifierProvider<StepperController>(
       create: (_) => StepperController(),
       child: Scaffold(
         body: Navigator(
@@ -20,5 +19,4 @@ class StepperDemoScreen extends StatelessWidget {
         ),
       ),
     );
-  }
 }

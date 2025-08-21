@@ -32,7 +32,7 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
     });
 
     try {
-      final XFile? pickedFile = await _picker.pickImage(
+      final pickedFile = await _picker.pickImage(
         source: source,
         maxWidth: 800,
         maxHeight: 800,
@@ -84,8 +84,7 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (BuildContext context) {
-        return SafeArea(
+      builder: (context) => SafeArea(
           child: Wrap(
             children: [
               ListTile(
@@ -106,8 +105,7 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
               ),
             ],
           ),
-        );
-      },
+        ),
     );
   }
 
@@ -115,9 +113,8 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 32),
           Text(
@@ -145,7 +142,7 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
                 height: 150,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: colors.surfaceVariant,
+                  color: colors.surfaceContainerHighest,
                   border: Border.all(
                     color: colors.outline.withOpacity(0.3),
                     width: 2,

@@ -66,8 +66,7 @@ class _StepperMainScreenState extends State<StepperMainScreen> {
     StepperController controller,
     ColorScheme colors,
     TextTheme textTheme,
-  ) {
-    return Container(
+  ) => Container(
       padding: const EdgeInsets.fromLTRB(16, 50, 16, 16),
       child: Column(
         children: [
@@ -104,5 +103,4 @@ class _StepperMainScreenState extends State<StepperMainScreen> {
         ],
       ),
     );
-  }
 }

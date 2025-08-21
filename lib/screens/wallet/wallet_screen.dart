@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:uber_clone/theme/app_typography.dart';
-import 'package:uber_clone/theme/app_spacing.dart';
-import 'package:uber_clone/services/user_service.dart';
-import 'package:uber_clone/services/wallet_service.dart';
-import 'package:uber_clone/models/user.dart' as app_user;
+import '../../theme/app_typography.dart';
+import '../../theme/app_spacing.dart';
+import '../../services/user_service.dart';
+import '../../services/wallet_service.dart';
+import '../../models/user.dart' as app_user;
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -41,7 +41,7 @@ class _WalletScreenState extends State<WalletScreen> {
           }
           final user = snapshot.data;
           if (user == null) {
-            return _ErrorState(message: 'Você precisa estar logado para ver a carteira.');
+            return const _ErrorState(message: 'Você precisa estar logado para ver a carteira.');
           }
 
           final isDriver = user.userType.toLowerCase() == 'driver';
@@ -57,8 +57,8 @@ class _WalletScreenState extends State<WalletScreen> {
 }
 
 class _PassengerWalletPlaceholder extends StatelessWidget {
-  final app_user.User user;
   const _PassengerWalletPlaceholder({required this.user});
+  final app_user.User user;
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +66,7 @@ class _PassengerWalletPlaceholder extends StatelessWidget {
     return ListView(
       padding: AppSpacing.paddingLg,
       children: [
-        _InfoCard(
+        const _InfoCard(
           title: 'Carteira indisponível',
           message: 'Por enquanto, a carteira está disponível apenas para motoristas. Em breve você poderá gerenciar seus pagamentos aqui.',
           icon: Icons.account_balance_wallet_outlined,
@@ -92,9 +92,9 @@ class _PassengerWalletPlaceholder extends StatelessWidget {
 }
 
 class _DriverWalletContent extends StatefulWidget {
+  const _DriverWalletContent({required this.user, required this.walletService});
   final app_user.User user;
   final WalletService walletService;
-  const _DriverWalletContent({required this.user, required this.walletService});
 
   @override
   State<_DriverWalletContent> createState() => _DriverWalletContentState();
@@ -132,7 +132,7 @@ class _DriverWalletContentState extends State<_DriverWalletContent> {
         }
         final driverId = snap.data;
         if (driverId == null) {
-          return _ErrorState(message: 'Não encontramos seu perfil de motorista.');
+          return const _ErrorState(message: 'Não encontramos seu perfil de motorista.');
         }
         return ListView(
           padding: AppSpacing.paddingLg,
@@ -163,7 +163,7 @@ class _DriverWalletContentState extends State<_DriverWalletContent> {
                 }
                 final txs = tSnap.data ?? const [];
                 if (txs.isEmpty) {
-                  return _InfoCard(
+                  return const _InfoCard(
                     title: 'Nenhuma transação',
                     message: 'Suas transações aparecerão aqui assim que você começar a ganhar.',
                     icon: Icons.receipt_long_outlined,
@@ -185,8 +185,7 @@ class _DriverWalletContentState extends State<_DriverWalletContent> {
     final controller = TextEditingController();
     final amount = await showDialog<double>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
+      builder: (context) => AlertDialog(
           backgroundColor: cs.surface,
           title: Text('Solicitar saque', style: AppTypography.titleMedium.copyWith(color: cs.onSurface)),
           content: TextField(
@@ -210,8 +209,7 @@ class _DriverWalletContentState extends State<_DriverWalletContent> {
               child: const Text('Confirmar'),
             ),
           ],
-        );
-      },
+        ),
     );
 
     if (amount != null) {
@@ -234,11 +232,11 @@ class _DriverWalletContentState extends State<_DriverWalletContent> {
 }
 
 class _BalanceCard extends StatelessWidget {
+  const _BalanceCard({required this.available, required this.pending, required this.total, required this.onWithdraw});
   final String available;
   final String pending;
   final String total;
   final VoidCallback onWithdraw;
-  const _BalanceCard({required this.available, required this.pending, required this.total, required this.onWithdraw});
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +246,7 @@ class _BalanceCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cs.primaryContainer,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        border: Border.all(color: cs.outlineVariant, width: AppSpacing.borderThin),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,7 +285,7 @@ class _BalanceCard extends StatelessWidget {
               icon: const Icon(Icons.attach_money),
               label: const Text('Solicitar saque'),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -295,15 +293,14 @@ class _BalanceCard extends StatelessWidget {
 }
 
 class _StatChip extends StatelessWidget {
+  const _StatChip({required this.label, required this.value, required this.background, required this.foreground});
   final String label;
   final String value;
   final Color background;
   final Color foreground;
-  const _StatChip({required this.label, required this.value, required this.background, required this.foreground});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(AppSpacing.radiusLg)),
       child: Row(
@@ -313,12 +310,11 @@ class _StatChip extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _TransactionTile extends StatelessWidget {
-  final Map<String, dynamic> tx;
   const _TransactionTile({required this.tx});
+  final Map<String, dynamic> tx;
 
   @override
   Widget build(BuildContext context) {
@@ -340,7 +336,7 @@ class _TransactionTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: cs.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: cs.outlineVariant, width: AppSpacing.borderThin),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Row(
         children: [
@@ -361,7 +357,7 @@ class _TransactionTile extends StatelessWidget {
             ),
           ),
           Text(
-            (isCredit ? '+ R\$ ' : '- R\$ ') + amount,
+            (isCredit ? r'+ R$ ' : r'- R$ ') + amount,
             style: AppTypography.bodyMedium.copyWith(color: cs.onSurface, fontWeight: FontWeight.w600),
           ),
         ],
@@ -371,10 +367,10 @@ class _TransactionTile extends StatelessWidget {
 }
 
 class _InfoCard extends StatelessWidget {
+  const _InfoCard({required this.title, required this.message, required this.icon});
   final String title;
   final String message;
   final IconData icon;
-  const _InfoCard({required this.title, required this.message, required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -384,7 +380,7 @@ class _InfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        border: Border.all(color: cs.outlineVariant, width: AppSpacing.borderThin),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,7 +396,7 @@ class _InfoCard extends StatelessWidget {
                 Text(message, style: AppTypography.bodyMedium.copyWith(color: cs.onSurfaceVariant)),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -408,8 +404,8 @@ class _InfoCard extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  final String message;
   const _ErrorState({required this.message});
+  final String message;
 
   @override
   Widget build(BuildContext context) {

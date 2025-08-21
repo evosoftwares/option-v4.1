@@ -1,34 +1,4 @@
 class Driver {
-  final String id;
-  final String userId;
-  final String cnhNumber;
-  final DateTime cnhExpiryDate;
-  final String? cnhPhotoUrl;
-  final String brand;
-  final String model;
-  final int year;
-  final String color;
-  final String plate;
-  final String category;
-  final String? crlvPhotoUrl;
-  final String approvalStatus;
-  final bool isOnline;
-  final bool acceptsPet;
-  final bool acceptsGrocery;
-  final bool acceptsCondo;
-  final Map<String, dynamic> fees;
-  final String? acPolicy;
-  final double? customPricePerKm;
-  final double? customPricePerMinute;
-  final Map<String, dynamic>? bankData;
-  final Map<String, dynamic>? pixData;
-  final double? currentLatitude;
-  final double? currentLongitude;
-  final double ratings;
-  final int trips;
-  final int cancellations;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   const Driver({
     required this.id,
@@ -105,9 +75,38 @@ class Driver {
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
   }
+  final String id;
+  final String userId;
+  final String cnhNumber;
+  final DateTime cnhExpiryDate;
+  final String? cnhPhotoUrl;
+  final String brand;
+  final String model;
+  final int year;
+  final String color;
+  final String plate;
+  final String category;
+  final String? crlvPhotoUrl;
+  final String approvalStatus;
+  final bool isOnline;
+  final bool acceptsPet;
+  final bool acceptsGrocery;
+  final bool acceptsCondo;
+  final Map<String, dynamic> fees;
+  final String? acPolicy;
+  final double? customPricePerKm;
+  final double? customPricePerMinute;
+  final Map<String, dynamic>? bankData;
+  final Map<String, dynamic>? pixData;
+  final double? currentLatitude;
+  final double? currentLongitude;
+  final double ratings;
+  final int trips;
+  final int cancellations;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'user_id': userId,
       'cnh_number': cnhNumber,
@@ -139,7 +138,6 @@ class Driver {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
 
   Driver copyWith({
     String? id,
@@ -172,8 +170,7 @@ class Driver {
     int? cancellations,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return Driver(
+  }) => Driver(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       cnhNumber: cnhNumber ?? this.cnhNumber,
@@ -205,5 +202,4 @@ class Driver {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 }

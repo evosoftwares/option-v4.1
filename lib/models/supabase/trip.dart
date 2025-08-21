@@ -1,26 +1,4 @@
 class Trip {
-  final String id;
-  final String tripRequestId;
-  final String driverId;
-  final String passengerId;
-  final String originAddress;
-  final double originLatitude;
-  final double originLongitude;
-  final String destinationAddress;
-  final double destinationLatitude;
-  final double destinationLongitude;
-  final double actualDistanceKm;
-  final int actualDurationMinutes;
-  final double baseFare;
-  final double finalFare;
-  final String status;
-  final DateTime startTime;
-  final DateTime? endTime;
-  final double? driverRating;
-  final double? passengerRating;
-  final String? promoCodeId;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   Trip({
     required this.id,
@@ -75,9 +53,30 @@ class Trip {
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
   }
+  final String id;
+  final String tripRequestId;
+  final String driverId;
+  final String passengerId;
+  final String originAddress;
+  final double originLatitude;
+  final double originLongitude;
+  final String destinationAddress;
+  final double destinationLatitude;
+  final double destinationLongitude;
+  final double actualDistanceKm;
+  final int actualDurationMinutes;
+  final double baseFare;
+  final double finalFare;
+  final String status;
+  final DateTime startTime;
+  final DateTime? endTime;
+  final double? driverRating;
+  final double? passengerRating;
+  final String? promoCodeId;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'trip_request_id': tripRequestId,
       'driver_id': driverId,
@@ -101,7 +100,6 @@ class Trip {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
 
   Trip copyWith({
     String? id,
@@ -126,8 +124,7 @@ class Trip {
     String? promoCodeId,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return Trip(
+  }) => Trip(
       id: id ?? this.id,
       tripRequestId: tripRequestId ?? this.tripRequestId,
       driverId: driverId ?? this.driverId,
@@ -151,7 +148,6 @@ class Trip {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 
   // Helper methods for status checking
   bool get isOngoing => status == 'ongoing';

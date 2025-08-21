@@ -8,8 +8,7 @@ class StepperNavigation extends StatelessWidget {
   const StepperNavigation({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<StepperController>(
+  Widget build(BuildContext context) => Consumer<StepperController>(
       builder: (context, controller, child) {
         return Navigator(
           key: controller.navigatorKey,
@@ -36,5 +35,4 @@ class StepperNavigation extends StatelessWidget {
         );
       },
     );
-  }
 }

@@ -8,16 +8,16 @@ class PhotoService {
   /// Solicita permissões necessárias para câmera e galeria
   Future<bool> requestPermissions() async {
     try {
-      Map<Permission, PermissionStatus> permissions = await [
+      var permissions = await [
         Permission.camera,
         Permission.photos,
         Permission.storage,
       ].request();
 
       // Verifica se pelo menos uma das permissões foi concedida
-      bool hasCameraPermission = permissions[Permission.camera]?.isGranted ?? false;
-      bool hasPhotosPermission = permissions[Permission.photos]?.isGranted ?? false;
-      bool hasStoragePermission = permissions[Permission.storage]?.isGranted ?? false;
+      var hasCameraPermission = permissions[Permission.camera]?.isGranted ?? false;
+      var hasPhotosPermission = permissions[Permission.photos]?.isGranted ?? false;
+      var hasStoragePermission = permissions[Permission.storage]?.isGranted ?? false;
 
       return hasCameraPermission || hasPhotosPermission || hasStoragePermission;
     } catch (e) {
@@ -35,7 +35,7 @@ class PhotoService {
         return null;
       }
 
-      final XFile? photo = await _picker.pickImage(
+      final photo = await _picker.pickImage(
         source: ImageSource.camera,
         maxWidth: 1024,
         maxHeight: 1024,
@@ -58,7 +58,7 @@ class PhotoService {
         return null;
       }
 
-      final XFile? photo = await _picker.pickImage(
+      final photo = await _picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1024,
         maxHeight: 1024,

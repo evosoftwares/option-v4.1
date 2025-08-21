@@ -1,17 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:uber_clone/config/app_config.dart';
-import 'package:uber_clone/exceptions/app_exceptions.dart';
+import '../config/app_config.dart';
+import '../exceptions/app_exceptions.dart';
 
 class AsaasService {
-  final String _baseUrl;
-  final String _apiKey;
-  final http.Client _http;
 
   AsaasService({http.Client? httpClient})
       : _baseUrl = AppConfig.asaasBaseUrl,
         _apiKey = AppConfig.asaasApiKey,
         _http = httpClient ?? http.Client();
+  final String _baseUrl;
+  final String _apiKey;
+  final http.Client _http;
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
@@ -44,7 +44,7 @@ class AsaasService {
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
-      throw NetworkException('Erro na integração com o serviço de pagamentos. Por favor, tente novamente mais tarde.');
+      throw const NetworkException('Erro na integração com o serviço de pagamentos. Por favor, tente novamente mais tarde.');
     } catch (e) {
       if (e is AppException) rethrow;
       throw NetworkException('Falha ao garantir cliente Asaas: $e');
@@ -60,6 +60,6 @@ class AsaasService {
       if (items.isNotEmpty) return items.first as Map<String, dynamic>;
       return null;
     }
-    throw NetworkException('Erro na integração com o serviço de pagamentos. Por favor, tente novamente mais tarde.');
+    throw const NetworkException('Erro na integração com o serviço de pagamentos. Por favor, tente novamente mais tarde.');
   }
 }

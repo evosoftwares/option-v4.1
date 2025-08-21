@@ -5,9 +5,9 @@ import '../models/supabase/location.dart';
 import '../exceptions/app_exceptions.dart';
 
 class TripService {
-  final SupabaseClient _supabase;
 
   TripService(this._supabase);
+  final SupabaseClient _supabase;
 
   // Trip Request Methods
   Future<TripRequest> createTripRequest({
@@ -60,12 +60,12 @@ class TripService {
           .single();
 
       return TripRequest.fromJson(response);
-    } on PostgrestException catch (e) {
-      throw DatabaseException(
-          'Erro ao criar solicitação de viagem. Por favor, verifique os dados e tente novamente.');
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao criar solicitação de viagem. Por favor, verifique os dados e tente novamente.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao criar solicitação de viagem. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao criar solicitação de viagem. Por favor, tente novamente mais tarde.',);
     }
   }
 
@@ -92,12 +92,12 @@ class TripService {
       final response = await query.order('created_at', ascending: false);
 
       return response.map((json) => TripRequest.fromJson(json)).toList();
-    } on PostgrestException catch (e) {
-      throw DatabaseException(
-          'Erro ao buscar solicitações. Por favor, tente novamente mais tarde.');
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao buscar solicitações. Por favor, tente novamente mais tarde.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao buscar solicitações. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao buscar solicitações. Por favor, tente novamente mais tarde.',);
     }
   }
 
@@ -111,11 +111,11 @@ class TripService {
       if (e.code == 'PGRST116') {
         return null;
       }
-      throw DatabaseException(
-          'Erro ao buscar solicitação. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro ao buscar solicitação. Por favor, tente novamente mais tarde.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao buscar solicitação. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao buscar solicitação. Por favor, tente novamente mais tarde.',);
     }
   }
 
@@ -143,12 +143,12 @@ class TripService {
           .single();
 
       return TripRequest.fromJson(response);
-    } on PostgrestException catch (e) {
-      throw DatabaseException(
-          'Erro ao atualizar status. Por favor, verifique os dados e tente novamente.');
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao atualizar status. Por favor, verifique os dados e tente novamente.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao atualizar status. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao atualizar status. Por favor, tente novamente mais tarde.',);
     }
   }
 
@@ -194,12 +194,12 @@ class TripService {
           .single();
 
       return Trip.fromJson(response);
-    } on PostgrestException catch (e) {
-      throw DatabaseException(
-          'Erro ao criar viagem. Por favor, verifique os dados e tente novamente.');
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao criar viagem. Por favor, verifique os dados e tente novamente.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao criar viagem. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao criar viagem. Por favor, tente novamente mais tarde.',);
     }
   }
 
@@ -213,11 +213,11 @@ class TripService {
       if (e.code == 'PGRST116') {
         return null;
       }
-      throw DatabaseException(
-          'Erro ao buscar viagem. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro ao buscar viagem. Por favor, tente novamente mais tarde.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao buscar viagem. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao buscar viagem. Por favor, tente novamente mais tarde.',);
     }
   }
 
@@ -249,12 +249,58 @@ class TripService {
       final response = await query.order('created_at', ascending: false);
 
       return response.map((json) => Trip.fromJson(json)).toList();
-    } on PostgrestException catch (e) {
-      throw DatabaseException(
-          'Erro ao buscar viagens. Por favor, tente novamente mais tarde.');
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao buscar viagens. Por favor, tente novamente mais tarde.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao buscar viagens. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao buscar viagens. Por favor, tente novamente mais tarde.',);
+    }
+  }
+
+  // Get trip history with user details for history screen
+  Future<List<TripHistoryModel>> getTripHistory({
+    String? passengerId,
+    String? driverId,
+    int limit = 20,
+  }) async {
+    try {
+      var selectQuery = '''
+        id, trip_code, status, origin_address, destination_address,
+        actual_distance_km, base_fare, additional_fees, requested_at, completed_at,
+        cancelled_at, cancellation_reason, payment_status,
+        ratings(driver_rating, passenger_rating)
+      ''';
+
+      // Add driver/passenger info based on who is requesting
+      if (passengerId != null) {
+        selectQuery += ', drivers!inner(users!inner(full_name, photo_url))';
+      } else if (driverId != null) {
+        selectQuery += ', passengers!inner(users!inner(full_name, photo_url))';
+      }
+
+      dynamic query = _supabase.from('trips').select(selectQuery);
+
+      if (passengerId != null) {
+        query = query.eq('passenger_id', passengerId);
+      }
+
+      if (driverId != null) {
+        query = query.eq('driver_id', driverId);
+      }
+
+      final response = await query
+          .order('created_at', ascending: false)
+          .limit(limit);
+
+      return response.map((json) => TripHistoryModel.fromJson(json, 
+          isForPassenger: passengerId != null,),).toList();
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao buscar histórico de viagens. Tente novamente.',);
+    } catch (e) {
+      throw const DatabaseException(
+          'Erro inesperado ao buscar histórico. Tente novamente.',);
     }
   }
 
@@ -280,12 +326,12 @@ class TripService {
           .single();
 
       return Trip.fromJson(response);
-    } on PostgrestException catch (e) {
-      throw DatabaseException(
-          'Erro ao completar viagem. Por favor, verifique os dados e tente novamente.');
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao completar viagem. Por favor, verifique os dados e tente novamente.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao completar viagem. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao completar viagem. Por favor, tente novamente mais tarde.',);
     }
   }
 
@@ -315,12 +361,12 @@ class TripService {
           .single();
 
       return Trip.fromJson(response);
-    } on PostgrestException catch (e) {
-      throw DatabaseException(
-          'Erro ao avaliar viagem. Por favor, verifique os dados e tente novamente.');
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao avaliar viagem. Por favor, verifique os dados e tente novamente.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao avaliar viagem. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao avaliar viagem. Por favor, tente novamente mais tarde.',);
     }
   }
 
@@ -354,12 +400,12 @@ class TripService {
           .single();
 
       return Location.fromJson(response);
-    } on PostgrestException catch (e) {
-      throw DatabaseException(
-          'Erro ao salvar localização. Por favor, tente novamente mais tarde.');
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao salvar localização. Por favor, tente novamente mais tarde.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao salvar localização. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao salvar localização. Por favor, tente novamente mais tarde.',);
     }
   }
 
@@ -371,13 +417,13 @@ class TripService {
           .eq('user_id', userId)
           .order('created_at', ascending: false);
 
-      return response.map((json) => Location.fromJson(json)).toList();
-    } on PostgrestException catch (e) {
-      throw DatabaseException(
-          'Erro ao buscar localizações. Por favor, tente novamente mais tarde.');
+      return response.map(Location.fromJson).toList();
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao buscar localizações. Por favor, tente novamente mais tarde.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao buscar localizações. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao buscar localizações. Por favor, tente novamente mais tarde.',);
     }
   }
 
@@ -391,11 +437,11 @@ class TripService {
       if (e.code == 'PGRST116') {
         return null;
       }
-      throw DatabaseException(
-          'Erro ao buscar localização. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro ao buscar localização. Por favor, tente novamente mais tarde.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao buscar localização. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao buscar localização. Por favor, tente novamente mais tarde.',);
     }
   }
 
@@ -432,24 +478,24 @@ class TripService {
           .single();
 
       return Location.fromJson(response);
-    } on PostgrestException catch (e) {
-      throw DatabaseException(
-          'Erro ao atualizar localização. Por favor, verifique os dados e tente novamente.');
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao atualizar localização. Por favor, verifique os dados e tente novamente.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao atualizar localização. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao atualizar localização. Por favor, tente novamente mais tarde.',);
     }
   }
 
   Future<void> deleteLocation(String id) async {
     try {
       await _supabase.from('locations').delete().eq('id', id);
-    } on PostgrestException catch (e) {
-      throw DatabaseException(
-          'Erro ao deletar localização. Por favor, verifique os dados e tente novamente.');
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao deletar localização. Por favor, verifique os dados e tente novamente.',);
     } catch (e) {
-      throw DatabaseException(
-          'Erro inesperado ao deletar localização. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao deletar localização. Por favor, tente novamente mais tarde.',);
     }
   }
 
@@ -473,11 +519,140 @@ class TripService {
         .map((data) => data.map((json) => TripRequest.fromJson(json)).toList());
   }
 
-  Stream<Trip?> subscribeToTrip(String tripId) {
-    return _supabase
+  Stream<Trip?> subscribeToTrip(String tripId) => _supabase
         .from('trips')
         .stream(primaryKey: ['id'])
         .eq('id', tripId)
         .map((data) => data.isEmpty ? null : Trip.fromJson(data.first));
+}
+
+// Model for trip history screen
+class TripHistoryModel {
+
+  TripHistoryModel({
+    required this.id,
+    this.tripCode,
+    required this.status,
+    required this.originAddress,
+    required this.destinationAddress,
+    this.actualDistanceKm,
+    required this.baseFare,
+    required this.additionalFees,
+    required this.requestedAt,
+    this.completedAt,
+    this.cancelledAt,
+    this.cancellationReason,
+    required this.paymentStatus,
+    this.driverRating,
+    this.passengerRating,
+    this.otherUserName,
+    this.otherUserPhotoUrl,
+  });
+
+  factory TripHistoryModel.fromJson(Map<String, dynamic> json, {required bool isForPassenger}) {
+    String? otherUserName;
+    String? otherUserPhotoUrl;
+
+    // Extract driver or passenger info
+    if (isForPassenger && json['drivers'] != null) {
+      final driver = json['drivers'];
+      if (driver['users'] != null) {
+        otherUserName = driver['users']['full_name'];
+        otherUserPhotoUrl = driver['users']['photo_url'];
+      }
+    } else if (!isForPassenger && json['passengers'] != null) {
+      final passenger = json['passengers'];
+      if (passenger['users'] != null) {
+        otherUserName = passenger['users']['full_name'];
+        otherUserPhotoUrl = passenger['users']['photo_url'];
+      }
+    }
+
+    // Extract ratings from ratings table
+    double? driverRating;
+    double? passengerRating;
+    if (json['ratings'] != null && json['ratings'].isNotEmpty) {
+      final ratings = json['ratings'][0]; // First rating entry
+      driverRating = ratings['driver_rating']?.toDouble();
+      passengerRating = ratings['passenger_rating']?.toDouble();
+    }
+
+    return TripHistoryModel(
+      id: json['id'],
+      tripCode: json['trip_code'],
+      status: json['status'] ?? 'unknown',
+      originAddress: json['origin_address'] ?? '',
+      destinationAddress: json['destination_address'] ?? '',
+      actualDistanceKm: json['actual_distance_km']?.toDouble(),
+      baseFare: (json['base_fare'] ?? 0).toDouble(),
+      additionalFees: (json['additional_fees'] ?? 0).toDouble(),
+      requestedAt: DateTime.parse(json['requested_at']),
+      completedAt: json['completed_at'] != null ? DateTime.parse(json['completed_at']) : null,
+      cancelledAt: json['cancelled_at'] != null ? DateTime.parse(json['cancelled_at']) : null,
+      cancellationReason: json['cancellation_reason'],
+      paymentStatus: json['payment_status'] ?? 'pending',
+      driverRating: driverRating,
+      passengerRating: passengerRating,
+      otherUserName: otherUserName,
+      otherUserPhotoUrl: otherUserPhotoUrl,
+    );
+  }
+  final String id;
+  final String? tripCode;
+  final String status;
+  final String originAddress;
+  final String destinationAddress;
+  final double? actualDistanceKm;
+  final double baseFare;
+  final double additionalFees;
+  final DateTime requestedAt;
+  final DateTime? completedAt;
+  final DateTime? cancelledAt;
+  final String? cancellationReason;
+  final String paymentStatus;
+  final double? driverRating;
+  final double? passengerRating;
+  final String? otherUserName;
+  final String? otherUserPhotoUrl;
+
+  String get statusDisplayText {
+    switch (status.toLowerCase()) {
+      case 'ongoing':
+        return 'Em andamento';
+      case 'completed':
+        return 'Concluída';
+      case 'cancelled':
+        return 'Cancelada';
+      default:
+        return 'Status desconhecido';
+    }
+  }
+
+  String get formattedDate {
+    final now = DateTime.now();
+    final difference = now.difference(requestedAt);
+
+    if (difference.inDays == 0) {
+      return 'Hoje';
+    } else if (difference.inDays == 1) {
+      return 'Ontem';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} dias atrás';
+    } else {
+      return '${requestedAt.day}/${requestedAt.month}/${requestedAt.year}';
+    }
+  }
+
+  // Calculated field for total fare (base + additional fees)
+  double get totalFare => baseFare + additionalFees;
+
+  String get shortOriginAddress {
+    final parts = originAddress.split(',');
+    return parts.isNotEmpty ? parts.first.trim() : originAddress;
+  }
+
+  String get shortDestinationAddress {
+    final parts = destinationAddress.split(',');
+    return parts.isNotEmpty ? parts.first.trim() : destinationAddress;
   }
 }

@@ -5,14 +5,14 @@ import '../../../controllers/stepper_controller.dart';
 import '../../../models/favorite_location.dart';
 
 class AddLocationModal extends StatefulWidget {
-  final FavoriteLocation? location;
-  final int? index;
 
   const AddLocationModal({
     Key? key,
     this.location,
     this.index,
   }) : super(key: key);
+  final FavoriteLocation? location;
+  final int? index;
 
   @override
   State<AddLocationModal> createState() => _AddLocationModalState();
@@ -69,7 +69,7 @@ class _AddLocationModalState extends State<AddLocationModal> {
     } catch (e) {
       setState(() => _isSearching = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao buscar locais. Por favor, tente novamente mais tarde.')),
+        const SnackBar(content: Text('Erro ao buscar locais. Por favor, tente novamente mais tarde.')),
       );
     }
   }
@@ -123,7 +123,7 @@ class _AddLocationModalState extends State<AddLocationModal> {
       ),
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16),
           child: Form(
             key: _formKey,
             child: Column(
@@ -165,7 +165,7 @@ class _AddLocationModalState extends State<AddLocationModal> {
                 
                 if (_isSearching)
                   const Padding(
-                    padding: EdgeInsets.all(8.0),
+                    padding: EdgeInsets.all(8),
                     child: Center(child: CircularProgressIndicator()),
                   ),
                 
@@ -229,13 +229,12 @@ class _AddLocationModalState extends State<AddLocationModal> {
                 
                 // Tipo de local
                 DropdownButtonFormField<LocationType>(
-                  value: _selectedType,
+                  initialValue: _selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Tipo de local',
                     border: OutlineInputBorder(),
                   ),
-                  items: LocationType.values.map((type) {
-                    return DropdownMenuItem(
+                  items: LocationType.values.map((type) => DropdownMenuItem(
                       value: type,
                       child: Row(
                         children: [
@@ -244,8 +243,7 @@ class _AddLocationModalState extends State<AddLocationModal> {
                           Text(type.label),
                         ],
                       ),
-                    );
-                  }).toList(),
+                    )).toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setState(() => _selectedType = value);

@@ -5,14 +5,14 @@ import '../../utils/phone_mask.dart';
 import '../../utils/phone_validator.dart';
 
 class PhoneStep extends StatefulWidget {
-  final VoidCallback onNext;
-  final Function(String)? onSave;
 
   const PhoneStep({
     super.key,
     required this.onNext,
     this.onSave,
   });
+  final VoidCallback onNext;
+  final Function(String)? onSave;
 
   @override
   State<PhoneStep> createState() => _PhoneStepState();
@@ -36,9 +36,7 @@ class _PhoneStepState extends State<PhoneStep> {
     super.dispose();
   }
 
-  String? _validatePhone(String? value) {
-    return PhoneValidator.validate(value);
-  }
+  String? _validatePhone(String? value) => PhoneValidator.validate(value);
 
   Future<void> _submitPhone() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -57,7 +55,7 @@ class _PhoneStepState extends State<PhoneStep> {
       final colorScheme = Theme.of(context).colorScheme;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao salvar telefone. Por favor, tente novamente mais tarde.'),
+          content: const Text('Erro ao salvar telefone. Por favor, tente novamente mais tarde.'),
           backgroundColor: colorScheme.error,
         ),
       );
@@ -78,7 +76,7 @@ class _PhoneStepState extends State<PhoneStep> {
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(24),
       child: Form(
         key: _formKey,
         child: Column(

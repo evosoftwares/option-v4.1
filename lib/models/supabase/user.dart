@@ -1,7 +1,4 @@
 class User {
-  final String id;
-  final String email;
-  final DateTime createdAt;
 
   User({
     required this.id,
@@ -16,24 +13,23 @@ class User {
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
+  final String id;
+  final String email;
+  final DateTime createdAt;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'email': email,
       'created_at': createdAt.toIso8601String(),
     };
-  }
 
   User copyWith({
     String? id,
     String? email,
     DateTime? createdAt,
-  }) {
-    return User(
+  }) => User(
       id: id ?? this.id,
       email: email ?? this.email,
       createdAt: createdAt ?? this.createdAt,
     );
-  }
 }

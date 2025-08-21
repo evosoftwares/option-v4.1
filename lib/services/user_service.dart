@@ -14,14 +14,25 @@ class UserService {
     String? photoUrl,
     required String userType,
   }) async {
+    print('🔄 UserService.createUser iniciado');
+    print('  - authUserId: $authUserId');
+    print('  - email: $email');
+    print('  - fullName: $fullName');
+    print('  - phone: $phone');
+    print('  - userType: $userType');
+
     try {
       // Verificar se o usuário já existe
+      print('🔍 Verificando se usuário já existe...');
       final existingUser = await getUserById(authUserId);
       if (existingUser != null) {
+        print('❌ Usuário já existe: $email');
         throw UserAlreadyExistsException(email);
       }
+      print('✅ Usuário não existe, prosseguindo com criação');
     } catch (e) {
       if (e is UserAlreadyExistsException) rethrow;
+      print('ℹ️ Erro ao verificar usuário existente (normal): $e');
       // Se não encontrou o usuário, continua com a criação
     }
 
@@ -37,20 +48,28 @@ class UserService {
         'status': 'active',
       };
 
+      print('📝 Inserindo dados do usuário:');
+      print(userData);
+
       final response = await _supabase
           .from('app_users')
           .insert(userData)
           .select()
           .single();
 
+      print('✅ Usuário criado com sucesso!');
+      print('📄 Resposta: $response');
+      
       return User.fromMap(response);
     } on PostgrestException catch (e) {
+      print('❌ PostgrestException: ${e.code} - ${e.message}');
       if (e.code == '23505') { // Unique constraint violation
         throw UserAlreadyExistsException(email);
       }
-      throw DatabaseException('Erro ao criar usuário. Por favor, verifique os dados e tente novamente.');
+      throw DatabaseException('Erro ao criar usuário: ${e.message}', e.code);
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao criar usuário. Por favor, tente novamente mais tarde.');
+      print('❌ Erro inesperado ao criar usuário: $e');
+      throw DatabaseException('Erro inesperado ao criar usuário: ${e.toString()}');
     }
   }
 
@@ -65,10 +84,10 @@ class UserService {
 
       if (response == null) return null;
       return User.fromMap(response);
-    } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar usuário. Por favor, tente novamente mais tarde.');
+    } on PostgrestException {
+      throw const DatabaseException('Erro ao buscar usuário. Por favor, tente novamente mais tarde.');
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar usuário. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException('Erro inesperado ao buscar usuário. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -83,7 +102,7 @@ class UserService {
 
       if (response == null) return null;
       return User.fromMap(response);
-    } on PostgrestException catch (e) {
+    } on PostgrestException {
       throw Exception('Erro ao buscar usuário por email. Por favor, tente novamente mais tarde.');
     } catch (e) {
       throw Exception('Erro inesperado ao buscar usuário por email. Por favor, tente novamente mais tarde.');
@@ -125,7 +144,7 @@ class UserService {
       }
       throw DatabaseException('Erro ao atualizar usuário. Por favor, verifique os dados e tente novamente.', e.code);
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao atualizar usuário. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException('Erro inesperado ao atualizar usuário. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -149,7 +168,7 @@ class UserService {
       }
       throw DatabaseException('Erro ao atualizar tipo de usuário. Por favor, verifique os dados e tente novamente.', e.code);
     } catch (e) {
-      throw DatabaseException('Erro inesperado ao atualizar tipo de usuário. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException('Erro inesperado ao atualizar tipo de usuário. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -163,7 +182,7 @@ class UserService {
           .maybeSingle();
 
       return response != null;
-    } on PostgrestException catch (e) {
+    } on PostgrestException {
       throw Exception('Erro ao verificar existência do usuário. Por favor, tente novamente mais tarde.');
     } catch (e) {
       throw Exception('Erro inesperado ao verificar usuário. Por favor, tente novamente mais tarde.');
@@ -192,7 +211,7 @@ class UserService {
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', userId);
-    } on PostgrestException catch (e) {
+    } on PostgrestException {
       throw Exception('Erro ao desativar usuário. Por favor, tente novamente mais tarde.');
     } catch (e) {
       throw Exception('Erro inesperado ao desativar usuário. Por favor, tente novamente mais tarde.');
@@ -214,8 +233,8 @@ class UserService {
           .order('created_at', ascending: false)
           .range(offset, offset + limit - 1);
 
-      return response.map((data) => User.fromMap(data)).toList();
-    } on PostgrestException catch (e) {
+      return response.map(User.fromMap).toList();
+    } on PostgrestException {
       throw Exception('Erro ao buscar usuários por tipo. Por favor, tente novamente mais tarde.');
     } catch (e) {
       throw Exception('Erro inesperado ao buscar usuários. Por favor, tente novamente mais tarde.');

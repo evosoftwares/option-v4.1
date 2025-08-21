@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uber_clone/widgets/logo_branding.dart';
+import '../../widgets/logo_branding.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -43,7 +43,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao enviar e-mail de recuperação. Por favor, tente novamente mais tarde.')),
+        const SnackBar(content: Text('Erro ao enviar e-mail de recuperação. Por favor, tente novamente mais tarde.')),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

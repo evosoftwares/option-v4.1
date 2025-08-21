@@ -1,16 +1,4 @@
 class Location {
-  final String id;
-  final String userId;
-  final String name;
-  final String address;
-  final double latitude;
-  final double longitude;
-  final String? neighborhood;
-  final String? notes;
-  final bool isFavorite;
-  final String? locationType;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   Location({
     required this.id,
@@ -43,9 +31,20 @@ class Location {
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
   }
+  final String id;
+  final String userId;
+  final String name;
+  final String address;
+  final double latitude;
+  final double longitude;
+  final String? neighborhood;
+  final String? notes;
+  final bool isFavorite;
+  final String? locationType;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'user_id': userId,
       'name': name,
@@ -59,7 +58,6 @@ class Location {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
 
   Location copyWith({
     String? id,
@@ -74,8 +72,7 @@ class Location {
     String? locationType,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return Location(
+  }) => Location(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       name: name ?? this.name,
@@ -89,5 +86,4 @@ class Location {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 }

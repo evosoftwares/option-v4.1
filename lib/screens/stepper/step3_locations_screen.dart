@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../config/app_config.dart';
 import '../../controllers/stepper_controller.dart';
 import '../../models/favorite_location.dart';
 import '../../services/location_service.dart';
@@ -14,7 +15,7 @@ class Step3LocationsScreen extends StatefulWidget {
 
 class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
   final LocationService _locationService = LocationService(
-    apiKey: 'YOUR_GOOGLE_MAPS_API_KEY_HERE',
+    apiKey: AppConfig.googleMapsApiKey,
   );
 
   @override
@@ -35,9 +36,8 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 32),
           Text(
@@ -116,8 +116,7 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
     );
   }
 
-  Widget _buildLocationsList(StepperController controller) {
-    return ListView.builder(
+  Widget _buildLocationsList(StepperController controller) => ListView.builder(
       padding: const EdgeInsets.all(8),
       itemCount: controller.favoriteLocations.length,
       itemBuilder: (context, index) {
@@ -125,7 +124,6 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
         return _buildLocationCard(location, controller);
       },
     );
-  }
 
   Widget _buildLocationCard(FavoriteLocation location, StepperController controller) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -179,12 +177,11 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
     
     final nameController = TextEditingController(text: isEditing ? location.name : '');
     final addressController = TextEditingController(text: isEditing ? location.address : '');
-    LocationType selectedType = isEditing ? location.type : LocationType.home;
+    var selectedType = isEditing ? location.type : LocationType.home;
 
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
+      builder: (context) => StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
               title: Text(isEditing ? 'Editar Local' : 'Adicionar Local'),
@@ -266,8 +263,7 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
               ],
             );
           },
-        );
-      },
+        ),
     );
   }
 

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase/supabase.dart';
-import 'package:uber_clone/services/trip_service.dart';
+import 'package:option/services/trip_service.dart';
 import '../../helpers/supabase_test_helper.dart';
 
 void main() {
@@ -38,9 +38,9 @@ void main() {
         isCondoOrigin: false,
         needsAc: false,
         numberOfStops: 0,
-        estimatedDistanceKm: 8.0,
+        estimatedDistanceKm: 8,
         estimatedDurationMinutes: 20,
-        estimatedFare: 20.0,
+        estimatedFare: 20,
       );
 
       // Act: create a trip from the request
@@ -56,8 +56,8 @@ void main() {
         destinationLongitude: tripRequest.destinationLongitude,
         actualDistanceKm: 8.2,
         actualDurationMinutes: 21,
-        baseFare: 18.0,
-        finalFare: 22.0,
+        baseFare: 18,
+        finalFare: 22,
       );
 
       // Assert creation
@@ -88,7 +88,7 @@ void main() {
       final rated = await tripService.rateTrip(
         tripId: trip.id,
         driverRating: 4.8,
-        passengerRating: 5.0,
+        passengerRating: 5,
       );
       expect(rated.driverRating, closeTo(4.8, 0.001));
       expect(rated.passengerRating, closeTo(5.0, 0.001));

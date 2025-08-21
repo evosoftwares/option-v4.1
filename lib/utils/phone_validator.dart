@@ -60,7 +60,5 @@ class PhoneValidator {
     return value;
   }
 
-  static String unformat(String value) {
-    return value.replaceAll(RegExp(r'[^\d]'), '');
-  }
+  static String unformat(String value) => value.replaceAll(RegExp(r'[^\d]'), '');
 }

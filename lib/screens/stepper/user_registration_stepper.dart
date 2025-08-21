@@ -19,7 +19,13 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
   @override
   void initState() {
     super.initState();
+    print('🔄 Iniciando UserRegistrationStepper...');
     final controller = Provider.of<StepperController>(context, listen: false);
+    print('📋 Estado atual do controller:');
+    print('  - userType: ${controller.userType}');
+    print('  - fullName: ${controller.fullName}');
+    print('  - email: ${controller.email}');
+    print('  - phone: ${controller.phone}');
     controller.loadUserData();
   }
 
@@ -62,21 +68,36 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
     }
   }
 
-  void _completeRegistration() async {
+  Future<void> _completeRegistration() async {
+    print('🏁 Finalizando cadastro...');
     final controller = Provider.of<StepperController>(context, listen: false);
+    
+    // Validar estado antes de tentar completar
+    print('📋 Validando dados antes da finalização:');
+    print('  - userType: ${controller.userType}');
+    print('  - fullName: ${controller.fullName}');
+    print('  - email: ${controller.email}');
+    print('  - phone: ${controller.phone}');
+    
     try {
       final ok = await controller.completeRegistration();
       if (!mounted) return;
       if (ok) {
+        print('✅ Cadastro finalizado com sucesso! Navegando para /home');
         Navigator.of(context).pushReplacementNamed('/home');
+      } else {
+        print('❌ Falha na finalização do cadastro');
+        throw Exception('Falha na finalização do cadastro');
       }
     } catch (e) {
+      print('❌ Erro ao finalizar cadastro: $e');
       if (!mounted) return;
       final colorScheme = Theme.of(context).colorScheme;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao finalizar cadastro. Por favor, tente novamente mais tarde.'),
+          content: Text('Erro ao finalizar cadastro: ${e.toString()}'),
           backgroundColor: colorScheme.error,
+          duration: const Duration(seconds: 5),
         ),
       );
     }
@@ -151,8 +172,7 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(3, (index) {
-          return GestureDetector(
+        children: List.generate(3, (index) => GestureDetector(
             onTap: () => _jumpToStep(index),
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -165,8 +185,7 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
-          );
-        }),
+          )),
       ),
     );
   }

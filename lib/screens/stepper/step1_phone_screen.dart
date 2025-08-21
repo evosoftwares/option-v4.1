@@ -35,7 +35,7 @@ class _Step1PhoneScreenState extends State<Step1PhoneScreen> {
     if (cleanText.isEmpty) return '';
     
     if (cleanText.length <= 2) {
-      return '(${cleanText.padRight(2, ' ') }';
+      return '(${cleanText.padRight(2) }';
     } else if (cleanText.length <= 6) {
       return '(${cleanText.substring(0, 2)}) ${cleanText.substring(2)}';
     } else if (cleanText.length <= 10) {
@@ -74,7 +74,7 @@ class _Step1PhoneScreenState extends State<Step1PhoneScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -3,9 +3,9 @@ import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 
 class LocationService {
-  final String apiKey;
 
   LocationService({required this.apiKey});
+  final String apiKey;
 
   Future<List<Map<String, dynamic>>> searchPlaces(String query) async {
     if (query.isEmpty) return [];
@@ -19,20 +19,31 @@ class LocationService {
     );
 
     try {
+      print('Fazendo requisição para: $url');
       final response = await http.get(url);
+      
+      print('Status da resposta: ${response.statusCode}');
+      print('Corpo da resposta: ${response.body}');
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final predictions = data['predictions'] as List;
         
-        return predictions.map((prediction) {
-          return {
+        // Verificar se há erro na resposta da API
+        if (data['status'] != 'OK') {
+          print('Erro da API Google Places: ${data['status']} - ${data['error_message'] ?? 'Sem mensagem de erro'}');
+          return [];
+        }
+        
+        final predictions = data['predictions'] as List? ?? [];
+        
+        return predictions.map((prediction) => {
             'placeId': prediction['place_id'],
             'description': prediction['description'],
-            'mainText': prediction['structured_formatting']['main_text'] ?? '',
-            'secondaryText': prediction['structured_formatting']['secondary_text'] ?? '',
-          };
-        }).toList();
+            'mainText': prediction['structured_formatting']?['main_text'] ?? '',
+            'secondaryText': prediction['structured_formatting']?['secondary_text'] ?? '',
+          }).toList();
+      } else {
+        print('Erro HTTP: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       print('Erro ao buscar lugares: $e');
@@ -75,7 +86,7 @@ class LocationService {
 
   Future<Map<String, dynamic>?> getCurrentLocation() async {
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
+      var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }

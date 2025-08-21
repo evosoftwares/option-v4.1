@@ -5,14 +5,14 @@ import 'package:provider/provider.dart';
 import '../../controllers/stepper_controller.dart';
 
 class PhotoStep extends StatefulWidget {
-  final VoidCallback onNext;
-  final Function(String)? onSave;
 
   const PhotoStep({
     super.key,
     required this.onNext,
     this.onSave,
   });
+  final VoidCallback onNext;
+  final Function(String)? onSave;
 
   @override
   State<PhotoStep> createState() => _PhotoStepState();
@@ -26,7 +26,7 @@ class _PhotoStepState extends State<PhotoStep> {
     setState(() => _isLoading = true);
 
     try {
-      final XFile? image = await _picker.pickImage(
+      final image = await _picker.pickImage(
         source: source,
         maxWidth: 800,
         maxHeight: 800,
@@ -96,8 +96,7 @@ class _PhotoStepState extends State<PhotoStep> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Consumer<StepperController>(
-      builder: (context, controller, child) {
-        return Padding(
+      builder: (context, controller, child) => Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,8 +199,7 @@ class _PhotoStepState extends State<PhotoStep> {
               const SizedBox(height: 20),
             ],
           ),
-        );
-      },
+        ),
     );
   }
 
@@ -213,8 +211,7 @@ class _PhotoStepState extends State<PhotoStep> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
-        return SafeArea(
+      builder: (context) => SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -239,8 +236,7 @@ class _PhotoStepState extends State<PhotoStep> {
               ],
             ),
           ),
-        );
-      },
+        ),
     );
   }
 }

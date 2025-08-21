@@ -1,16 +1,4 @@
 class DriverOffer {
-  final String id;
-  final String? tripId; // request_id (fallback trip_id)
-  final String? driverId;
-  final double? driverDistanceKm;
-  final int? driverEtaMinutes;
-  final double? baseFare;
-  final double? additionalFees;
-  final double? totalFare;
-  final bool? isAvailable;
-  final bool? wasSelected;
-  final String? notes;
-  final DateTime? createdAt;
 
   DriverOffer({
     required this.id,
@@ -45,9 +33,20 @@ class DriverOffer {
           : null,
     );
   }
+  final String id;
+  final String? tripId; // request_id (fallback trip_id)
+  final String? driverId;
+  final double? driverDistanceKm;
+  final int? driverEtaMinutes;
+  final double? baseFare;
+  final double? additionalFees;
+  final double? totalFare;
+  final bool? isAvailable;
+  final bool? wasSelected;
+  final String? notes;
+  final DateTime? createdAt;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'request_id': tripId,
       'driver_id': driverId,
@@ -61,7 +60,6 @@ class DriverOffer {
       'notes': notes,
       'created_at': createdAt?.toIso8601String(),
     };
-  }
 
   DriverOffer copyWith({
     String? id,
@@ -76,8 +74,7 @@ class DriverOffer {
     bool? wasSelected,
     String? notes,
     DateTime? createdAt,
-  }) {
-    return DriverOffer(
+  }) => DriverOffer(
       id: id ?? this.id,
       tripId: tripId ?? this.tripId,
       driverId: driverId ?? this.driverId,
@@ -91,5 +88,4 @@ class DriverOffer {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
     );
-  }
 }
