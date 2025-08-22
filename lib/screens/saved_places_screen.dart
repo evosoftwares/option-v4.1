@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/logo_branding.dart';
 import 'stepper/step3_locations_screen.dart';
 
 class SavedPlacesScreen extends StatelessWidget {
@@ -12,11 +13,10 @@ class SavedPlacesScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Locais salvos'),
-        backgroundColor: colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        elevation: 0,
+      appBar: const StandardAppBar(
+        title: 'Locais Favoritos',
+        showMenuIcon: false,
+        centerTitle: true,
       ),
       body: const SafeArea(
         child: Step3LocationsScreen(),

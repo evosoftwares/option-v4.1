@@ -3,7 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/supabase/driver.dart';
 import '../models/supabase/driver_offer.dart';
 import '../models/supabase/trip.dart';
+import '../models/vehicle_category.dart';
 import '../exceptions/app_exceptions.dart';
+import 'driver_excluded_zones_service.dart';
 
 class DriverService {
 
@@ -62,12 +64,12 @@ class DriverService {
         'cnh_number': cnhNumber,
         'cnh_expiry_date': cnhExpiryDate.toIso8601String(),
         'cnh_photo_url': cnhPhotoUrl,
-        'brand': brand,
-        'model': model,
-        'year': year,
-        'color': color,
-        'plate': plate,
-        'category': category,
+        'vehicle_brand': brand,
+        'vehicle_model': model,
+        'vehicle_year': year,
+        'vehicle_color': color,
+        'vehicle_plate': plate,
+        'vehicle_category': category,
         'crlv_photo_url': crlvPhotoUrl,
         'approval_status': 'pending',
         'is_online': false,
@@ -82,9 +84,9 @@ class DriverService {
         'pix_data': pixData,
         'current_latitude': currentLatitude,
         'current_longitude': currentLongitude,
-        'ratings': 0.0,
-        'trips': 0,
-        'cancellations': 0,
+        'average_rating': 0.0,
+        'total_trips': 0,
+        'consecutive_cancellations': 0,
       };
 
       final response =
@@ -139,12 +141,12 @@ class DriverService {
       }
       if (cnhPhotoUrl != null) updates['cnh_photo_url'] = cnhPhotoUrl;
 
-      if (brand != null) updates['brand'] = brand;
-      if (model != null) updates['model'] = model;
-      if (year != null) updates['year'] = year;
-      if (color != null) updates['color'] = color;
-      if (plate != null) updates['plate'] = plate;
-      if (category != null) updates['category'] = category;
+      if (brand != null) updates['vehicle_brand'] = brand;
+      if (model != null) updates['vehicle_model'] = model;
+      if (year != null) updates['vehicle_year'] = year;
+      if (color != null) updates['vehicle_color'] = color;
+      if (plate != null) updates['vehicle_plate'] = plate;
+      if (category != null) updates['vehicle_category'] = category;
       if (crlvPhotoUrl != null) updates['crlv_photo_url'] = crlvPhotoUrl;
 
       if (approvalStatus != null) updates['approval_status'] = approvalStatus;
@@ -353,17 +355,28 @@ class DriverService {
   // Update driver location
   Future<void> updateLocation(
       String driverId, double latitude, double longitude,) async {
-    try {
-      await _supabase.from('drivers').update({
-        'current_latitude': latitude,
-        'current_longitude': longitude,
-      }).eq('id', driverId);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao atualizar localização. Por favor, tente novamente mais tarde.',);
-    } catch (e) {
-      throw const DatabaseException(
-          'Erro inesperado ao atualizar localização. Por favor, tente novamente mais tarde.',);
+    const retries = 3;
+    const delays = [Duration(milliseconds: 0), Duration(milliseconds: 500), Duration(milliseconds: 1500)];
+    for (var attempt = 0; attempt < retries; attempt++) {
+      try {
+        await _supabase.from('drivers').update({
+          'current_latitude': latitude,
+          'current_longitude': longitude,
+        }).eq('id', driverId);
+        return; // sucesso
+      } on PostgrestException {
+        if (attempt == retries - 1) {
+          throw const DatabaseException(
+              'Erro ao atualizar localização. Por favor, tente novamente mais tarde.',);
+        }
+        await Future.delayed(delays[attempt]);
+      } catch (e) {
+        if (attempt == retries - 1) {
+          throw const DatabaseException(
+              'Erro inesperado ao atualizar localização. Por favor, tente novamente mais tarde.',);
+        }
+        await Future.delayed(delays[attempt]);
+      }
     }
   }
 
@@ -410,6 +423,9 @@ class DriverService {
     bool? needsPet,
     bool? needsGrocery,
     bool? needsCondo,
+    String? destinationNeighborhood,
+    String? destinationCity,
+    String? destinationState,
     int? limit,
   }) async {
     try {
@@ -424,7 +440,7 @@ class DriverService {
 
       // Filtro de categoria
       if (category != null && category.isNotEmpty) {
-        query = query.eq('category', category);
+        query = query.eq('vehicle_category', category);
       }
 
       // Preferências
@@ -438,20 +454,184 @@ class DriverService {
           .lte('current_latitude', latitude + latDelta)
           .gte('current_longitude', longitude - lngDelta)
           .lte('current_longitude', longitude + lngDelta)
-          .order('ratings', ascending: false);
+          .order('average_rating', ascending: false);
 
       if (limit != null && limit > 0) {
         query = query.limit(limit);
       }
 
       final response = await query;
-      return (response as List)
+      List<Driver> drivers = (response as List)
           .map((json) => Driver.fromJson(json as Map<String, dynamic>))
           .toList();
+
+      // Filtrar motoristas que excluíram a zona de destino
+      if (destinationNeighborhood != null && destinationCity != null && destinationState != null) {
+        drivers = await _filterDriversByExcludedZones(
+          drivers,
+          destinationNeighborhood,
+          destinationCity,
+          destinationState,
+        );
+      }
+
+      return drivers;
     } on PostgrestException catch (e) {
       throw DatabaseException('Erro ao buscar motoristas disponíveis: ${e.message}');
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao buscar motoristas disponíveis.');
     }
+  }
+
+  // Filtra motoristas baseado nas zonas excluídas
+  Future<List<Driver>> _filterDriversByExcludedZones(
+    List<Driver> drivers,
+    String neighborhoodName,
+    String city,
+    String state,
+  ) async {
+    try {
+      final excludedZonesService = DriverExcludedZonesService(_supabase);
+      final filteredDrivers = <Driver>[];
+
+      for (final driver in drivers) {
+        final isExcluded = await excludedZonesService.isZoneExcluded(
+          driverId: driver.id,
+          neighborhoodName: neighborhoodName,
+          city: city,
+          state: state,
+        );
+
+        if (!isExcluded) {
+          filteredDrivers.add(driver);
+        }
+      }
+
+      return filteredDrivers;
+    } catch (e) {
+      // Em caso de erro na verificação de zonas excluídas, retorna todos os motoristas
+      // para não impactar a funcionalidade principal
+      return drivers;
+    }
+  }
+
+  /// Busca categorias de veículos disponíveis em uma região
+  /// Retorna dados reais baseados nos motoristas ativos
+  Future<List<VehicleCategoryData>> getAvailableCategoriesInRegion({
+    required double latitude,
+    required double longitude,
+    double radiusKm = 10.0,
+  }) async {
+    try {
+      // Busca estatísticas por categoria dos motoristas online na região
+      final response = await _supabase.rpc('get_available_categories_stats', params: {
+        'lat': latitude,
+        'lng': longitude,
+        'radius_km': radiusKm,
+      });
+
+      if (response == null || response.isEmpty) {
+        // Fallback: retorna categorias padrão se não houver dados reais
+        return VehicleCategory.popularCategories
+            .map((cat) => VehicleCategoryData.defaultForCategory(cat))
+            .toList();
+      }
+
+      return (response as List).map((stat) {
+        final categoryId = stat['vehicle_category'] as String;
+        final category = VehicleCategory.fromId(categoryId) ?? VehicleCategory.standard;
+        
+        return VehicleCategoryData(
+          category: category,
+          basePricePerKm: (stat['avg_price_per_km'] as num?)?.toDouble() ?? 1.5,
+          basePricePerMinute: (stat['avg_price_per_minute'] as num?)?.toDouble() ?? 0.20,
+          availableDrivers: stat['driver_count'] as int? ?? 0,
+          estimatedArrival: _calculateEstimatedArrival(stat['avg_distance_km'] as double?),
+          isAvailable: (stat['driver_count'] as int? ?? 0) > 0,
+        );
+      }).toList();
+    } on PostgrestException catch (e) {
+      // Se a função RPC não existir, retorna dados padrão
+      if (e.code == '42883') {
+        return VehicleCategory.popularCategories
+            .map((cat) => VehicleCategoryData.defaultForCategory(cat))
+            .toList();
+      }
+      throw DatabaseException('Erro ao buscar categorias disponíveis: ${e.message}');
+    } catch (e) {
+      // Fallback para dados padrão em caso de erro
+      return VehicleCategory.popularCategories
+          .map((cat) => VehicleCategoryData.defaultForCategory(cat))
+          .toList();
+    }
+  }
+
+  /// Busca dados de uma categoria específica
+  Future<VehicleCategoryData?> getCategoryData(VehicleCategory category, {
+    required double latitude,
+    required double longitude,
+    double radiusKm = 10.0,
+  }) async {
+    try {
+      final drivers = await getAvailableDriversNearby(
+        latitude: latitude,
+        longitude: longitude,
+        radiusKm: radiusKm,
+        category: category.id,
+      );
+
+      if (drivers.isEmpty) {
+        return VehicleCategoryData.defaultForCategory(category).copyWith(
+          availableDrivers: 0,
+          isAvailable: false,
+        );
+      }
+
+      // Calcula preços médios dos motoristas disponíveis
+      double avgPricePerKm = 1.5;
+      double avgPricePerMinute = 0.20;
+      
+      final pricesPerKm = drivers
+          .where((d) => d.customPricePerKm != null && d.customPricePerKm! > 0)
+          .map((d) => d.customPricePerKm!)
+          .toList();
+      
+      final pricesPerMinute = drivers
+          .where((d) => d.customPricePerMinute != null && d.customPricePerMinute! > 0)
+          .map((d) => d.customPricePerMinute!)
+          .toList();
+
+      if (pricesPerKm.isNotEmpty) {
+        avgPricePerKm = pricesPerKm.reduce((a, b) => a + b) / pricesPerKm.length;
+      }
+      
+      if (pricesPerMinute.isNotEmpty) {
+        avgPricePerMinute = pricesPerMinute.reduce((a, b) => a + b) / pricesPerMinute.length;
+      }
+
+      return VehicleCategoryData(
+        category: category,
+        basePricePerKm: avgPricePerKm,
+        basePricePerMinute: avgPricePerMinute,
+        availableDrivers: drivers.length,
+        estimatedArrival: _calculateEstimatedArrival(null),
+        isAvailable: true,
+      );
+    } catch (e) {
+      return VehicleCategoryData.defaultForCategory(category);
+    }
+  }
+
+  String _calculateEstimatedArrival(double? avgDistanceKm) {
+    if (avgDistanceKm == null) return '5-10 min';
+    
+    // Estimativa baseada em 30km/h médio no trânsito urbano
+    final minutes = (avgDistanceKm * 2).round(); // 30km/h = 0.5km/min
+    
+    if (minutes <= 5) return '2-5 min';
+    if (minutes <= 10) return '5-10 min';
+    if (minutes <= 15) return '10-15 min';
+    if (minutes <= 20) return '15-20 min';
+    return '20+ min';
   }
 }

@@ -5,6 +5,7 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../services/trip_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/logo_branding.dart';
 
 class TripHistoryScreen extends StatefulWidget {
   const TripHistoryScreen({super.key});
@@ -86,23 +87,30 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         ? 'Você ainda não realizou nenhuma viagem.\nFique online para receber solicitações!'
         : 'Você ainda não solicitou nenhuma viagem.\nQue tal começar sua primeira jornada?';
 
+  Future<void> _navigateToMenu() async {
+    final user = await UserService.getCurrentUser();
+    if (!mounted) {
+      return;
+    }
+    
+    if (user != null) {
+      if (user.userType == 'driver') {
+        await Navigator.pushNamed(context, '/driver_menu');
+      } else {
+        await Navigator.pushNamed(context, '/user_menu');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Histórico de Viagens'),
-        backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _isLoading ? null : _loadTrips,
-          ),
-        ],
+      appBar: const StandardAppBar(
+        title: 'Histórico de Viagens',
+        showMenuIcon: false,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

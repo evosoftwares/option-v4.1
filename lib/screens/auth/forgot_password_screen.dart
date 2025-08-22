@@ -56,16 +56,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: colorScheme.surface,
-        elevation: 0,
-        title: Text(
-          'Recuperar senha',
-          style: textTheme.titleLarge?.copyWith(
-            color: colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+      appBar: const StandardAppBar(
+        title: 'Recuperar senha',
+        showMenuIcon: false,
       ),
       body: SafeArea(
         child: Center(
@@ -139,7 +132,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 56,
               child: FilledButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Voltar para login'),
@@ -182,7 +175,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                height: 48,
+                height: 56,
                 child: FilledButton(
                   onPressed: _isSubmitting ? null : _onSubmit,
                   child: _isSubmitting

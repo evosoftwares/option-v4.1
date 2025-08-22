@@ -43,11 +43,23 @@ class _PlacesStepState extends State<PlacesStep> {
   }
 
   Future<void> _submitPlaces() async {
+    final controller = Provider.of<StepperController>(context, listen: false);
+    
+    if (controller.favoriteLocations.isEmpty) {
+      final colorScheme = Theme.of(context).colorScheme;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Por favor, adicione pelo menos um local favorito para continuar.'),
+          backgroundColor: colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      final controller = Provider.of<StepperController>(context, listen: false);
-      
       widget.onSave?.call(controller.favoriteLocations);
       
       await Future.delayed(const Duration(milliseconds: 500));
@@ -175,7 +187,7 @@ class _PlacesStepState extends State<PlacesStep> {
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 56,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _submitPlaces,
                   style: ElevatedButton.styleFrom(

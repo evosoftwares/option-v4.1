@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/driver_status.dart';
+import '../theme/app_spacing.dart';
 
 class DriverEarningsWidget extends StatelessWidget {
 
@@ -40,7 +41,7 @@ class DriverEarningsWidget extends StatelessWidget {
             Icon(
               Icons.account_balance_wallet_outlined,
               color: colorScheme.primary,
-              size: 20,
+              size: AppSpacing.iconSm,
             ),
             const SizedBox(width: 8),
             Column(
@@ -67,7 +68,7 @@ class DriverEarningsWidget extends StatelessWidget {
               Icon(
                 Icons.chevron_right,
                 color: colorScheme.onSurfaceVariant,
-                size: 18,
+                size: AppSpacing.iconXs,
               ),
             ],
           ],

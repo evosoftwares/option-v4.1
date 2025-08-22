@@ -6,6 +6,7 @@ import '../../models/user.dart' as app;
 import '../../theme/app_spacing.dart';
 import '../../utils/phone_mask.dart';
 import '../../utils/phone_validator.dart';
+import '../../widgets/logo_branding.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key});
@@ -125,9 +126,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Editar perfil'),
-      ),
+      appBar: const StandardAppBar(title: 'Editar perfil'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
@@ -193,7 +192,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         hintText: '(11) 9 1234-5678',
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) return null; // opcional
+                        if (value == null || value.isEmpty) {
+                          return null; // opcional
+                        }
                         return PhoneValidator.validate(value);
                       },
                     ),

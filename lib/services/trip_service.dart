@@ -168,6 +168,7 @@ class TripService {
     required double baseFare,
     required double finalFare,
     String? promoCodeId,
+    double? discountApplied,
   }) async {
     try {
       final response = await _supabase
@@ -189,6 +190,7 @@ class TripService {
             'status': 'ongoing',
             'start_time': DateTime.now().toIso8601String(),
             'promo_code_id': promoCodeId,
+            'discount_applied': discountApplied,
           })
           .select()
           .single();

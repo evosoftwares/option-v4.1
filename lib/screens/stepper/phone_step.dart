@@ -128,7 +128,7 @@ class _PhoneStepState extends State<PhoneStep> {
             const Spacer(),
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 56,
               child: FilledButton(
                 onPressed: _isLoading ? null : _submitPhone,
                 child: _isLoading

@@ -5,6 +5,7 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../services/notification_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/logo_branding.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -30,6 +31,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void dispose() {
     _notificationsSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> _navigateToMenu() async {
+    final user = await UserService.getCurrentUser();
+    if (!mounted) {
+      return;
+    }
+    
+    if (user != null) {
+      if (user.userType == 'driver') {
+        await Navigator.pushNamed(context, '/driver_menu');
+      } else {
+        await Navigator.pushNamed(context, '/user_menu');
+      }
+    }
   }
 
   Future<void> _initializeNotifications() async {
@@ -165,10 +181,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Notificações'),
-        backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
+      appBar: StandardAppBar(
+        title: 'Notificações',
+        showMenuIcon: false,
         actions: [
           if (unreadCount > 0)
             TextButton(
@@ -212,7 +227,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         children: [
           Icon(
             Icons.notifications_none,
-            size: 64,
+            size: AppSpacing.iconXxl,
             color: colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: AppSpacing.md),
@@ -287,7 +302,7 @@ class _NotificationTile extends StatelessWidget {
                 child: Icon(
                   getIcon(notification.type),
                   color: getColor(notification.type, colorScheme),
-                  size: 20,
+                  size: AppSpacing.iconSm,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),

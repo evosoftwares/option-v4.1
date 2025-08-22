@@ -135,7 +135,7 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
-                    height: 48,
+                    height: 56,
                     child: FilledButton(
                       onPressed: _selectedType == null ? null : _onContinue,
                       child: const Text('Continuar'),

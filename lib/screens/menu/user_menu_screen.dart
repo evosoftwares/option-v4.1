@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../services/user_service.dart';
@@ -27,6 +29,63 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
         content: Text('"$label" em breve', style: AppTypography.bodyMedium.copyWith(color: theme.colorScheme.onInverseSurface)),
       ),
     );
+  }
+
+  Future<void> _logout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sair'),
+        content: const Text('Tem certeza que deseja sair?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await Supabase.instance.client.auth.signOut();
+        if (!mounted) return;
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro ao sair. Tente novamente.'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openWhatsAppSupport() async {
+    const phoneNumber = '556592577217';
+    const message = 'Olá! Preciso de ajuda com o app Option.';
+    final encodedMessage = Uri.encodeComponent(message);
+    final whatsappUrl = 'https://wa.me/$phoneNumber?text=$encodedMessage';
+    
+    final uri = Uri.parse(whatsappUrl);
+    
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível abrir o WhatsApp. Verifique se o app está instalado.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -89,11 +148,6 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
                 label: 'Histórico de viagens',
                 onTap: () => Navigator.pushNamed(context, '/trip_history'),
               ),
-              _MenuTile(
-                icon: Icons.card_giftcard_outlined,
-                label: 'Promoções',
-                onTap: () => _showComingSoon('Promoções'),
-              ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
               const _SectionTitle(title: 'Geral'),
@@ -103,24 +157,19 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
                 onTap: () => Navigator.pushNamed(context, '/notifications'),
               ),
               _MenuTile(
-                icon: Icons.security_outlined,
-                label: 'Segurança',
-                onTap: () => _showComingSoon('Segurança'),
-              ),
-              _MenuTile(
                 icon: Icons.help_outline,
                 label: 'Ajuda',
-                onTap: () => _showComingSoon('Ajuda'),
+                onTap: _openWhatsAppSupport,
               ),
               _MenuTile(
                 icon: Icons.info_outline,
                 label: 'Sobre o app',
-                onTap: () => _showComingSoon('Sobre o app'),
+                onTap: () => Navigator.pushNamed(context, '/about'),
               ),
               _MenuTile(
                 icon: Icons.logout,
                 label: 'Sair',
-                onTap: () => _showComingSoon('Sair'),
+                onTap: _logout,
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
@@ -157,8 +206,8 @@ class _HeaderCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: AppSpacing.avatarMd / 2,
-            backgroundColor: cs.primaryContainer,
-            child: Icon(Icons.person, color: cs.onPrimaryContainer),
+            backgroundColor: Colors.white,
+            child: Icon(Icons.person, color: Colors.black),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(

@@ -26,7 +26,11 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
     print('  - fullName: ${controller.fullName}');
     print('  - email: ${controller.email}');
     print('  - phone: ${controller.phone}');
-    controller.loadUserData();
+    
+    // Delay loadUserData until after build completes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.loadUserData();
+    });
   }
 
   @override

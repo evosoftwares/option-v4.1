@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -64,6 +65,22 @@ class _PhotoStepState extends State<PhotoStep> {
   }
 
   Future<void> _submitPhoto() async {
+    final controller = Provider.of<StepperController>(context, listen: false);
+    
+    if (!controller.hasProfilePhoto()) {
+      final colors = Theme.of(context).colorScheme;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: colors.error,
+          content: Text(
+            'Por favor, adicione uma foto para continuar.',
+            style: TextStyle(color: colors.onError),
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -133,10 +150,22 @@ class _PhotoStepState extends State<PhotoStep> {
                     ),
                     child: controller.hasProfilePhoto()
                         ? ClipOval(
-                            child: Image.file(
-                              controller.profilePhoto!,
-                              fit: BoxFit.cover,
-                            ),
+                            child: kIsWeb
+                                ? Image.network(
+                                    controller.profilePhoto!.path,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(
+                                        Icons.broken_image,
+                                        size: 50,
+                                        color: colors.onSurfaceVariant,
+                                      );
+                                    },
+                                  )
+                                : Image.file(
+                                    controller.profilePhoto!,
+                                    fit: BoxFit.cover,
+                                  ),
                           )
                         : Icon(
                             Icons.camera_alt,
@@ -164,37 +193,28 @@ class _PhotoStepState extends State<PhotoStep> {
                 ),
               ],
               const Spacer(),
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 48,
-                      child: OutlinedButton(
-                        onPressed: _isLoading ? null : _submitPhoto,
-                        child: const Text('Pular'),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 48,
-                      child: FilledButton(
-                        onPressed: _isLoading ? null : _submitPhoto,
-                        child: _isLoading
-                            ? SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(colors.onPrimary),
-                                ),
-                              )
-                            : const Text('Continuar'),
-                      ),
-                    ),
-                  ),
-                ],
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: FilledButton(
+                  onPressed: _isLoading ? null : _submitPhoto,
+                  child: _isLoading
+                      ? SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(colors.onPrimary),
+                          ),
+                        )
+                      : const Text(
+                          'Continuar',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
               ),
               const SizedBox(height: 20),
             ],

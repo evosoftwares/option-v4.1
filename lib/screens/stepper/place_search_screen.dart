@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/location_service.dart';
+import '../../widgets/logo_branding.dart';
 
 class PlaceSearchScreen extends StatefulWidget {
 
@@ -63,8 +64,9 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Buscar Local'),
+      appBar: StandardAppBar(
+        title: 'Buscar Local',
+        showMenuIcon: false,
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
       ),

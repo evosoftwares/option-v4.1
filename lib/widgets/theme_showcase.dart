@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_spacing.dart';
 
 class ThemeShowcase extends StatelessWidget {
   const ThemeShowcase({super.key});
@@ -109,15 +110,15 @@ class ThemeShowcase extends StatelessWidget {
             children: [
               Chip(
                 label: const Text('Econômico'),
-                avatar: const Icon(Icons.directions_car, size: 16),
+                avatar: const Icon(Icons.directions_car, size: AppSpacing.iconXs),
               ),
               Chip(
                 label: const Text('Conforto'),
-                avatar: const Icon(Icons.airline_seat_recline_normal, size: 16),
+                avatar: const Icon(Icons.airline_seat_recline_normal, size: AppSpacing.iconXs),
               ),
               Chip(
                 label: const Text('Premium'),
-                avatar: const Icon(Icons.star, size: 16),
+                avatar: const Icon(Icons.star, size: AppSpacing.iconXs),
               ),
             ],
           ),

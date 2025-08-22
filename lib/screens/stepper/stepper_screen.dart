@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/stepper_controller.dart';
+import '../../widgets/logo_branding.dart';
 import 'step1_phone_screen.dart';
 import 'step2_photo_screen.dart';
 import 'step3_locations_screen.dart';
@@ -50,10 +51,10 @@ class _StepperScreenState extends State<StepperScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Configuração do Perfil'),
+      appBar: const StandardAppBar(
+        title: 'Configuração do Perfil',
+        showMenuIcon: false,
         centerTitle: true,
-        elevation: 0,
       ),
       body: SafeArea(
         child: Column(

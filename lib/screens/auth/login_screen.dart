@@ -170,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                              const SizedBox(height: 16),
                              SizedBox(
                                width: double.infinity,
-                               height: 48,
+                               height: 56,
                                child: FilledButton(
                                  onPressed: _isSubmitting ? null : _onSubmit,
                                  child: _isSubmitting
@@ -188,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                              const SizedBox(height: 12),
                              SizedBox(
                                width: double.infinity,
-                               height: 48,
+                               height: 56,
                                child: TextButton(
                                  onPressed: _isSubmitting
                                      ? null

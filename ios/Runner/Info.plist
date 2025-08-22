@@ -55,5 +55,11 @@
 	<string>Precisamos acessar sua localização para fornecer serviços de transporte mesmo quando o app estiver em segundo plano</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Precisamos enviar notificações para informar sobre novas corridas e atualizações de status</string>
+
+	<!-- Habilita localização em segundo plano -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 </dict>
 </plist>

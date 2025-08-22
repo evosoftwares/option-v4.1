@@ -29,7 +29,7 @@ class StepperActionButtons extends StatelessWidget {
           if (onBack != null) ...[
             Expanded(
               child: SizedBox(
-                height: 48,
+                height: 56,
                 child: OutlinedButton(
                   onPressed: isLoading ? null : onBack,
                   child: Text(backLabel ?? 'Voltar'),
@@ -41,7 +41,7 @@ class StepperActionButtons extends StatelessWidget {
           Expanded(
             flex: onBack != null ? 1 : 2,
             child: SizedBox(
-              height: 48,
+              height: 56,
               child: FilledButton(
                 onPressed: isLoading ? null : onNext,
                 child: isLoading

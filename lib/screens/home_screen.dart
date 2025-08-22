@@ -12,6 +12,8 @@ import '../models/user.dart' as app_user;
 import '../widgets/logo_branding.dart';
 import '../widgets/notification_icon_widget.dart';
 import '../services/map_style_service.dart';
+import '../theme/app_spacing.dart';
+import '../services/recent_destinations_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,12 +26,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final Completer<GoogleMapController> _mapControllerCompleter = Completer();
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
+  List<LatLng> _routePoints = [];
+  List<LatLng> _progressPoints = [];
+  Timer? _routeAnimTimer;
+  int _routeAnimIndex = 0;
   StreamSubscription<Position>? _positionSub;
   late final LocationService _locationService;
   Future<app_user.User?>? _userFuture;
 
   FavoriteLocation? _origin;
   FavoriteLocation? _destination;
+  List<FavoriteLocation> _recentDestinations = [];
   
   final DraggableScrollableController _bottomSheetController = DraggableScrollableController();
   bool _isBottomSheetExpanded = false;
@@ -47,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     _userFuture = UserService.getCurrentUser();
     _initLocation();
+    _loadRecentDestinations();
   }
 
   Future<void> _initLocation() async {
@@ -73,21 +82,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final controller = await _ensureController();
       final here = LatLng(pos.latitude, pos.longitude);
       if (!mounted) return;
-      setState(() {
-        _markers.removeWhere((m) => m.markerId.value == 'me');
-        _markers.add(Marker(
-          markerId: const MarkerId('me'),
-          position: here,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-        ),);
-      });
+      // Não adicionar marker da posição atual - o mapa nativo já mostra
       controller.animateCamera(CameraUpdate.newLatLng(here));
     });
+  }
+
+  Future<void> _loadRecentDestinations() async {
+    final recent = await RecentDestinationsService.instance.getRecentDestinations();
+    if (mounted) {
+      setState(() {
+        _recentDestinations = recent;
+      });
+    }
   }
 
   @override
   void dispose() {
     _positionSub?.cancel();
+    _routeAnimTimer?.cancel();
     _mapController?.dispose();
     _bottomSheetController.dispose();
     super.dispose();
@@ -101,7 +113,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (result is FavoriteLocation) {
       setState(() => _origin = result);
       _setMarker('origin', result.latitude, result.longitude, BitmapDescriptor.hueGreen);
-      _fitBounds();
+      await _fitBounds();
+      await _tryBuildRoute();
     }
   }
 
@@ -113,8 +126,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (result is FavoriteLocation) {
       setState(() => _destination = result);
       _setMarker('destination', result.latitude, result.longitude, BitmapDescriptor.hueRed);
-      _fitBounds();
+      await RecentDestinationsService.instance.addRecentDestination(result);
+      await _loadRecentDestinations();
+      await _fitBounds();
+      await _tryBuildRoute();
     }
+  }
+
+  Future<void> _selectRecentDestination(FavoriteLocation destination) async {
+    setState(() => _destination = destination);
+    _setMarker('destination', destination.latitude, destination.longitude, BitmapDescriptor.hueRed);
+    await RecentDestinationsService.instance.addRecentDestination(destination);
+    await _loadRecentDestinations();
+    await _fitBounds();
+    await _tryBuildRoute();
   }
 
   void _setMarker(String id, double? lat, double? lng, double hue) {
@@ -151,6 +176,110 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 48));
   }
 
+  Future<void> _fitRouteBounds() async {
+    if (_routePoints.isEmpty) return;
+    double minLat = _routePoints.first.latitude;
+    double maxLat = _routePoints.first.latitude;
+    double minLng = _routePoints.first.longitude;
+    double maxLng = _routePoints.first.longitude;
+    for (final p in _routePoints) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+    final controller = await _ensureController();
+    controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 64));
+  }
+
+  void _clearRoute() {
+    _routeAnimTimer?.cancel();
+    _routeAnimTimer = null;
+    _routeAnimIndex = 0;
+    _routePoints = [];
+    _progressPoints = [];
+    setState(() {
+      _polylines.removeWhere((p) => p.polylineId.value.startsWith('route'));
+    });
+  }
+
+  Future<void> _tryBuildRoute() async {
+    if (_origin == null || _destination == null) return;
+    final oLat = _origin!.latitude;
+    final oLng = _origin!.longitude;
+    final dLat = _destination!.latitude;
+    final dLng = _destination!.longitude;
+    if (oLat == null || oLng == null || dLat == null || dLng == null) return;
+
+    _clearRoute();
+
+    final route = await _locationService.getDrivingRoute(
+      originLat: oLat,
+      originLng: oLng,
+      destLat: dLat,
+      destLng: dLng,
+    );
+    if (!mounted || route == null) return;
+
+    _routePoints = route.points;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    setState(() {
+      _polylines.add(Polyline(
+        polylineId: const PolylineId('route_base'),
+        points: _routePoints,
+        color: colorScheme.primary,
+        width: 6,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        jointType: JointType.round,
+        zIndex: 1,
+      ));
+    });
+
+    await _fitRouteBounds();
+    _startRouteAnimation(colorScheme);
+  }
+
+  void _startRouteAnimation(ColorScheme colorScheme) {
+    if (_routePoints.length < 2) return;
+    _progressPoints = [_routePoints.first];
+    _routeAnimIndex = 1;
+
+    // Duração aproximada: 8s para toda rota (ajustando passo por comprimento)
+    final total = _routePoints.length;
+    final stepMs = (8000 / total).clamp(12, 60).toInt();
+
+    _routeAnimTimer?.cancel();
+    _routeAnimTimer = Timer.periodic(Duration(milliseconds: stepMs), (timer) {
+      if (!mounted) return;
+      if (_routeAnimIndex >= _routePoints.length) {
+        timer.cancel();
+        return;
+      }
+      _progressPoints.add(_routePoints[_routeAnimIndex]);
+      _routeAnimIndex++;
+
+      setState(() {
+        _polylines.removeWhere((p) => p.polylineId.value == 'route_progress');
+        _polylines.add(Polyline(
+          polylineId: const PolylineId('route_progress'),
+          points: List<LatLng>.from(_progressPoints),
+          color: colorScheme.secondary,
+          width: 8,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          jointType: JointType.round,
+          zIndex: 2,
+        ));
+      });
+    });
+  }
+
   Widget _buildLocationCard({
     required String label,
     required String placeholder,
@@ -174,10 +303,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
+                color: Colors.white,
                 shape: BoxShape.circle,
+                border: Border.all(color: colorScheme.outlineVariant),
               ),
-              child: Icon(icon, color: colorScheme.primary, size: 20),
+              child: Icon(icon, color: Colors.black, size: AppSpacing.iconSm),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -214,213 +344,47 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildBottomSheetContent() {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Handle bar
-          Container(
-            margin: const EdgeInsets.only(top: 12, bottom: 8),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: colorScheme.onSurfaceVariant.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Para onde?',
-                    style: textTheme.headlineSmall?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  _buildLocationCard(
-                    label: 'Origem',
-                    placeholder: 'Sua localização atual',
-                    icon: Icons.my_location,
-                    onTap: _pickOrigin,
-                    value: _origin?.name ?? _origin?.address,
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  _buildLocationCard(
-                    label: 'Destino',
-                    placeholder: 'Para onde você quer ir?',
-                    icon: Icons.location_on,
-                    onTap: _pickDestination,
-                    value: _destination?.name ?? _destination?.address,
-                  ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Quick actions
-                  Text(
-                    'Acesso rápido',
-                    style: textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildQuickAction(
-                          icon: Icons.home,
-                          label: 'Casa',
-                          onTap: () {
-                            // TODO: Implement home quick action
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildQuickAction(
-                          icon: Icons.work,
-                          label: 'Trabalho',
-                          onTap: () {
-                            // TODO: Implement work quick action
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildQuickAction(
-                          icon: Icons.star,
-                          label: 'Favoritos',
-                          onTap: () {
-                            // TODO: Implement favorites quick action
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Trip button
-                  if (_origin != null && _destination != null)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          final o = _origin!;
-                          final d = _destination!;
-                          Navigator.pushNamed(
-                            context,
-                            '/trip_options',
-                            arguments: {
-                              'origin': {
-                                'id': o.id,
-                                'name': o.name,
-                                'address': o.address,
-                                'type': o.type.toString(),
-                                'latitude': o.latitude,
-                                'longitude': o.longitude,
-                                'placeId': o.placeId,
-                              },
-                              'destination': {
-                                'id': d.id,
-                                'name': d.name,
-                                'address': d.address,
-                                'type': d.type.toString(),
-                                'latitude': d.latitude,
-                                'longitude': d.longitude,
-                                'placeId': d.placeId,
-                              },
-                            },
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.directions_car),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Procurar corrida',
-                              style: textTheme.titleMedium?.copyWith(
-                                color: colorScheme.onPrimary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildQuickAction({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildEmptyState() {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: colorScheme.primary, size: 28),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.w500,
-              ),
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 40),
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+              shape: BoxShape.circle,
             ),
-          ],
-        ),
+            child: Icon(
+              Icons.map_outlined,
+              size: 60,
+              color: colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Seus destinos aparecerão aqui',
+            style: textTheme.titleMedium?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Quando você escolher um destino, ele será\nsalvo aqui para fácil acesso',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 40),
+        ],
       ),
     );
   }
@@ -471,6 +435,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
               markers: _markers,
+              polylines: _polylines,
             ),
           ),
           
@@ -507,147 +472,174 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                     
                     Expanded(
-                      child: SingleChildScrollView(
-                        controller: scrollController,
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Para onde?',
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: colorScheme.onSurface,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            
-                            _buildLocationCard(
-                              label: 'Origem',
-                              placeholder: 'Sua localização atual',
-                              icon: Icons.my_location,
-                              onTap: _pickOrigin,
-                              value: _origin?.name ?? _origin?.address,
-                            ),
-                            
-                            const SizedBox(height: 16),
-                            
-                            _buildLocationCard(
-                              label: 'Destino',
-                              placeholder: 'Para onde você quer ir?',
-                              icon: Icons.location_on,
-                              onTap: _pickDestination,
-                              value: _destination?.name ?? _destination?.address,
-                            ),
-                            
-                            const SizedBox(height: 32),
-                            
-                            // Quick actions
-                            Text(
-                              'Acesso rápido',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: colorScheme.onSurface,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildQuickAction(
-                                    icon: Icons.home,
-                                    label: 'Casa',
-                                    onTap: () {
-                                      // TODO: Implement home quick action
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _buildQuickAction(
-                                    icon: Icons.work,
-                                    label: 'Trabalho',
-                                    onTap: () {
-                                      // TODO: Implement work quick action
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _buildQuickAction(
-                                    icon: Icons.star,
-                                    label: 'Favoritos',
-                                    onTap: () {
-                                      // TODO: Implement favorites quick action
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            
-                            const SizedBox(height: 32),
-                            
-                            // Trip button
-                            if (_origin != null && _destination != null)
-                              SizedBox(
-                                width: double.infinity,
-                                height: 56,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    final o = _origin!;
-                                    final d = _destination!;
-                                    Navigator.pushNamed(
-                                      context,
-                                      '/trip_options',
-                                      arguments: {
-                                        'origin': {
-                                          'id': o.id,
-                                          'name': o.name,
-                                          'address': o.address,
-                                          'type': o.type.toString(),
-                                          'latitude': o.latitude,
-                                          'longitude': o.longitude,
-                                          'placeId': o.placeId,
-                                        },
-                                        'destination': {
-                                          'id': d.id,
-                                          'name': d.name,
-                                          'address': d.address,
-                                          'type': d.type.toString(),
-                                          'latitude': d.latitude,
-                                          'longitude': d.longitude,
-                                          'placeId': d.placeId,
-                                        },
-                                      },
-                                    );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: colorScheme.primary,
-                                    foregroundColor: colorScheme.onPrimary,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(28),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: SingleChildScrollView(
+                              controller: scrollController,
+                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Para onde?',
+                                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                      color: colorScheme.onSurface,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(Icons.directions_car),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Procurar corrida',
-                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          color: colorScheme.onPrimary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                  const SizedBox(height: 24),
+                                  
+                                  _buildLocationCard(
+                                    label: 'Origem',
+                                    placeholder: 'Sua localização atual',
+                                    icon: Icons.my_location,
+                                    onTap: _pickOrigin,
+                                    value: _origin?.name ?? _origin?.address,
+                                  ),
+                                  
+                                  const SizedBox(height: 16),
+                                  
+                                  _buildLocationCard(
+                                    label: 'Destino',
+                                    placeholder: 'Para onde você quer ir?',
+                                    icon: Icons.location_on,
+                                    onTap: _pickDestination,
+                                    value: _destination?.name ?? _destination?.address,
+                                  ),
+                                  
+                                  const SizedBox(height: 32),
+                            
+                                  if (_recentDestinations.isNotEmpty) ...[
+                                    Text(
+                                      'Destinos recentes',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        color: colorScheme.onSurface,
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                    ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    
+                                    ListView.separated(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      itemCount: _recentDestinations.length,
+                                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                                      itemBuilder: (context, index) {
+                                        final destination = _recentDestinations[index];
+                                        return Card(
+                                          elevation: 1,
+                                          color: colorScheme.surface,
+                                          child: ListTile(
+                                            leading: Container(
+                                              width: 40,
+                                              height: 40,
+                                              decoration: BoxDecoration(
+                                                color: colorScheme.primaryContainer,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                destination.type.icon,
+                                                color: colorScheme.onPrimaryContainer,
+                                                size: 20,
+                                              ),
+                                            ),
+                                            title: Text(
+                                              destination.name,
+                                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                color: colorScheme.onSurface,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            subtitle: Text(
+                                              destination.address,
+                                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                color: colorScheme.onSurfaceVariant,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            onTap: () => _selectRecentDestination(destination),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ] else
+                                    _buildEmptyState(),
+                                ],
+                              ),
+                            ),
+                          ),
+                          
+                          // Fixed Trip button at bottom
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 56,
+                              child: ElevatedButton(
+                                onPressed: (_origin != null && _destination != null) ? () {
+                                  final o = _origin!;
+                                  final d = _destination!;
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/trip_options',
+                                    arguments: {
+                                      'origin': {
+                                        'id': o.id,
+                                        'name': o.name,
+                                        'address': o.address,
+                                        'type': o.type.toString(),
+                                        'latitude': o.latitude,
+                                        'longitude': o.longitude,
+                                        'placeId': o.placeId,
+                                      },
+                                      'destination': {
+                                        'id': d.id,
+                                        'name': d.name,
+                                        'address': d.address,
+                                        'type': d.type.toString(),
+                                        'latitude': d.latitude,
+                                        'longitude': d.longitude,
+                                        'placeId': d.placeId,
+                                      },
+                                    },
+                                  );
+                                } : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: (_origin != null && _destination != null) 
+                                      ? colorScheme.primary 
+                                      : colorScheme.surfaceContainerHighest,
+                                  foregroundColor: (_origin != null && _destination != null) 
+                                      ? colorScheme.onPrimary 
+                                      : colorScheme.onSurfaceVariant,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.directions_car),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Vamos',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        color: (_origin != null && _destination != null) 
+                                            ? colorScheme.onPrimary 
+                                            : colorScheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                          ],
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

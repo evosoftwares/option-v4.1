@@ -95,10 +95,13 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
           final lat = details['lat'] as num?;
           final lng = details['lng'] as num?;
           if (lat != null && lng != null) {
+            final name = (result['mainText'] as String?) ?? 'Local';
+            final address = (result['description'] as String?) ?? '';
+            
             locations.add(FavoriteLocation(
               id: placeId,
-              name: (result['mainText'] as String?) ?? 'Local',
-              address: (result['description'] as String?) ?? '',
+              name: placeId.startsWith('manual_') ? address : name,
+              address: placeId.startsWith('manual_') ? 'Endereço digitado manualmente' : address,
               type: LocationType.other,
               latitude: lat.toDouble(),
               longitude: lng.toDouble(),
@@ -241,7 +244,7 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
               onChanged: _searchPlaces,
               style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
               decoration: InputDecoration(
-                hintText: 'Buscar lugares... ',
+                hintText: 'Digite o nome do local ou endereço...',
                 prefixIcon: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
                 filled: true,
                 fillColor: colorScheme.surfaceContainerHighest,
@@ -306,24 +309,27 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.search,
+                          Icons.location_on_outlined,
                           size: 64,
                           color: colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Busque por locais',
+                          'Digite um local',
                           style: textTheme.titleMedium?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'Digite o nome ou endereço para encontrar locais',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            'Digite o nome do local ou endereço completo que você deseja adicionar',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
