@@ -259,7 +259,7 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.radio_button_checked, color: Colors.green, size: 16),
+                                  Icon(Icons.radio_button_checked, color: colorScheme.primary, size: 16),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
@@ -277,7 +277,7 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Icon(Icons.location_on, color: Colors.red, size: 16),
+                                  Icon(Icons.location_on, color: colorScheme.tertiary, size: 16),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(

@@ -23,14 +23,6 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
     _userFuture = UserService.getCurrentUser();
   }
 
-  void _showComingSoon(String label) {
-    final theme = Theme.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('"$label" em breve', style: AppTypography.bodyMedium.copyWith(color: theme.colorScheme.onInverseSurface)),
-      ),
-    );
-  }
 
   Future<void> _logout() async {
     final confirm = await showDialog<bool>(
@@ -131,7 +123,7 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               _MenuTile(
                 icon: Icons.directions_car_outlined,
                 label: 'Veículo',
-                onTap: () => _showComingSoon('Veículo'),
+                onTap: () => Navigator.pushNamed(context, '/vehicle'),
               ),
               _MenuTile(
                 icon: Icons.assignment_turned_in_outlined,
@@ -144,7 +136,7 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               _MenuTile(
                 icon: Icons.schedule_outlined,
                 label: 'Horários de trabalho',
-                onTap: () => _showComingSoon('Horários de trabalho'),
+                onTap: () => Navigator.pushNamed(context, '/working_hours'),
               ),
               _MenuTile(
                 icon: Icons.remove_circle_outline,
@@ -154,7 +146,12 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               _MenuTile(
                 icon: Icons.price_change_outlined,
                 label: 'Preços personalizados',
-                onTap: () => _showComingSoon('Preços personalizados'),
+                onTap: () => Navigator.pushNamed(context, '/custom_pricing'),
+              ),
+              _MenuTile(
+                icon: Icons.map_outlined,
+                label: 'Áreas de atuação',
+                onTap: () => Navigator.pushNamed(context, '/driver_operation_zones'),
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
@@ -167,7 +164,7 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               _MenuTile(
                 icon: Icons.stacked_line_chart_outlined,
                 label: 'Estatísticas',
-                onTap: () => _showComingSoon('Estatísticas'),
+                onTap: () => Navigator.pushNamed(context, '/statistics'),
               ),
               _MenuTile(
                 icon: Icons.account_balance_wallet_outlined,
@@ -241,7 +238,7 @@ class _HeaderCard extends StatelessWidget {
               CircleAvatar(
                 radius: AppSpacing.avatarMd / 2,
                 backgroundColor: Colors.white,
-                child: Icon(Icons.person, color: Colors.black),
+                child: Icon(Icons.person, color: cs.onSurface),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(

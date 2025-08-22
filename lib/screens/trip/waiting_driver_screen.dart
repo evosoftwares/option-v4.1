@@ -99,7 +99,7 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erro ao cancelar viagem: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -272,7 +272,7 @@ class _TripInfoCard extends StatelessWidget {
           // Destino
           _InfoRow(
             icon: Icons.location_on,
-            iconColor: colorScheme.error,
+            iconColor: colorScheme.onSurface,
             title: 'Destino',
             subtitle: tripRequest.destinationAddress,
           ),
@@ -281,7 +281,7 @@ class _TripInfoCard extends StatelessWidget {
           // Categoria
           _InfoRow(
             icon: Icons.directions_car,
-            iconColor: colorScheme.secondary,
+            iconColor: colorScheme.onSurface,
             title: 'Categoria',
             subtitle: tripRequest.vehicleCategory.toUpperCase(),
           ),

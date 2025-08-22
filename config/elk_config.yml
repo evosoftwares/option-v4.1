@@ -1,0 +1,417 @@
+# Configuração do ELK Stack para o sistema de monitoramento
+# Este arquivo define a configuração para Elasticsearch, Logstash e Kibana
+
+# =====================================================
+# ELASTICSEARCH CONFIGURATION
+# =====================================================
+elasticsearch:
+  cluster:
+    name: "uber-zones-monitoring"
+  node:
+    name: "node-1"
+    master: true
+    data: true
+  network:
+    host: "0.0.0.0"
+    port: 9200
+  discovery:
+    type: "single-node"
+  indices:
+    # Configuração de índices para logs da aplicação
+    application_logs:
+      name: "uber-zones-logs"
+      pattern: "uber-zones-logs-*"
+      settings:
+        number_of_shards: 1
+        number_of_replicas: 0
+        refresh_interval: "5s"
+      mappings:
+        properties:
+          timestamp:
+            type: "date"
+            format: "strict_date_optional_time||epoch_millis"
+          level:
+            type: "keyword"
+          service:
+            type: "keyword"
+          operation:
+            type: "keyword"
+          user_id:
+            type: "keyword"
+          driver_id:
+            type: "keyword"
+          zone_id:
+            type: "keyword"
+          duration_ms:
+            type: "long"
+          status:
+            type: "keyword"
+          message:
+            type: "text"
+            analyzer: "standard"
+          metadata:
+            type: "object"
+            dynamic: true
+          error_details:
+            type: "object"
+            properties:
+              type:
+                type: "keyword"
+              message:
+                type: "text"
+              stack_trace:
+                type: "text"
+          client_info:
+            type: "object"
+            properties:
+              ip:
+                type: "ip"
+              user_agent:
+                type: "text"
+              platform:
+                type: "keyword"
+              app_version:
+                type: "keyword"
+    
+    # Configuração de índices para métricas
+    metrics:
+      name: "uber-zones-metrics"
+      pattern: "uber-zones-metrics-*"
+      settings:
+        number_of_shards: 1
+        number_of_replicas: 0
+        refresh_interval: "10s"
+      mappings:
+        properties:
+          timestamp:
+            type: "date"
+          metric_name:
+            type: "keyword"
+          metric_type:
+            type: "keyword"
+          value:
+            type: "double"
+          labels:
+            type: "object"
+            dynamic: true
+          retention_days:
+            type: "integer"
+    
+    # Configuração de índices para health checks
+    health_checks:
+      name: "uber-zones-health"
+      pattern: "uber-zones-health-*"
+      settings:
+        number_of_shards: 1
+        number_of_replicas: 0
+        refresh_interval: "30s"
+      mappings:
+        properties:
+          timestamp:
+            type: "date"
+          service_name:
+            type: "keyword"
+          status:
+            type: "keyword"
+          response_time_ms:
+            type: "long"
+          error_message:
+            type: "text"
+          metadata:
+            type: "object"
+            dynamic: true
+
+# =====================================================
+# LOGSTASH CONFIGURATION
+# =====================================================
+logstash:
+  pipeline:
+    workers: 2
+    batch:
+      size: 125
+      delay: 50
+  
+  # Input configuration
+  input:
+    # Recebe logs via HTTP
+    http:
+      port: 8080
+      codec: "json"
+      additional_codecs:
+        "application/json": "json"
+    
+    # Recebe logs via TCP
+    tcp:
+      port: 5000
+      codec: "json_lines"
+    
+    # Recebe logs via UDP (para logs de alta frequência)
+    udp:
+      port: 5001
+      codec: "json"
+    
+    # Monitora arquivos de log
+    file:
+      path: "/var/log/uber-zones/*.log"
+      start_position: "beginning"
+      codec: "json"
+  
+  # Filter configuration
+  filter:
+    # Parse de timestamps
+    date:
+      match: ["timestamp", "ISO8601"]
+      target: "@timestamp"
+    
+    # Enriquecimento de dados
+    mutate:
+      add_field:
+        "[@metadata][index_name]": "uber-zones-logs-%{+YYYY.MM.dd}"
+      convert:
+        "duration_ms": "integer"
+        "response_time_ms": "integer"
+    
+    # Geolocalizacao baseada em IP
+    geoip:
+      source: "[client_info][ip]"
+      target: "geoip"
+    
+    # Parse de user agent
+    useragent:
+      source: "[client_info][user_agent]"
+      target: "user_agent_parsed"
+    
+    # Classificação de severidade
+    if:
+      - condition: '[level] == "ERROR"'
+        then:
+          mutate:
+            add_field:
+              "severity": "high"
+      - condition: '[level] == "WARN"'
+        then:
+          mutate:
+            add_field:
+              "severity": "medium"
+      - condition: '[level] == "INFO"'
+        then:
+          mutate:
+            add_field:
+              "severity": "low"
+  
+  # Output configuration
+  output:
+    # Envia para Elasticsearch
+    elasticsearch:
+      hosts: ["localhost:9200"]
+      index: "%{[@metadata][index_name]}"
+      template_name: "uber-zones-template"
+      template_pattern: "uber-zones-*"
+      template_overwrite: true
+    
+    # Debug output (apenas em desenvolvimento)
+    stdout:
+      codec: "rubydebug"
+      condition: "[environment] == 'development'"
+
+# =====================================================
+# KIBANA CONFIGURATION
+# =====================================================
+kibana:
+  server:
+    port: 5601
+    host: "0.0.0.0"
+    name: "uber-zones-kibana"
+  
+  elasticsearch:
+    hosts: ["http://localhost:9200"]
+    username: "kibana_system"
+    password: "changeme"
+  
+  # Configurações de índice padrão
+  kibana:
+    index: ".kibana"
+    defaultAppId: "dashboard"
+  
+  # Dashboards pré-configurados
+  dashboards:
+    - name: "System Overview"
+      description: "Visão geral do sistema de zonas operacionais"
+      visualizations:
+        - "logs_by_level_pie"
+        - "response_time_histogram"
+        - "error_rate_timeline"
+        - "active_zones_gauge"
+        - "geographic_heatmap"
+    
+    - name: "Performance Monitoring"
+      description: "Monitoramento de performance e latência"
+      visualizations:
+        - "api_response_times"
+        - "database_query_performance"
+        - "memory_usage_timeline"
+        - "cpu_usage_gauge"
+        - "throughput_metrics"
+    
+    - name: "Security & Audit"
+      description: "Monitoramento de segurança e auditoria"
+      visualizations:
+        - "failed_authentications"
+        - "suspicious_activities"
+        - "audit_trail_table"
+        - "geographic_anomalies"
+        - "access_patterns"
+    
+    - name: "Business Intelligence"
+      description: "Métricas de negócio e operacionais"
+      visualizations:
+        - "zone_utilization_heatmap"
+        - "driver_activity_timeline"
+        - "price_multiplier_distribution"
+        - "demand_patterns"
+        - "revenue_metrics"
+  
+  # Configurações de alertas
+  alerting:
+    rules:
+      - name: "High Error Rate"
+        condition: "error_rate > 5%"
+        actions:
+          - type: "email"
+            recipients: ["ops@company.com"]
+          - type: "slack"
+            webhook: "https://hooks.slack.com/services/..."
+      
+      - name: "High Response Time"
+        condition: "avg_response_time > 2000ms"
+        actions:
+          - type: "email"
+            recipients: ["dev@company.com"]
+      
+      - name: "Service Down"
+        condition: "health_check_status == 0"
+        actions:
+          - type: "pagerduty"
+            integration_key: "your-integration-key"
+
+# =====================================================
+# RETENTION POLICIES
+# =====================================================
+retention:
+  policies:
+    # Logs de aplicação
+    application_logs:
+      hot_phase: "7d"      # Dados recentes em SSD
+      warm_phase: "30d"    # Dados menos acessados
+      cold_phase: "90d"    # Dados arquivados
+      delete_phase: "365d" # Exclusão automática
+    
+    # Métricas
+    metrics:
+      hot_phase: "30d"
+      warm_phase: "90d"
+      cold_phase: "180d"
+      delete_phase: "730d" # 2 anos
+    
+    # Health checks
+    health_checks:
+      hot_phase: "14d"
+      warm_phase: "60d"
+      cold_phase: "180d"
+      delete_phase: "365d"
+    
+    # Logs de auditoria
+    audit_logs:
+      hot_phase: "90d"
+      warm_phase: "365d"
+      cold_phase: "1095d" # 3 anos
+      delete_phase: "2555d" # 7 anos (compliance)
+
+# =====================================================
+# SECURITY CONFIGURATION
+# =====================================================
+security:
+  authentication:
+    enabled: true
+    type: "basic" # ou "ldap", "saml", "oidc"
+  
+  authorization:
+    roles:
+      - name: "admin"
+        permissions: ["all"]
+        users: ["admin"]
+      
+      - name: "developer"
+        permissions: ["read", "write"]
+        indices: ["uber-zones-logs-*", "uber-zones-metrics-*"]
+        users: ["dev1", "dev2"]
+      
+      - name: "analyst"
+        permissions: ["read"]
+        indices: ["uber-zones-*"]
+        users: ["analyst1", "analyst2"]
+      
+      - name: "support"
+        permissions: ["read"]
+        indices: ["uber-zones-logs-*"]
+        users: ["support1", "support2"]
+  
+  encryption:
+    transport:
+      enabled: true
+      certificate: "/etc/elasticsearch/certs/transport.crt"
+      key: "/etc/elasticsearch/certs/transport.key"
+    
+    http:
+      enabled: true
+      certificate: "/etc/elasticsearch/certs/http.crt"
+      key: "/etc/elasticsearch/certs/http.key"
+
+# =====================================================
+# MONITORING & ALERTING
+# =====================================================
+monitoring:
+  cluster_health:
+    check_interval: "30s"
+    thresholds:
+      yellow: "warning"
+      red: "critical"
+  
+  disk_usage:
+    check_interval: "1m"
+    thresholds:
+      warning: "80%"
+      critical: "90%"
+  
+  memory_usage:
+    check_interval: "1m"
+    thresholds:
+      warning: "85%"
+      critical: "95%"
+  
+  query_performance:
+    slow_query_threshold: "5s"
+    log_slow_queries: true
+
+# =====================================================
+# BACKUP CONFIGURATION
+# =====================================================
+backup:
+  repository:
+    type: "fs" # ou "s3", "gcs", "azure"
+    location: "/backup/elasticsearch"
+  
+  schedule:
+    daily:
+      time: "02:00"
+      retention: "30d"
+    
+    weekly:
+      day: "sunday"
+      time: "01:00"
+      retention: "12w"
+    
+    monthly:
+      day: "1"
+      time: "00:00"
+      retention: "12m"

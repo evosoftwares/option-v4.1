@@ -327,7 +327,7 @@ class _TripHistoryTile extends StatelessWidget {
                             Icon(
                               Icons.location_on,
                               size: 12,
-                              color: colorScheme.error,
+                              color: colorScheme.onSurface,
                             ),
                             const SizedBox(width: AppSpacing.sm),
                             Expanded(
@@ -393,11 +393,11 @@ class _TripHistoryTile extends StatelessWidget {
   Color _getStatusColor(String status, ColorScheme colorScheme) {
     switch (status.toLowerCase()) {
       case 'completed':
-        return Colors.green;
+        return colorScheme.primary;
       case 'cancelled':
         return colorScheme.error;
       case 'ongoing':
-        return Colors.orange;
+        return colorScheme.secondary;
       default:
         return colorScheme.onSurfaceVariant;
     }
@@ -527,7 +527,7 @@ class _TripDetailsBottomSheet extends StatelessWidget {
                 
                 _AddressRow(
                   icon: Icons.location_on,
-                  iconColor: colorScheme.error,
+                  iconColor: colorScheme.onSurface,
                   label: 'Destino',
                   address: trip.destinationAddress,
                 ),

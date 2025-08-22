@@ -311,7 +311,7 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
                         Icon(
                           Icons.location_on_outlined,
                           size: 64,
-                          color: colorScheme.onSurfaceVariant,
+                          color: colorScheme.onSurface,
                         ),
                         const SizedBox(height: 16),
                         Text(

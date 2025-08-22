@@ -489,7 +489,7 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
                                   'ID: ${zone.id.substring(0, 8)}...',
                                 ),
                                 trailing: IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
                                   onPressed: () => _removeExcludedZone(zone),
                                 ),
                                 isThreeLine: true,

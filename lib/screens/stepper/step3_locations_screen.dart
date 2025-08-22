@@ -95,7 +95,7 @@ class _Step3LocationsScreenState extends State<Step3LocationsScreen> {
           Icon(
             Icons.location_on_outlined,
             size: 64,
-            color: colorScheme.outline,
+            color: colorScheme.onSurface,
           ),
           const SizedBox(height: 16),
           Text(

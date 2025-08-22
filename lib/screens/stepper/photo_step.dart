@@ -238,7 +238,7 @@ class _PhotoStepState extends State<PhotoStep> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: Icon(Icons.camera_alt, color: colors.primary),
+                  leading: Icon(Icons.camera_alt, color: colors.onSurface),
                   title: Text('Tirar foto', style: TextStyle(color: colors.onSurface)),
                   onTap: () {
                     Navigator.pop(context);
@@ -246,7 +246,7 @@ class _PhotoStepState extends State<PhotoStep> {
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.photo_library, color: colors.primary),
+                  leading: Icon(Icons.photo_library, color: colors.onSurface),
                   title: Text('Escolher da galeria', style: TextStyle(color: colors.onSurface)),
                   onTap: () {
                     Navigator.pop(context);

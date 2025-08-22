@@ -468,7 +468,7 @@ class _AddFavoriteBottomSheetState extends State<_AddFavoriteBottomSheet>
           child: ListTile(
             leading: Icon(
               Icons.place,
-              color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.primary,
+              color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
             ),
             title: Text(
               location.name,

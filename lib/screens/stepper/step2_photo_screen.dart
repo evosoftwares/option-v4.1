@@ -88,7 +88,7 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
           child: Wrap(
             children: [
               ListTile(
-                leading: Icon(Icons.camera_alt, color: colors.primary),
+                leading: Icon(Icons.camera_alt, color: colors.onSurface),
                 title: Text('Tirar foto', style: TextStyle(color: colors.onSurface)),
                 onTap: () {
                   Navigator.pop(context);
@@ -96,7 +96,7 @@ class _Step2PhotoScreenState extends State<Step2PhotoScreen> {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.photo_library, color: colors.primary),
+                leading: Icon(Icons.photo_library, color: colors.onSurface),
                 title: Text('Escolher da galeria', style: TextStyle(color: colors.onSurface)),
                 onTap: () {
                   Navigator.pop(context);

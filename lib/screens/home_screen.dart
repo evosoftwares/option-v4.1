@@ -307,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 shape: BoxShape.circle,
                 border: Border.all(color: colorScheme.outlineVariant),
               ),
-              child: Icon(icon, color: Colors.black, size: AppSpacing.iconSm),
+              child: Icon(icon, color: colorScheme.onSurface, size: AppSpacing.iconSm),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -364,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: Icon(
               Icons.map_outlined,
               size: 60,
-              color: colorScheme.primary,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 24),
@@ -493,7 +493,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   _buildLocationCard(
                                     label: 'Origem',
                                     placeholder: 'Sua localização atual',
-                                    icon: Icons.my_location,
+                                    icon: Icons.my_location_outlined,
                                     onTap: _pickOrigin,
                                     value: _origin?.name ?? _origin?.address,
                                   ),
@@ -503,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   _buildLocationCard(
                                     label: 'Destino',
                                     placeholder: 'Para onde você quer ir?',
-                                    icon: Icons.location_on,
+                                    icon: Icons.location_on_outlined,
                                     onTap: _pickDestination,
                                     value: _destination?.name ?? _destination?.address,
                                   ),
@@ -623,7 +623,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.directions_car),
+                                    Icon(Icons.directions_car_outlined, color: colorScheme.onPrimary),
                                     const SizedBox(width: 8),
                                     Text(
                                       'Vamos',

@@ -133,7 +133,7 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
               _MenuTile(
                 icon: Icons.payment_outlined,
                 label: 'Pagamentos',
-                onTap: () => _showComingSoon('Pagamentos'),
+                onTap: () => Navigator.pushNamed(context, '/payments'),
               ),
               _MenuTile(
                 icon: Icons.place_outlined,
@@ -207,7 +207,7 @@ class _HeaderCard extends StatelessWidget {
           CircleAvatar(
             radius: AppSpacing.avatarMd / 2,
             backgroundColor: Colors.white,
-            child: Icon(Icons.person, color: Colors.black),
+            child: Icon(Icons.person, color: cs.onSurface),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(

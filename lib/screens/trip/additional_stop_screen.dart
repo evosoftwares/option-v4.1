@@ -91,10 +91,13 @@ class _AdditionalStopScreenState extends State<AdditionalStopScreen> {
               TextField(
                 controller: _stopController,
                 textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Parada Adicional',
                   hintText: 'Ex.: Padaria Central, Av. Brasil 123',
-                  prefixIcon: Icon(Icons.add_location_alt_outlined),
+                  prefixIcon: Icon(
+                    Icons.add_location_alt_outlined,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ),
 

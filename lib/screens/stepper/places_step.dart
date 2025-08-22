@@ -140,7 +140,7 @@ class _PlacesStepState extends State<PlacesStep> {
                             Icon(
                               Icons.location_on_outlined,
                               size: 64,
-                              color: colorScheme.onSurfaceVariant,
+                              color: colorScheme.onSurface,
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -162,7 +162,7 @@ class _PlacesStepState extends State<PlacesStep> {
                             child: ListTile(
                               leading: Icon(
                                 Icons.location_on,
-                                color: colorScheme.primary,
+                                color: colorScheme.onSurface,
                               ),
                               title: Text(
                                 location.name,

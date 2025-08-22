@@ -156,7 +156,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
     );
   }

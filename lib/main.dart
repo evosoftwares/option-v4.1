@@ -27,6 +27,12 @@ import 'screens/trips/trip_history_screen.dart';
 import 'screens/saved_places_screen.dart';
 import 'screens/about/about_screen.dart';
 import 'screens/driver/driver_excluded_zones_screen.dart';
+import 'screens/driver/vehicle_screen.dart';
+import 'screens/driver/working_hours_screen.dart';
+import 'screens/driver/custom_pricing_screen.dart';
+import 'screens/driver/statistics_screen.dart';
+import 'screens/driver/driver_operation_zones_screen.dart';
+import 'screens/payments/payments_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -145,6 +151,12 @@ class MyApp extends StatelessWidget {
           '/about': (context) => const AboutScreen(),
           '/driver_excluded_zones': (context) => const DriverExcludedZonesScreen(),
           '/driver_documents': (context) => const DriverDocumentsScreen(),
+          '/vehicle': (context) => const VehicleScreen(),
+          '/working_hours': (context) => const WorkingHoursScreen(),
+          '/custom_pricing': (context) => const CustomPricingScreen(),
+          '/statistics': (context) => const StatisticsScreen(),
+          '/driver_operation_zones': (context) => const DriverOperationZonesScreen(),
+          '/payments': (context) => const PaymentsScreen(),
         },
         onGenerateRoute: (settings) {
           switch (settings.name) {

@@ -327,7 +327,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
                 shape: BoxShape.circle,
                 border: Border.all(color: colorScheme.outlineVariant),
               ),
-              child: Icon(icon, color: Colors.black, size: AppSpacing.iconSm),
+              child: Icon(icon, color: colorScheme.onSurface, size: AppSpacing.iconSm),
             ),
             const SizedBox(width: 16),
             Expanded(

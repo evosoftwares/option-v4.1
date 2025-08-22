@@ -133,7 +133,10 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
       itemBuilder: (context, index) {
         final place = _searchResults[index];
         return ListTile(
-          leading: const Icon(Icons.location_on_outlined),
+          leading: Icon(
+            Icons.location_on_outlined,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           title: Text(place['mainText'] ?? ''),
           subtitle: Text(place['secondaryText'] ?? ''),
           onTap: () => _selectPlace(place),

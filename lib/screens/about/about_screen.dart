@@ -25,7 +25,7 @@ class AboutScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Image.asset(
@@ -224,7 +224,7 @@ class AboutScreen extends StatelessWidget {
             ),
             child: Icon(
               icon,
-              color: Colors.black,
+              color: colorScheme.onSurface,
               size: AppSpacing.iconSm,
             ),
           ),
