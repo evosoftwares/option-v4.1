@@ -106,12 +106,20 @@ class WalletService {
 
   Future<String?> getPassengerIdForUser(String userId) async {
     try {
+      // First, try to find existing passenger record
       final data = await _supabase
           .from('passengers')
           .select('id')
           .eq('user_id', userId)
           .maybeSingle();
-      return data != null ? (data['id'] as String) : null;
+          
+      if (data != null) {
+        return data['id'] as String;
+      }
+      
+      // If no passenger record exists, check if this is a passenger-type user
+      // and auto-create the missing passenger record
+      return await _autoCreateMissingPassengerRecord(userId);
     } on PostgrestException catch (e) {
       throw DatabaseException('Erro ao buscar passageiro do usuário. Por favor, tente novamente mais tarde.', e.code);
     } catch (e) {
@@ -395,6 +403,71 @@ class WalletService {
       throw DatabaseException('Erro ao buscar resumo da carteira. Por favor, tente novamente mais tarde.', e.code);
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao buscar resumo da carteira. Por favor, tente novamente mais tarde.');
+    }
+  }
+
+  /// Auto-creates a missing passenger record for passenger-type users
+  /// This provides fallback support for existing users who were created before
+  /// the passenger record creation logic was implemented
+  Future<String?> _autoCreateMissingPassengerRecord(String userId) async {
+    try {
+      // First, verify this is actually a passenger-type user
+      final userResponse = await _supabase
+          .from('app_users')
+          .select('user_type')
+          .eq('user_id', userId)
+          .maybeSingle();
+          
+      if (userResponse == null) {
+        // User doesn't exist in app_users table
+        return null;
+      }
+      
+      final userType = userResponse['user_type'] as String?;
+      if (userType?.toLowerCase() != 'passenger') {
+        // Not a passenger-type user, don't create passenger record
+        return null;
+      }
+      
+      // Create the missing passenger record
+      final passengerData = {
+        'user_id': userId,
+        'consecutive_cancellations': 0,
+        'total_trips': 0,
+        'average_rating': null,
+        'payment_method_id': null,
+      };
+
+      final response = await _supabase
+          .from('passengers')
+          .insert(passengerData)
+          .select('id')
+          .single();
+          
+      final passengerId = response['id'] as String;
+      
+      // The database trigger should automatically create the wallet,
+      // but let's log this for monitoring
+      print('🆘 Auto-created missing passenger record for user $userId -> passenger $passengerId');
+      
+      return passengerId;
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        // Unique constraint violation - passenger record was created by another process
+        // Try to fetch the existing record
+        final data = await _supabase
+            .from('passengers')
+            .select('id')
+            .eq('user_id', userId)
+            .maybeSingle();
+        return data != null ? (data['id'] as String) : null;
+      }
+      
+      print('❌ Failed to auto-create passenger record: ${e.code} - ${e.message}');
+      return null;
+    } catch (e) {
+      print('❌ Unexpected error auto-creating passenger record: $e');
+      return null;
     }
   }
 }

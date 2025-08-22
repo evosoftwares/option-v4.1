@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/favorite_location.dart';
 import '../../models/vehicle_category.dart';
@@ -6,7 +7,9 @@ import '../../services/driver_service.dart';
 import '../../services/passenger_promo_service.dart';
 import '../../services/promo_code_service.dart';
 import '../../services/user_service.dart';
+import '../../services/search_status_service.dart';
 import '../../widgets/logo_branding.dart';
+import '../../widgets/search_feedback_widget.dart';
 import 'driver_selection_screen.dart';
 import 'additional_stop_screen.dart';
 import '../../config/app_config.dart';
@@ -37,7 +40,8 @@ class TripOptionsScreen extends StatefulWidget {
   State<TripOptionsScreen> createState() => _TripOptionsScreenState();
 }
 
-class _TripOptionsScreenState extends State<TripOptionsScreen> {
+class _TripOptionsScreenState extends State<TripOptionsScreen>
+    with TickerProviderStateMixin {
   VehicleCategory _selectedCategory = VehicleCategory.standard;
   bool _needsPet = false;
   bool _needsGrocery = false;
@@ -48,12 +52,16 @@ class _TripOptionsScreenState extends State<TripOptionsScreen> {
   late final LocationService _locationService;
   late final PassengerPromoService _passengerPromoService;
   late final PromoCodeService _promoCodeService;
+  late final SearchStatusService _searchStatusService;
+  late final AnimationController _buttonController;
+  late final Animation<double> _buttonScaleAnimation;
   
   // Promo code state
   final TextEditingController _promoController = TextEditingController();
   String? _appliedPromoCode;
   double _promoDiscount = 0.0;
   bool _isValidatingPromo = false;
+  bool _isNavigating = false;
 
   @override
   void initState() {
@@ -62,12 +70,28 @@ class _TripOptionsScreenState extends State<TripOptionsScreen> {
     _locationService = LocationService(apiKey: AppConfig.googleMapsApiKey);
     _passengerPromoService = PassengerPromoService();
     _promoCodeService = PromoCodeService();
+    _searchStatusService = SearchStatusService();
+    
+    _buttonController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    
+    _buttonScaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _buttonController,
+      curve: Curves.easeInOut,
+    ));
+    
     _loadCategoryData();
   }
 
   @override
   void dispose() {
     _promoController.dispose();
+    _buttonController.dispose();
     super.dispose();
   }
 
@@ -155,12 +179,21 @@ class _TripOptionsScreenState extends State<TripOptionsScreen> {
                   ),
                 )
               else
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _categoryData
-                      .map((data) => _categoryChip(data.category, data))
-                      .toList(),
+                SizedBox(
+                  height: 120,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _categoryData.length,
+                    itemBuilder: (context, index) {
+                      final data = _categoryData[index];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right: index < _categoryData.length - 1 ? 12 : 0,
+                        ),
+                        child: _categoryCard(data.category, data),
+                      );
+                    },
+                  ),
                 ),
               const SizedBox(height: 16),
               const _SectionTitle(title: 'Preferências'),
@@ -185,12 +218,33 @@ class _TripOptionsScreenState extends State<TripOptionsScreen> {
               const SizedBox(height: 8),
               _promoCodeSection(),
               const Spacer(),
+              // Widget de feedback visual para busca
+              SearchFeedbackWidget(
+                showOnlyWhenActive: true,
+                compact: true,
+              ),
+              const SizedBox(height: 8),
               SizedBox(
                 height: 56,
-                child: FilledButton.icon(
-                  onPressed: _continue,
-                  icon: const Icon(Icons.search),
-                  label: const Text('Buscar motoristas'),
+                child: AnimatedBuilder(
+                  animation: _buttonScaleAnimation,
+                  builder: (context, child) => Transform.scale(
+                    scale: _buttonScaleAnimation.value,
+                    child: FilledButton.icon(
+                      onPressed: _isNavigating ? null : _continue,
+                      icon: _isNavigating
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Icon(Icons.search),
+                      label: Text(_isNavigating ? 'Buscando...' : 'Buscar motoristas'),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -200,34 +254,95 @@ class _TripOptionsScreenState extends State<TripOptionsScreen> {
     );
   }
 
-  Widget _categoryChip(VehicleCategory category, VehicleCategoryData data) {
+  IconData _getCategoryIcon(VehicleCategory category) {
+    switch (category) {
+      case VehicleCategory.standard:
+        return Icons.directions_car;
+      case VehicleCategory.premium:
+        return Icons.directions_car_outlined;
+      case VehicleCategory.suv:
+        return Icons.airport_shuttle;
+      case VehicleCategory.van:
+        return Icons.commute;
+      default:
+        return Icons.directions_car;
+    }
+  }
+
+  Widget _categoryCard(VehicleCategory category, VehicleCategoryData data) {
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final selected = _selectedCategory == category;
-    return ChoiceChip(
-      label: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(category.displayName),
-          if (data.availableDrivers > 0)
-            Text(
-              '${data.availableDrivers} motoristas',
-              style: TextStyle(
-                fontSize: 10,
-                color: selected ? colorScheme.onPrimaryContainer.withOpacity(0.7) : colorScheme.onSurface.withOpacity(0.7),
-              ),
+    
+    return GestureDetector(
+      onTap: () => setState(() => _selectedCategory = category),
+      child: Container(
+        width: 130,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected ? colorScheme.primaryContainer : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? colorScheme.primary : colorScheme.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          if (data.estimatedArrival != null)
-            Text(
-              data.estimatedArrival!,
-              style: TextStyle(
-                fontSize: 10,
-                color: selected ? colorScheme.onPrimaryContainer.withOpacity(0.7) : colorScheme.onSurfaceVariant,
-              ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _getCategoryIcon(category),
+              size: 28,
+              color: selected ? colorScheme.onPrimaryContainer : colorScheme.primary,
             ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              category.displayName,
+              style: textTheme.titleSmall?.copyWith(
+                color: selected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            if (data.availableDrivers > 0)
+              Text(
+                '${data.availableDrivers} motoristas',
+                style: textTheme.bodySmall?.copyWith(
+                  color: selected ? colorScheme.onPrimaryContainer.withValues(alpha: 0.7) : colorScheme.onSurface.withValues(alpha: 0.7),
+                  fontSize: 10,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            if (data.estimatedArrival != null) ...[
+              const SizedBox(height: 1),
+              Text(
+                data.estimatedArrival!,
+                style: textTheme.bodySmall?.copyWith(
+                  color: selected ? colorScheme.onPrimaryContainer.withValues(alpha: 0.7) : colorScheme.onSurfaceVariant,
+                  fontSize: 10,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
       ),
-      selected: selected,
-      onSelected: (_) => setState(() => _selectedCategory = category),
     );
   }
 
@@ -253,66 +368,86 @@ class _TripOptionsScreenState extends State<TripOptionsScreen> {
     setState(() => _isValidatingPromo = true);
 
     try {
+      debugPrint('🎯 Validating promo code: $code');
+      
       final user = await UserService.getCurrentUser();
       if (user == null) {
         throw Exception('Usuário não encontrado');
       }
 
-      // Tenta validar como código de passageiro primeiro
-      final passengerPromo = await _passengerPromoService.validatePromoCode(
-        code,
-        user.id,
-        tripAmount: 0, // Será calculado na próxima tela
-      );
+      debugPrint('✅ User found: ${user.id}');
 
-      if (passengerPromo != null) {
-        setState(() {
-          _appliedPromoCode = code;
-          _promoDiscount = passengerPromo.value;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Código aplicado! Desconto: R\$ ${_promoDiscount.toStringAsFixed(2)}'),
-              backgroundColor: Colors.green,
-            ),
-          );
+      // Tenta validar como código de passageiro primeiro
+      try {
+        final passengerPromo = await _passengerPromoService.validatePromoCode(
+          code,
+          user.id,
+          tripAmount: 0, // Será calculado na próxima tela
+        );
+
+        if (passengerPromo != null) {
+          debugPrint('✅ Passenger promo found: ${passengerPromo.value}');
+          setState(() {
+            _appliedPromoCode = code;
+            _promoDiscount = passengerPromo.value;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Código aplicado! Desconto: R\$ ${_promoDiscount.toStringAsFixed(2)}'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+          return;
         }
-        return;
+        debugPrint('❌ No passenger promo found');
+      } catch (e) {
+        debugPrint('❌ Error checking passenger promo: $e');
       }
 
       // Se não for código de passageiro, tenta como código geral
-      final generalPromo = await _promoCodeService.getPromoCodeByCode(code);
-      if (generalPromo != null && generalPromo.isActive) {
-        setState(() {
-          _appliedPromoCode = code;
-          _promoDiscount = generalPromo.discountValue;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Código aplicado! Desconto: R\$ ${_promoDiscount.toStringAsFixed(2)}'),
-              backgroundColor: Colors.green,
-            ),
-          );
+      try {
+        final generalPromo = await _promoCodeService.getPromoCodeByCode(code);
+        debugPrint('🔍 General promo result: $generalPromo');
+        
+        if (generalPromo != null && generalPromo.isActive) {
+          debugPrint('✅ General promo found: ${generalPromo.discountValue}');
+          setState(() {
+            _appliedPromoCode = code;
+            _promoDiscount = generalPromo.discountValue;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Código aplicado! Desconto: R\$ ${_promoDiscount.toStringAsFixed(2)}'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+          return;
         }
-        return;
+        debugPrint('❌ General promo not found or inactive');
+      } catch (e) {
+        debugPrint('❌ Error checking general promo: $e');
       }
 
       // Código inválido
+      debugPrint('❌ Invalid promo code: $code');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Código promocional inválido'),
+            content: Text('Código promocional inválido ou expirado'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } on Exception catch (e) {
+    } catch (e) {
+      debugPrint('❌ General error validating promo: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao validar código: $e'),
+            content: Text('Erro ao validar código. Tente novamente.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -330,7 +465,7 @@ class _TripOptionsScreenState extends State<TripOptionsScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colorScheme.outlineVariant),
       ),
@@ -386,9 +521,25 @@ class _TripOptionsScreenState extends State<TripOptionsScreen> {
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: colorScheme.primary),
                         ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: colorScheme.error),
+                        ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
                       textCapitalization: TextCapitalization.characters,
+                      maxLength: 20,
+                      buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                      onChanged: (value) {
+                        // Remove espaços e converte para maiúsculo
+                        final cleaned = value.replaceAll(' ', '').toUpperCase();
+                        if (cleaned != value) {
+                          _promoController.value = TextEditingValue(
+                            text: cleaned,
+                            selection: TextSelection.collapsed(offset: cleaned.length),
+                          );
+                        }
+                      },
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -410,22 +561,59 @@ class _TripOptionsScreenState extends State<TripOptionsScreen> {
     );
   }
 
-  void _continue() {
-    Navigator.pushNamed(
-      context,
-      DriverSelectionScreen.routeName,
-      arguments: {
-        'origin': widget.origin.toJson(),
-        'destination': widget.destination.toJson(),
-        'vehicle_category': _selectedCategory.id,
-        'needsPet': _needsPet,
-        'needsGrocery': _needsGrocery,
-        'needsCondo': _needsCondo,
-        'additionalStop': false,
-        'appliedPromoCode': _appliedPromoCode,
-        'promoDiscount': _promoDiscount,
-      },
+  Future<void> _continue() async {
+    if (_isNavigating) return;
+    
+    // Feedback tátil
+    HapticFeedback.mediumImpact();
+    
+    // Animação de pressão
+    _buttonController.forward().then((_) {
+      _buttonController.reverse();
+    });
+    
+    // Iniciar busca com feedback visual
+    _searchStatusService.startSearch(
+      message: 'Preparando busca por motoristas...',
     );
+    
+    // Estado de loading
+    setState(() {
+      _isNavigating = true;
+    });
+    
+    try {
+      await Navigator.pushNamed(
+        context,
+        DriverSelectionScreen.routeName,
+        arguments: {
+          'origin': widget.origin.toJson(),
+          'destination': widget.destination.toJson(),
+          'vehicle_category': _selectedCategory.id,
+          'needsPet': _needsPet,
+          'needsGrocery': _needsGrocery,
+          'needsCondo': _needsCondo,
+          // Removed invalid 'additionalStop': false (expects String?)
+          'appliedPromoCode': _appliedPromoCode,
+          'promoDiscount': _promoDiscount,
+        },
+      );
+      
+      // Reset do estado após navegação bem-sucedida
+      _searchStatusService.reset();
+    } catch (e) {
+      // Tratar erro de navegação
+      _searchStatusService.markError(
+        message: 'Erro ao navegar para busca de motoristas',
+        errorDetails: e.toString(),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isNavigating = false;
+        });
+      }
+    }
   }
 }
 

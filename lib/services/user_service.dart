@@ -60,7 +60,12 @@ class UserService {
       print('✅ Usuário criado com sucesso!');
       print('📄 Resposta: $response');
       
-      return User.fromMap(response);
+      final user = User.fromMap(response);
+      
+      // Create corresponding passenger or driver record
+      await _createUserSpecificRecord(user);
+      
+      return user;
     } on PostgrestException catch (e) {
       print('❌ PostgrestException: ${e.code} - ${e.message}');
       if (e.code == '23505') { // Unique constraint violation
@@ -238,6 +243,136 @@ class UserService {
       throw Exception('Erro ao buscar usuários por tipo. Por favor, tente novamente mais tarde.');
     } catch (e) {
       throw Exception('Erro inesperado ao buscar usuários. Por favor, tente novamente mais tarde.');
+    }
+  }
+
+  /// Creates passenger or driver specific records when a user is created
+  static Future<void> _createUserSpecificRecord(User user) async {
+    try {
+      print('🔄 Criando registro específico para ${user.userType}: ${user.id}');
+      
+      if (user.userType.toLowerCase() == 'passenger') {
+        await _createPassengerRecord(user);
+      } else if (user.userType.toLowerCase() == 'driver') {
+        await _createDriverRecord(user);
+      }
+      
+      print('✅ Registro específico criado com sucesso');
+    } catch (e) {
+      print('❌ Erro ao criar registro específico: $e');
+      // Log the error but don't throw - the app_user record was already created successfully
+      // The wallet service has fallback logic to handle missing passenger records
+    }
+  }
+
+  /// Creates a passenger record for passenger-type users
+  static Future<void> _createPassengerRecord(User user) async {
+    try {
+      print('📝 Criando registro de passageiro...');
+      
+      // Check if passenger record already exists
+      final existingPassenger = await _supabase
+          .from('passengers')
+          .select('id')
+          .eq('user_id', user.userId)
+          .maybeSingle();
+          
+      if (existingPassenger != null) {
+        print('ℹ️ Registro de passageiro já existe');
+        return;
+      }
+      
+      final passengerData = {
+        'user_id': user.userId,
+        'consecutive_cancellations': 0,
+        'total_trips': 0,
+        'average_rating': null,
+        'payment_method_id': null,
+      };
+
+      await _supabase
+          .from('passengers')
+          .insert(passengerData);
+          
+      print('✅ Registro de passageiro criado com sucesso');
+    } on PostgrestException catch (e) {
+      print('❌ PostgrestException ao criar passageiro: ${e.code} - ${e.message}');
+      throw DatabaseException('Erro ao criar registro de passageiro: ${e.message}', e.code);
+    } catch (e) {
+      print('❌ Erro inesperado ao criar passageiro: $e');
+      throw DatabaseException('Erro inesperado ao criar registro de passageiro: ${e.toString()}');
+    }
+  }
+
+  /// Creates a driver record for driver-type users (basic record, needs completion later)
+  static Future<void> _createDriverRecord(User user) async {
+    try {
+      print('📝 Criando registro básico de motorista...');
+      
+      // Check if driver record already exists
+      final existingDriver = await _supabase
+          .from('drivers')
+          .select('id')
+          .eq('user_id', user.userId)
+          .maybeSingle();
+          
+      if (existingDriver != null) {
+        print('ℹ️ Registro de motorista já existe');
+        return;
+      }
+      
+      // Create basic driver record with placeholder values - will be filled during driver onboarding
+      final driverData = {
+        'user_id': user.userId,
+        'cnh_number': 'PENDENTE_CADASTRO',
+        'cnh_expiry_date': DateTime.now().add(Duration(days: 365)).toIso8601String().split('T')[0],
+        'cnh_photo_url': '',
+        'vehicle_brand': 'PENDENTE',
+        'vehicle_model': 'PENDENTE', 
+        'vehicle_year': 2020,
+        'vehicle_color': 'PENDENTE',
+        'vehicle_plate': 'PENDENTE',
+        'vehicle_category': 'standard',
+        'crlv_photo_url': '',
+        'approval_status': 'pending',
+        'approved_by': null,
+        'approved_at': null,
+        'is_online': false,
+        'accepts_pet': false,
+        'pet_fee': 0.0,
+        'accepts_grocery': false,
+        'grocery_fee': 0.0,
+        'accepts_condo': false,
+        'condo_fee': 0.0,
+        'stop_fee': 0.0,
+        'ac_policy': 'on_request',
+        'custom_price_per_km': 0.0,
+        'custom_price_per_minute': 0.0,
+        'bank_account_type': 'corrente',
+        'bank_code': '',
+        'bank_agency': '',
+        'bank_account': '',
+        'pix_key': '',
+        'pix_key_type': 'email',
+        'consecutive_cancellations': 0,
+        'total_trips': 0,
+        'average_rating': null,
+        'current_latitude': null,
+        'current_longitude': null,
+        'last_location_update': null,
+      };
+
+      await _supabase
+          .from('drivers')
+          .insert(driverData);
+          
+      print('✅ Registro básico de motorista criado com sucesso');
+    } on PostgrestException catch (e) {
+      print('❌ PostgrestException ao criar motorista: ${e.code} - ${e.message}');
+      throw DatabaseException('Erro ao criar registro de motorista: ${e.message}', e.code);
+    } catch (e) {
+      print('❌ Erro inesperado ao criar motorista: $e');
+      throw DatabaseException('Erro inesperado ao criar registro de motorista: ${e.toString()}');
     }
   }
 }

@@ -7,16 +7,17 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/user_type_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/passenger/passenger_home_screen.dart';
 import 'screens/stepper/stepper_demo_screen.dart';
 import 'screens/stepper/user_registration_stepper.dart';
 import 'theme/app_theme.dart';
 import 'screens/profile/profile_edit_screen.dart';
 import 'screens/menu/driver_menu_screen.dart';
+import 'screens/driver/driver_documents_screen.dart';
 import 'screens/menu/user_menu_screen.dart';
 import 'screens/wallet/wallet_screen.dart';
 import 'screens/driver/driver_home_screen.dart';
-import 'screens/driver/driver_main_screen.dart';
+import 'screens/driver/driver_trip_screen.dart';
 import 'screens/trip/trip_options_screen.dart';
 import 'screens/trip/driver_selection_screen.dart';
 import 'screens/trip/additional_stop_screen.dart';
@@ -129,13 +130,13 @@ class MyApp extends StatelessWidget {
           '/login': (context) => const LoginScreen(),
           '/register': (context) => const RegisterScreen(),
           '/forgot-password': (context) => const ForgotPasswordScreen(),
-          '/home': (context) => const HomeScreen(),
+          '/home': (context) => const PassengerHomeScreen(),
           '/stepper_demo': (context) => const StepperDemoScreen(),
           '/registration_stepper': (context) => const UserRegistrationStepper(),
           '/profile_edit': (context) => const ProfileEditScreen(),
           '/driver_menu': (context) => const DriverMenuScreen(),
           '/driver_home': (context) => const DriverHomeScreen(),
-          '/driver_main': (context) => const DriverMainScreen(),
+          '/driver_trip': (context) => const DriverTripScreen(),
           '/user_menu': (context) => const UserMenuScreen(),
           '/wallet': (context) => const WalletScreen(),
           '/notifications': (context) => const NotificationsScreen(),
@@ -143,6 +144,7 @@ class MyApp extends StatelessWidget {
           '/saved_places': (context) => const SavedPlacesScreen(),
           '/about': (context) => const AboutScreen(),
           '/driver_excluded_zones': (context) => const DriverExcludedZonesScreen(),
+          '/driver_documents': (context) => const DriverDocumentsScreen(),
         },
         onGenerateRoute: (settings) {
           switch (settings.name) {

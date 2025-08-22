@@ -136,7 +136,7 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               _MenuTile(
                 icon: Icons.assignment_turned_in_outlined,
                 label: 'Documentos',
-                onTap: () => _showComingSoon('Documentos'),
+                onTap: () => Navigator.pushNamed(context, '/driver_documents'),
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
@@ -145,11 +145,6 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
                 icon: Icons.schedule_outlined,
                 label: 'Horários de trabalho',
                 onTap: () => _showComingSoon('Horários de trabalho'),
-              ),
-              _MenuTile(
-                icon: Icons.map_outlined,
-                label: 'Zonas de atendimento',
-                onTap: () => _showComingSoon('Zonas de atendimento'),
               ),
               _MenuTile(
                 icon: Icons.remove_circle_outline,

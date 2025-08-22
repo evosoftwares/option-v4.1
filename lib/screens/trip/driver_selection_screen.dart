@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -9,7 +10,10 @@ import '../../services/driver_service.dart';
 import '../../services/trip_service.dart';
 import '../../services/user_service.dart';
 import '../../services/location_service.dart';
+import '../../services/search_status_service.dart';
 import '../../widgets/logo_branding.dart';
+import '../../widgets/search_feedback_widget.dart';
+import '../../theme/app_colors.dart';
 
 class DriverSelectionScreen extends StatefulWidget {
 
@@ -59,6 +63,7 @@ class DriverSelectionScreen extends StatefulWidget {
 
 class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
   late final DriverService _driverService;
+  final SearchStatusService _searchStatusService = SearchStatusService();
   late Future<List<Driver>> _futureDrivers;
   bool _isLoading = false;
   final _supabase = Supabase.instance.client;
@@ -71,35 +76,138 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
   }
 
   Future<List<Driver>> _loadDrivers() async {
-    final lat = widget.origin.latitude;
-    final lng = widget.origin.longitude;
-    if (lat == null || lng == null) {
-      return [];
+    return await _loadDriversWithRetry();
+  }
+  
+  Future<List<Driver>> _loadDriversWithRetry({int attempt = 1, int maxAttempts = 3}) async {
+    try {
+      // Inicia o feedback de busca
+      if (attempt == 1) {
+        _searchStatusService.startSearch(
+          message: 'Procurando motoristas na sua região...',
+        );
+      } else {
+        _searchStatusService.startSearch(
+          message: 'Tentativa $attempt de $maxAttempts - Procurando motoristas...',
+        );
+      }
+
+      final lat = widget.origin.latitude;
+      final lng = widget.origin.longitude;
+      if (lat == null || lng == null) {
+        _searchStatusService.markError(
+          message: 'Erro de localização',
+          errorDetails: 'Não foi possível determinar sua localização atual.',
+        );
+        return [];
+      }
+      
+      // Extrair informações de localização do endereço de destino
+      // Por enquanto, deixamos como null até implementarmos um parser de endereço
+      // ou até que o modelo FavoriteLocation seja atualizado com esses campos
+      String? destinationNeighborhood;
+      String? destinationCity;
+      String? destinationState;
+      
+      // TODO: Implementar parser de endereço ou atualizar modelo FavoriteLocation
+      // para incluir campos neighborhood, city e state
+      
+      // Busca motoristas com timeout de 30 segundos
+      final drivers = await _driverService.getAvailableDriversNearby(
+        latitude: lat,
+        longitude: lng,
+        radiusKm: 8,
+        category: widget.category,
+        needsPet: widget.needsPet,
+        needsGrocery: widget.needsGrocery,
+        needsCondo: widget.needsCondo,
+        destinationNeighborhood: destinationNeighborhood,
+        destinationCity: destinationCity,
+        destinationState: destinationState,
+        limit: 20,
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('timeout: A busca por motoristas demorou mais que o esperado');
+        },
+      );
+
+      // Atualiza o status baseado no resultado
+      if (drivers.isEmpty) {
+        _searchStatusService.markNoDriversFound(
+          message: 'Nenhum motorista disponível no momento. Tente novamente em alguns minutos.',
+        );
+      } else {
+        _searchStatusService.markSuccess(
+          driversFound: drivers.length,
+          message: drivers.length == 1 
+              ? 'Encontramos 1 motorista disponível!' 
+              : 'Encontramos ${drivers.length} motoristas disponíveis!',
+        );
+      }
+
+      return drivers;
+    } catch (e) {
+      // Log detalhado do erro para diagnóstico
+      if (kDebugMode) {
+        debugPrint('🚨 [DriverSelectionScreen] Erro na tentativa $attempt/$maxAttempts:');
+        debugPrint('   Tipo: ${e.runtimeType}');
+        debugPrint('   Mensagem: $e');
+        debugPrint('   Parâmetros: lat=${widget.origin.latitude}, lng=${widget.origin.longitude}, category=${widget.category}');
+        debugPrint('   Radius: 8km, needsPet: ${widget.needsPet}, needsGrocery: ${widget.needsGrocery}, needsCondo: ${widget.needsCondo}');
+      }
+      
+      // Marca erro com mensagem específica
+      String errorMessage = 'Erro ao buscar motoristas';
+      String? errorDetails;
+      
+      final errorString = e.toString().toLowerCase();
+      
+      if (errorString.contains('timeout') || errorString.contains('time out')) {
+        errorMessage = 'Tempo limite excedido';
+        errorDetails = 'A busca demorou mais que o esperado. Verifique sua conexão e tente novamente.';
+      } else if (errorString.contains('network') || errorString.contains('connection') || errorString.contains('socket')) {
+        errorMessage = 'Problema de conexão';
+        errorDetails = 'Verifique sua conexão com a internet e tente novamente.';
+      } else if (errorString.contains('location') || errorString.contains('gps')) {
+        errorMessage = 'Erro de localização';
+        errorDetails = 'Não foi possível determinar sua localização atual. Verifique se o GPS está ativado.';
+      } else if (errorString.contains('auth') || errorString.contains('unauthorized')) {
+        errorMessage = 'Erro de autenticação';
+        errorDetails = 'Sessão expirada. Faça login novamente.';
+      } else if (errorString.contains('rate limit') || errorString.contains('too many requests')) {
+        errorMessage = 'Muitas tentativas';
+        errorDetails = 'Aguarde alguns segundos antes de tentar novamente.';
+      } else if (errorString.contains('server') || errorString.contains('500')) {
+        errorMessage = 'Erro no servidor';
+        errorDetails = 'Nossos servidores estão temporariamente indisponíveis. Tente novamente em alguns minutos.';
+      } else {
+        errorDetails = 'Tente novamente em alguns instantes. Se o problema persistir, entre em contato conosco.';
+      }
+      
+      // Tenta novamente se não for o último attempt e for um erro recuperável
+      if (attempt < maxAttempts && _isRetryableError(errorString)) {
+        await Future.delayed(Duration(seconds: attempt * 2)); // Backoff exponencial
+        return await _loadDriversWithRetry(attempt: attempt + 1, maxAttempts: maxAttempts);
+      }
+      
+      _searchStatusService.markError(
+        message: errorMessage,
+        errorDetails: errorDetails,
+      );
+      
+      throw Exception('Erro ao buscar motoristas: $e');
     }
-    
-    // Extrair informações de localização do endereço de destino
-    // Por enquanto, deixamos como null até implementarmos um parser de endereço
-    // ou até que o modelo FavoriteLocation seja atualizado com esses campos
-    String? destinationNeighborhood;
-    String? destinationCity;
-    String? destinationState;
-    
-    // TODO: Implementar parser de endereço ou atualizar modelo FavoriteLocation
-    // para incluir campos neighborhood, city e state
-    
-    return _driverService.getAvailableDriversNearby(
-      latitude: lat,
-      longitude: lng,
-      radiusKm: 8,
-      category: widget.category,
-      needsPet: widget.needsPet,
-      needsGrocery: widget.needsGrocery,
-      needsCondo: widget.needsCondo,
-      destinationNeighborhood: destinationNeighborhood,
-      destinationCity: destinationCity,
-      destinationState: destinationState,
-      limit: 20,
-    );
+  }
+  
+  bool _isRetryableError(String errorString) {
+    // Erros que podem ser recuperáveis com retry
+    return errorString.contains('timeout') ||
+           errorString.contains('network') ||
+           errorString.contains('connection') ||
+           errorString.contains('socket') ||
+           errorString.contains('server') ||
+           errorString.contains('500');
   }
 
   @override
@@ -112,6 +220,9 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
         children: [
           Column(
             children: [
+              // Widget de feedback da busca
+              const SearchFeedbackWidget(showOnlyWhenActive: true),
+              
               if ((widget.additionalStop ?? '').trim().isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -133,10 +244,63 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
                       return _EmptyState(onRetry: () => setState(() => _futureDrivers = _loadDrivers()));
                     }
 
-                    return ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: drivers.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    return Column(
+                      children: [
+                        // Origin and Destination display
+                        Container(
+                          margin: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: colorScheme.outlineVariant),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.radio_button_checked, color: Colors.green, size: 16),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      widget.origin.address,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: colorScheme.onSurface,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on, color: Colors.red, size: 16),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      widget.destination.address,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: colorScheme.onSurface,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: ListView.separated(
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: drivers.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final d = drivers[index];
                         final distanceKm = _distanceKm(
@@ -156,8 +320,11 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
                              }
                            },
                          );
-                      },
-                    );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
                   },
                 ),
               ),
@@ -320,17 +487,17 @@ class _DriverCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
+          color: AppColors.black,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: colorScheme.outlineVariant),
         ),
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: colorScheme.primaryContainer,
+              backgroundColor: AppColors.white,
               child: Text(
                 (driver.brand.isNotEmpty ? driver.brand[0] : 'D').toUpperCase(),
-                style: TextStyle(color: colorScheme.onPrimaryContainer),
+                style: const TextStyle(color: AppColors.black),
               ),
             ),
             const SizedBox(width: 12),
@@ -340,29 +507,29 @@ class _DriverCard extends StatelessWidget {
                 children: [
                   Text(
                     '${driver.brand} ${driver.model} · ${driver.color}',
-                    style: textTheme.titleMedium?.copyWith(color: colorScheme.onSurface),
+                    style: textTheme.titleMedium?.copyWith(color: AppColors.white),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Placa ${driver.plate} · ${driver.category.toUpperCase()}',
-                    style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+                    style: textTheme.bodyMedium?.copyWith(color: AppColors.white.withOpacity(0.8)),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Icon(Icons.star, color: colorScheme.tertiary, size: 16),
                       const SizedBox(width: 4),
-                      Text(driver.ratings.toStringAsFixed(1), style: textTheme.bodyMedium),
+                      Text(driver.ratings.toStringAsFixed(1), style: textTheme.bodyMedium?.copyWith(color: AppColors.white)),
                       const SizedBox(width: 12),
                       Icon(Icons.place, color: colorScheme.secondary, size: 16),
                       const SizedBox(width: 4),
-                      Text('${distanceKm.toStringAsFixed(1)} km', style: textTheme.bodyMedium),
+                      Text('${distanceKm.toStringAsFixed(1)} km', style: textTheme.bodyMedium?.copyWith(color: AppColors.white)),
                       const SizedBox(width: 12),
                       Icon(Icons.timer, color: colorScheme.primary, size: 16),
                       const SizedBox(width: 4),
-                      Text('~$etaMinutes min', style: textTheme.bodyMedium),
+                      Text('~$etaMinutes min', style: textTheme.bodyMedium?.copyWith(color: AppColors.white)),
                     ],
                   ),
                 ],

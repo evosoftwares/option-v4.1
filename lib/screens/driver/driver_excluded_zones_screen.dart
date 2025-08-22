@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/supabase/driver_excluded_zone.dart';
-import '../../services/driver_excluded_zones_service.dart';
+import '../../services/secure_driver_excluded_zones_service.dart';
+import '../../services/zone_validation_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/logo_branding.dart';
 import '../../theme/app_spacing.dart';
+import '../../exceptions/app_exceptions.dart';
 
 class DriverExcludedZonesScreen extends StatefulWidget {
   const DriverExcludedZonesScreen({super.key});
@@ -16,7 +18,7 @@ class DriverExcludedZonesScreen extends StatefulWidget {
 }
 
 class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
-  late final DriverExcludedZonesService _service;
+  late final SecureDriverExcludedZonesService _service;
   final TextEditingController _neighborhoodController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
@@ -30,7 +32,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
   @override
   void initState() {
     super.initState();
-    _service = DriverExcludedZonesService(Supabase.instance.client);
+    _service = SecureDriverExcludedZonesService(Supabase.instance.client);
     _loadDriverData();
   }
 
@@ -105,9 +107,17 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
       if (mounted) {
         _showSuccessSnackBar('Zona excluída adicionada com sucesso!');
       }
+    } on ValidationException catch (e) {
+      if (mounted) {
+        _showErrorSnackBar(e.message);
+      }
+    } on DatabaseException catch (e) {
+      if (mounted) {
+        _showErrorSnackBar(e.message);
+      }
     } catch (e) {
       if (mounted) {
-        _showErrorSnackBar('Erro ao adicionar zona excluída: $e');
+        _showErrorSnackBar('Erro inesperado ao adicionar zona excluída. Tente novamente.');
       }
     } finally {
       if (mounted) {
@@ -194,14 +204,20 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Estado',
                   hintText: 'Ex: RJ, SP, MG',
+                  helperText: 'Use a sigla do estado brasileiro',
                 ),
+                textCapitalization: TextCapitalization.characters,
+                maxLength: 2,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Por favor, informe o estado';
                   }
-                  if (value.trim().length != 2) {
-                    return 'Use a sigla do estado (ex: RJ, SP)';
+                  
+                  final normalizedState = value.trim().toLowerCase();
+                  if (!ZoneValidationService.validBrazilianStates.contains(normalizedState)) {
+                    return 'Estado inválido. Use uma sigla válida (ex: RJ, SP, MG)';
                   }
+                  
                   return null;
                 },
               ),
@@ -317,6 +333,35 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
                           color: colorScheme.onPrimaryContainer,
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surface.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: colorScheme.onSurface,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              'Zonas cadastradas: ${_excludedZones.length}/50',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -332,9 +377,15 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
       floatingActionButton: _isLoading
           ? null
           : FloatingActionButton.extended(
-              onPressed: _showAddZoneDialog,
+              onPressed: _excludedZones.length >= 50 ? null : _showAddZoneDialog,
               icon: const Icon(Icons.add_location_alt),
-              label: const Text('Adicionar Zona'),
+              label: Text(_excludedZones.length >= 50 ? 'Limite Atingido' : 'Adicionar Zona'),
+              backgroundColor: _excludedZones.length >= 50 
+                  ? Theme.of(context).colorScheme.surfaceVariant
+                  : null,
+              foregroundColor: _excludedZones.length >= 50 
+                  ? Theme.of(context).colorScheme.onSurfaceVariant
+                  : null,
             ),
     );
   }

@@ -87,8 +87,15 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
       final ok = await controller.completeRegistration();
       if (!mounted) return;
       if (ok) {
-        print('✅ Cadastro finalizado com sucesso! Navegando para /home');
-        Navigator.of(context).pushReplacementNamed('/home');
+        print('✅ Cadastro finalizado com sucesso!');
+        // Redirecionar baseado no tipo de usuário
+        if (controller.userType == 'driver') {
+          print('Navegando para /driver_home (motorista)');
+          Navigator.of(context).pushReplacementNamed('/driver_home');
+        } else {
+          print('Navegando para /home (passageiro)');
+          Navigator.of(context).pushReplacementNamed('/home');
+        }
       } else {
         print('❌ Falha na finalização do cadastro');
         throw Exception('Falha na finalização do cadastro');
@@ -154,11 +161,28 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
                           .updatePhotoUrl(photoUrl);
                     },
                   ),
-                  PlacesStep(
-                    onNext: _completeRegistration,
-                    onSave: (locations) {
-                      Provider.of<StepperController>(context, listen: false)
-                          .updateLocations(locations);
+                  Consumer<StepperController>(
+                    builder: (context, controller, child) {
+                      // Motoristas pulam o passo de locais favoritos
+                      if (controller.userType == 'driver') {
+                        // Para motoristas, finalizar cadastro diretamente
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            _completeRegistration();
+                          }
+                        });
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      }
+                      // Para passageiros, mostrar o passo de locais favoritos
+                      return PlacesStep(
+                        onNext: _completeRegistration,
+                        onSave: (locations) {
+                          Provider.of<StepperController>(context, listen: false)
+                              .updateLocations(locations);
+                        },
+                      );
                     },
                   ),
                 ],

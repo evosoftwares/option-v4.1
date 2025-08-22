@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../models/supabase/driver.dart';
 import '../models/supabase/driver_offer.dart';
 import '../models/supabase/trip.dart';
@@ -460,7 +461,46 @@ class DriverService {
         query = query.limit(limit);
       }
 
-      final response = await query;
+      // Execute query with fallback in case of missing column (e.g., average_rating not present yet)
+      dynamic response;
+      try {
+        response = await query;
+      } on PostgrestException catch (e) {
+        // 42703: undefined_column in Postgres
+        final msg = (e.message ?? '').toLowerCase();
+        final isMissingAverageRating = e.code == '42703' || msg.contains('average_rating') || msg.contains('column');
+        if (isMissingAverageRating) {
+          // Fallback: re-run the same query without the ordering clause
+          // (Some environments may not have the average_rating column yet.)
+          // Note: keep filters identical to preserve result correctness
+          // Diagnostic log only in debug mode; does not expose secrets
+          if (kDebugMode) {
+            debugPrint('getAvailableDriversNearby: coluna average_rating ausente. Aplicando fallback sem ordenação. (${e.code})');
+          }
+
+          dynamic fb = _supabase.from('drivers').select().eq('is_online', true);
+          fb = fb.or('approval_status.eq.approved,approval_status.is.null');
+          if (category != null && category.isNotEmpty) fb = fb.eq('vehicle_category', category);
+          if (needsPet ?? false) fb = fb.eq('accepts_pet', true);
+          if (needsGrocery ?? false) fb = fb.eq('accepts_grocery', true);
+          if (needsCondo ?? false) fb = fb.eq('accepts_condo', true);
+          fb = fb
+              .gte('current_latitude', latitude - latDelta)
+              .lte('current_latitude', latitude + latDelta)
+              .gte('current_longitude', longitude - lngDelta)
+              .lte('current_longitude', longitude + lngDelta);
+          if (limit != null && limit > 0) fb = fb.limit(limit);
+
+          response = await fb;
+        } else {
+          // Log in debug mode and rethrow to upper handler
+          if (kDebugMode) {
+            debugPrint('getAvailableDriversNearby PostgrestException: code=${e.code}, message=${e.message}');
+          }
+          rethrow;
+        }
+      }
+
       List<Driver> drivers = (response as List)
           .map((json) => Driver.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -477,7 +517,7 @@ class DriverService {
 
       return drivers;
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar motoristas disponíveis: ${e.message}');
+      throw DatabaseException('Erro ao buscar motoristas disponíveis: ${e.message}', e.code);
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao buscar motoristas disponíveis.');
     }

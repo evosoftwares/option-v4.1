@@ -56,7 +56,13 @@ class _LoginScreenState extends State<LoginScreen> {
           },
         );
       } else {
-        Navigator.of(context).pushReplacementNamed('/home');
+        // Buscar dados completos do usuário para verificar o tipo
+        final currentUser = await UserService.getCurrentUser();
+        if (currentUser != null && currentUser.userType == 'driver') {
+          Navigator.of(context).pushReplacementNamed('/driver_home');
+        } else {
+          Navigator.of(context).pushReplacementNamed('/home');
+        }
       }
     } on AuthException catch (e) {
       if (!mounted) return;
