@@ -5,7 +5,7 @@ import 'package:option/screens/place_picker_screen.dart';
 
 void main() {
   group('PlacePickerScreen Favorites Tests', () {
-    testWidgets('should use favorite type when isForFavorites is true', (WidgetTester tester) async {
+    testWidgets('should use favorite type when isForFavorites is true', (tester) async {
       // Arrange
       const testApp = MaterialApp(
         home: PlacePickerScreen(
@@ -23,11 +23,10 @@ void main() {
       expect(find.byType(PlacePickerScreen), findsOneWidget);
     });
 
-    testWidgets('should show type selection when isForFavorites is false', (WidgetTester tester) async {
+    testWidgets('should show type selection when isForFavorites is false', (tester) async {
       // Arrange
       const testApp = MaterialApp(
         home: PlacePickerScreen(
-          isForFavorites: false,
           title: 'Test Regular',
         ),
       );

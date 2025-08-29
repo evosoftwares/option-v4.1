@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../models/favorite_location.dart';
+
 import '../../../controllers/stepper_controller.dart';
 import '../../../models/favorite_location.dart';
 
 class AddLocationModal extends StatefulWidget {
 
   const AddLocationModal({
-    Key? key,
+    super.key,
     this.location,
     this.index,
-  }) : super(key: key);
+  });
   final FavoriteLocation? location;
   final int? index;
 
@@ -243,7 +243,7 @@ class _AddLocationModalState extends State<AddLocationModal> {
                           Text(type.label),
                         ],
                       ),
-                    )).toList(),
+                    ),).toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setState(() => _selectedType = value);

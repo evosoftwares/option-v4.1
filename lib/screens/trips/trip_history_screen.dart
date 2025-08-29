@@ -1,10 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../theme/app_spacing.dart';
-import '../../theme/app_typography.dart';
+
 import '../../services/trip_service.dart';
 import '../../services/user_service.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 import '../../widgets/logo_branding.dart';
 
 class TripHistoryScreen extends StatefulWidget {

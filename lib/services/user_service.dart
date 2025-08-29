@@ -1,9 +1,22 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
-import '../models/user.dart';
+
+import '../config/feature_flags.dart';
 import '../exceptions/app_exceptions.dart';
+import '../utils/supabase_helper.dart';
+import '../exceptions/validation_exception.dart' as validation;
+import '../models/user.dart';
+import '../validators/user_data_validator.dart';
+import '../validators/database_constraints_validator.dart';
+import 'enhanced_data_integrity_service.dart';
 
 class UserService {
-  static final SupabaseClient _supabase = Supabase.instance.client;
+  static SupabaseClient get _supabase {
+    final c = SupabaseHelper.client;
+    if (c == null) {
+      throw Exception('Supabase não inicializado');
+    }
+    return c;
+  }
 
   /// Cria um novo usuário na tabela app_users
   static Future<User> createUser({
@@ -14,42 +27,85 @@ class UserService {
     String? photoUrl,
     required String userType,
   }) async {
-    print('🔄 UserService.createUser iniciado');
+    final timestamp = DateTime.now().toIso8601String();
+    print('🔄 [$timestamp] [USER_SERVICE] createUser iniciado');
     print('  - authUserId: $authUserId');
     print('  - email: $email');
     print('  - fullName: $fullName');
-    print('  - phone: $phone');
+    print('  - phone: ${phone ?? 'null'}');
     print('  - userType: $userType');
 
+    // VALIDAÇÃO SIMPLIFICADA: Apenas validação básica necessária
     try {
-      // Verificar se o usuário já existe
-      print('🔍 Verificando se usuário já existe...');
-      final existingUser = await getUserById(authUserId);
-      if (existingUser != null) {
-        print('❌ Usuário já existe: $email');
-        throw UserAlreadyExistsException(email);
-      }
-      print('✅ Usuário não existe, prosseguindo com criação');
-    } catch (e) {
-      if (e is UserAlreadyExistsException) rethrow;
-      print('ℹ️ Erro ao verificar usuário existente (normal): $e');
-      // Se não encontrou o usuário, continua com a criação
+      final validatedData = UserDataValidator.validateUserData(
+        fullName: fullName,
+        email: email,
+        userType: userType,
+        phone: phone,
+        photoUrl: photoUrl,
+      );
+      
+      // Usar dados validados
+      fullName = validatedData['full_name'];
+      email = validatedData['email'];
+      userType = validatedData['user_type'];
+      phone = validatedData['phone'];
+      photoUrl = validatedData['photo_url'];
+      
+    } on validation.ValidationException catch (e) {
+      throw DatabaseException('Dados inválidos: ${e.message}');
     }
 
     try {
+      // Verificar se o usuário já existe por ID
+      print('🔍 [$timestamp] [USER_SERVICE] Verificando se usuário já existe por ID...');
+      final existingUser = await getUserById(authUserId);
+      if (existingUser != null) {
+        print('❌ [$timestamp] [USER_SERVICE] Usuário já existe por ID: $email');
+        throw UserAlreadyExistsException(email);
+      }
+      print('✅ [$timestamp] [USER_SERVICE] Usuário não existe por ID, continuando...');
+    } catch (e) {
+      if (e is UserAlreadyExistsException) rethrow;
+      print('ℹ️ [$timestamp] [USER_SERVICE] Erro ao verificar usuário existente por ID (normal): $e');
+      // Se não encontrou o usuário, continua com a criação
+    }
+
+    // Verificar se já existe usuário com o mesmo email
+    try {
+      print('🔍 [$timestamp] [USER_SERVICE] Verificando se email já existe: $email');
+      final existingUserByEmail = await getUserByEmail(email);
+      if (existingUserByEmail != null) {
+        print('❌ [$timestamp] [USER_SERVICE] Email já existe: $email (ID: ${existingUserByEmail.id})');
+        throw UserAlreadyExistsException(email);
+      }
+      print('✅ [$timestamp] [USER_SERVICE] Email disponível: $email');
+    } catch (e) {
+      if (e is UserAlreadyExistsException) rethrow;
+      print('ℹ️ [$timestamp] [USER_SERVICE] Erro ao verificar email existente (normal): $e');
+    }
+
+    // Validação obrigatória do telefone conforme schema Supabase
+    if (phone == null || phone.trim().isEmpty) {
+      throw const DatabaseException('Telefone é obrigatório para criar usuário', 'PHONE_REQUIRED');
+    }
+    final finalPhone = phone.trim();
+
+    try {
       final userData = {
-        'id': authUserId,
-        'user_id': authUserId, // Cópia do UUID do AUTH user
+        'id': authUserId,  // PK: UUID do auth.users
         'email': email,
         'full_name': fullName,
-        'phone': phone,
+        'phone': finalPhone,    // Pode ser vazio, será preenchido no stepper
         'photo_url': photoUrl,
         'user_type': userType,
         'status': 'active',
       };
 
-      print('📝 Inserindo dados do usuário:');
-      print(userData);
+      print('📝 [$timestamp] [USER_SERVICE] Usando telefone: $finalPhone');
+
+      print('📝 [$timestamp] [USER_SERVICE] Inserindo dados do usuário:');
+      print('  - Dados: $userData');
 
       final response = await _supabase
           .from('app_users')
@@ -57,23 +113,40 @@ class UserService {
           .select()
           .single();
 
-      print('✅ Usuário criado com sucesso!');
-      print('📄 Resposta: $response');
+      print('✅ [$timestamp] [USER_SERVICE] Usuário criado com sucesso!');
+      print('📄 [$timestamp] [USER_SERVICE] Resposta: $response');
       
       final user = User.fromMap(response);
       
       // Create corresponding passenger or driver record
+      print('🔄 [$timestamp] [USER_SERVICE] Criando registro específico para ${user.userType}...');
       await _createUserSpecificRecord(user);
+      print('✅ [$timestamp] [USER_SERVICE] Processo completo finalizado com sucesso!');
       
       return user;
     } on PostgrestException catch (e) {
-      print('❌ PostgrestException: ${e.code} - ${e.message}');
+      print('❌ [$timestamp] [USER_SERVICE] PostgrestException: ${e.code} - ${e.message}');
+      print('❌ [$timestamp] [USER_SERVICE] Detalhes do erro: ${e.details}');
+      print('❌ [$timestamp] [USER_SERVICE] Hint: ${e.hint}');
+      
       if (e.code == '23505') { // Unique constraint violation
-        throw UserAlreadyExistsException(email);
+        // Analisar qual constraint foi violado
+        final message = e.message.toLowerCase() ?? '';
+        if (message.contains('phone')) {
+          print('❌ [$timestamp] [USER_SERVICE] Constraint violado: telefone duplicado');
+          throw DatabaseException('Este telefone já está cadastrado: $phone', 'PHONE_ALREADY_EXISTS');
+        } else if (message.contains('email')) {
+          print('❌ [$timestamp] [USER_SERVICE] Constraint violado: email duplicado');
+          throw UserAlreadyExistsException(email);
+        } else {
+          print('❌ [$timestamp] [USER_SERVICE] Constraint violado: dados duplicados');
+          throw UserAlreadyExistsException(email);
+        }
       }
       throw DatabaseException('Erro ao criar usuário: ${e.message}', e.code);
     } catch (e) {
-      print('❌ Erro inesperado ao criar usuário: $e');
+      print('❌ [$timestamp] [USER_SERVICE] Erro inesperado ao criar usuário: $e');
+      print('❌ [$timestamp] [USER_SERVICE] Tipo do erro: ${e.runtimeType}');
       throw DatabaseException('Erro inesperado ao criar usuário: ${e.toString()}');
     }
   }
@@ -81,17 +154,33 @@ class UserService {
   /// Busca um usuário pelo ID
   static Future<User?> getUserById(String userId) async {
     try {
+      print('🔍 [DEBUG] getUserById chamado para ID: $userId');
       final response = await _supabase
           .from('app_users')
           .select()
           .eq('id', userId)
           .maybeSingle();
 
-      if (response == null) return null;
-      return User.fromMap(response);
-    } on PostgrestException {
+      print('🔍 [DEBUG] Resposta bruta do Supabase: $response');
+      print('🔍 [DEBUG] Tipo da resposta: ${response.runtimeType}');
+
+      if (response == null) {
+        print('❌ [DEBUG] Resposta é null - usuário não encontrado');
+        return null;
+      }
+      
+      print('✅ [DEBUG] Resposta é um Map válido');
+      print('🔍 [DEBUG] full_name na resposta: ${response['full_name']}');
+      print('🔍 [DEBUG] email na resposta: ${response['email']}');
+      
+      final user = User.fromMap(response);
+      print('✅ [DEBUG] User criado: ${user.fullName}');
+      return user;
+        } on PostgrestException catch (e) {
+      print('❌ [DEBUG] PostgrestException: ${e.message}');
       throw const DatabaseException('Erro ao buscar usuário. Por favor, tente novamente mais tarde.');
     } catch (e) {
+      print('❌ [DEBUG] Erro inesperado em getUserById: $e');
       throw const DatabaseException('Erro inesperado ao buscar usuário. Por favor, tente novamente mais tarde.');
     }
   }
@@ -114,6 +203,24 @@ class UserService {
     }
   }
 
+  /// Busca um usuário pelo telefone
+  static Future<User?> _getUserByPhone(String phone) async {
+    try {
+      final response = await _supabase
+          .from('app_users')
+          .select()
+          .eq('phone', phone)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return User.fromMap(response);
+    } on PostgrestException {
+      throw Exception('Erro ao buscar usuário por telefone. Por favor, tente novamente mais tarde.');
+    } catch (e) {
+      throw Exception('Erro inesperado ao buscar usuário por telefone. Por favor, tente novamente mais tarde.');
+    }
+  }
+
   /// Atualiza os dados de um usuário
   static Future<User> updateUser({
     required String userId,
@@ -123,6 +230,21 @@ class UserService {
     String? userType,
     String? status,
   }) async {
+    // 🚨 VALIDAÇÃO CRÍTICA: NUNCA permitir dados corrompidos
+    try {
+      if (fullName != null) {
+        UserDataValidator.validateAndSanitizeFullName(fullName);
+      }
+      if (phone != null) {
+        UserDataValidator.validatePhone(phone);
+      }
+      if (userType != null) {
+        UserDataValidator.validateUserType(userType);
+      }
+    } on validation.ValidationException catch (e) {
+      throw DatabaseException('Dados inválidos fornecidos para atualização: ${e.message}');
+    }
+
     try {
       final updateData = <String, dynamic>{};
       
@@ -197,11 +319,26 @@ class UserService {
   /// Obtém o usuário atual logado
   static Future<User?> getCurrentUser() async {
     try {
+      print('🔍 [DEBUG] getCurrentUser iniciado');
       final authUser = _supabase.auth.currentUser;
-      if (authUser == null) return null;
+      if (authUser == null) {
+        print('❌ [DEBUG] Auth user é null');
+        return null;
+      }
 
-      return await getUserById(authUser.id);
+      print('✅ [DEBUG] Auth user encontrado: ${authUser.id}');
+      final user = await getUserById(authUser.id);
+      
+      if (user != null) {
+        print('✅ [DEBUG] Usuário encontrado: ${user.fullName} (${user.email})');
+        print('🔍 [DEBUG] Dados completos do usuário: $user');
+      } else {
+        print('❌ [DEBUG] Usuário não encontrado na tabela app_users');
+      }
+      
+      return user;
     } catch (e) {
+      print('❌ [DEBUG] Erro em getCurrentUser: $e');
       throw Exception('Erro ao obter usuário atual. Por favor, tente novamente mais tarde.');
     }
   }
@@ -274,7 +411,7 @@ class UserService {
       final existingPassenger = await _supabase
           .from('passengers')
           .select('id')
-          .eq('user_id', user.userId)
+          .eq('user_id', user.id)
           .maybeSingle();
           
       if (existingPassenger != null) {
@@ -283,7 +420,7 @@ class UserService {
       }
       
       final passengerData = {
-        'user_id': user.userId,
+        'user_id': user.id,
         'consecutive_cancellations': 0,
         'total_trips': 0,
         'average_rating': null,
@@ -313,7 +450,7 @@ class UserService {
       final existingDriver = await _supabase
           .from('drivers')
           .select('id')
-          .eq('user_id', user.userId)
+          .eq('user_id', user.id)
           .maybeSingle();
           
       if (existingDriver != null) {
@@ -323,9 +460,9 @@ class UserService {
       
       // Create basic driver record with placeholder values - will be filled during driver onboarding
       final driverData = {
-        'user_id': user.userId,
+        'user_id': user.id,
         'cnh_number': 'PENDENTE_CADASTRO',
-        'cnh_expiry_date': DateTime.now().add(Duration(days: 365)).toIso8601String().split('T')[0],
+        'cnh_expiry_date': DateTime.now().add(const Duration(days: 365)).toIso8601String().split('T')[0],
         'cnh_photo_url': '',
         'vehicle_brand': 'PENDENTE',
         'vehicle_model': 'PENDENTE', 

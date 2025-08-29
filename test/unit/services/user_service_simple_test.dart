@@ -1,0 +1,211 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+import 'package:option/exceptions/app_exceptions.dart';
+import 'package:option/services/user_service.dart';
+import 'package:option/utils/supabase_helper.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+// Generate mocks
+@GenerateMocks([
+  SupabaseClient,
+  GoTrueClient,
+  SupabaseQueryBuilder,
+  PostgrestFilterBuilder,
+  PostgrestTransformBuilder,
+])
+import 'user_service_simple_test.mocks.dart';
+
+void main() {
+  group('UserService Basic Tests', () {
+    late MockSupabaseClient mockClient;
+    late MockGoTrueClient mockAuth;
+    late MockSupabaseQueryBuilder mockQuery;
+    late MockPostgrestFilterBuilder mockFilter;
+    late MockPostgrestTransformBuilder mockTransform;
+
+    setUp(() {
+      mockClient = MockSupabaseClient();
+      mockAuth = MockGoTrueClient();
+      mockQuery = MockSupabaseQueryBuilder();
+      mockFilter = MockPostgrestFilterBuilder();
+      mockTransform = MockPostgrestTransformBuilder();
+
+      SupabaseHelper.testClient = mockClient;
+      when(mockClient.auth).thenReturn(mockAuth);
+      when(mockClient.from(any)).thenReturn(mockQuery);
+    });
+
+    tearDown(() {
+      SupabaseHelper.testClient = null;
+    });
+
+    group('userExists', () {
+      test('should return true when user exists', () async {
+        when(mockQuery.select('id')).thenReturn(mockFilter);
+        when(mockFilter.eq('id', 'existing-user')).thenReturn(mockTransform);
+        when(mockTransform.single()).thenAnswer((_) async => {'id': 'existing-user'});
+
+        final result = await UserService.userExists('existing-user');
+
+        expect(result, isTrue);
+        verify(mockQuery.select('id')).called(1);
+        verify(mockFilter.eq('id', 'existing-user')).called(1);
+        verify(mockTransform.single()).called(1);
+      });
+
+      test('should return false when user does not exist', () async {
+        when(mockQuery.select('id')).thenReturn(mockFilter);
+        when(mockFilter.eq('id', 'non-existing')).thenReturn(mockTransform);
+        when(mockTransform.single()).thenThrow(
+          const PostgrestException(message: 'User not found', code: 'PGRST116')
+        );
+
+        final result = await UserService.userExists('non-existing');
+
+        expect(result, isFalse);
+      });
+    });
+
+    group('getCurrentUser', () {
+      test('should return null when no authenticated user', () async {
+        when(mockAuth.currentUser).thenReturn(null);
+
+        final result = await UserService.getCurrentUser();
+
+        expect(result, isNull);
+      });
+
+      test('should return user when authenticated and exists in app_users', () async {
+        final authUser = User(
+          id: 'auth-user-id',
+          email: 'test@example.com',
+          appMetadata: {},
+          userMetadata: {},
+          aud: 'authenticated',
+          createdAt: DateTime.now().toIso8601String(),
+        );
+
+        final userData = {
+          'id': 'auth-user-id',
+          'email': 'test@example.com',
+          'full_name': 'Test User',
+          'phone': '11999999999',
+          'user_type': 'passenger',
+          'status': 'active',
+        };
+
+        when(mockAuth.currentUser).thenReturn(authUser);
+        when(mockQuery.select()).thenReturn(mockFilter);
+        when(mockFilter.eq('id', 'auth-user-id')).thenReturn(mockTransform);
+        when(mockTransform.single()).thenAnswer((_) async => userData);
+
+        final result = await UserService.getCurrentUser();
+
+        expect(result, isNotNull);
+        expect(result!.id, equals('auth-user-id'));
+        expect(result.email, equals('test@example.com'));
+        expect(result.fullName, equals('Test User'));
+        expect(result.userType, equals('passenger'));
+      });
+    });
+
+    group('getUserById', () {
+      test('should return user when found', () async {
+        final userData = {
+          'id': 'test-user-id',
+          'email': 'test@example.com',
+          'full_name': 'Test User',
+          'phone': '11999999999',
+          'user_type': 'passenger',
+          'status': 'active',
+        };
+
+        when(mockQuery.select()).thenReturn(mockFilter);
+        when(mockFilter.eq('id', 'test-user-id')).thenReturn(mockTransform);
+        when(mockTransform.single()).thenAnswer((_) async => userData);
+
+        final result = await UserService.getUserById('test-user-id');
+
+        expect(result, isNotNull);
+        expect(result!.id, equals('test-user-id'));
+        expect(result.email, equals('test@example.com'));
+      });
+
+      test('should return null when user not found', () async {
+        when(mockQuery.select()).thenReturn(mockFilter);
+        when(mockFilter.eq('id', 'non-existing')).thenReturn(mockTransform);
+        when(mockTransform.single()).thenThrow(
+          const PostgrestException(message: 'User not found', code: 'PGRST116')
+        );
+
+        final result = await UserService.getUserById('non-existing');
+
+        expect(result, isNull);
+      });
+    });
+
+    group('createUser validation', () {
+      test('should validate required fields', () async {
+        expect(
+          () async => UserService.createUser(
+            authUserId: '',
+            email: 'test@example.com',
+            fullName: 'Test User',
+            phone: '11999999999',
+            userType: 'passenger',
+          ),
+          throwsA(isA<DatabaseException>()),
+        );
+      });
+
+      test('should validate email format', () async {
+        expect(
+          () async => UserService.createUser(
+            authUserId: 'test-id',
+            email: 'invalid-email',
+            fullName: 'Test User',
+            phone: '11999999999',
+            userType: 'passenger',
+          ),
+          throwsA(isA<DatabaseException>()),
+        );
+      });
+
+      test('should validate user type', () async {
+        expect(
+          () async => UserService.createUser(
+            authUserId: 'test-id',
+            email: 'test@example.com',
+            fullName: 'Test User',
+            phone: '11999999999',
+            userType: 'invalid-type',
+          ),
+          throwsA(isA<DatabaseException>()),
+        );
+      });
+    });
+
+    group('updateUser', () {
+      test('should validate update data', () async {
+        expect(
+          () async => UserService.updateUser(
+            userId: 'test-id',
+            fullName: '', // Empty name should fail
+          ),
+          throwsA(isA<DatabaseException>()),
+        );
+      });
+
+      test('should validate phone format', () async {
+        expect(
+          () async => UserService.updateUser(
+            userId: 'test-id',
+            phone: 'invalid-phone',
+          ),
+          throwsA(isA<DatabaseException>()),
+        );
+      });
+    });
+  });
+}

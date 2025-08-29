@@ -14,12 +14,10 @@ class AppConfig {
   // Asaas configuration
   static const String asaasBaseUrl = String.fromEnvironment(
     'ASAAS_BASE_URL',
-    defaultValue: '',
   );
 
   static const String asaasApiKey = String.fromEnvironment(
     'ASAAS_API_KEY',
-    defaultValue: '',
   );
 
   // Google Maps API

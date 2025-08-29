@@ -6,13 +6,11 @@ class User {
     required this.createdAt,
   });
 
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
+  factory User.fromJson(Map<String, dynamic> json) => User(
       id: json['id'] as String,
       email: json['email'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
-  }
   final String id;
   final String email;
   final DateTime createdAt;

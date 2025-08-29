@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/driver_status.dart';
+
 import '../controllers/driver_status_controller.dart';
+import '../models/driver_status.dart';
+import '../theme/app_colors.dart';
 
 class DriverBottomSheet extends StatefulWidget {
 
@@ -114,7 +116,7 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: AppColors.black.withOpacity(0.1),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),

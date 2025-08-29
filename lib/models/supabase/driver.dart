@@ -31,15 +31,18 @@ class Driver {
     required this.cancellations,
     required this.createdAt,
     required this.updatedAt,
+    this.fcmToken,
+    this.devicePlatform,
+    this.lastNotificationAt,
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
-    double? _toDouble(dynamic v) => v == null
+    double? toDouble(dynamic v) => v == null
         ? null
         : (v is num ? v.toDouble() : double.tryParse(v.toString()));
-    double _toDoubleOrZero(dynamic v) =>
+    double toDoubleOrZero(dynamic v) =>
         (v is num) ? v.toDouble() : double.tryParse(v?.toString() ?? '') ?? 0.0;
-    int _toIntOrZero(dynamic v) =>
+    int toIntOrZero(dynamic v) =>
         (v is num) ? v.toInt() : int.tryParse(v?.toString() ?? '') ?? 0;
 
     return Driver(
@@ -50,7 +53,7 @@ class Driver {
       cnhPhotoUrl: json['cnh_photo_url'] as String?,
       brand: json['vehicle_brand'] as String,
       model: json['vehicle_model'] as String,
-      year: _toIntOrZero(json['vehicle_year']),
+      year: toIntOrZero(json['vehicle_year']),
       color: json['vehicle_color'] as String,
       plate: json['vehicle_plate'] as String,
       category: json['vehicle_category'] as String,
@@ -62,17 +65,22 @@ class Driver {
       acceptsCondo: json['accepts_condo'] as bool? ?? false,
       fees: (json['fees'] as Map<String, dynamic>?) ?? const {},
       acPolicy: json['ac_policy'] as String?,
-      customPricePerKm: _toDouble(json['custom_price_per_km']),
-      customPricePerMinute: _toDouble(json['custom_price_per_minute']),
+      customPricePerKm: toDouble(json['custom_price_per_km']),
+      customPricePerMinute: toDouble(json['custom_price_per_minute']),
       bankData: json['bank_data'] as Map<String, dynamic>?,
       pixData: json['pix_data'] as Map<String, dynamic>?,
-      currentLatitude: _toDouble(json['current_latitude']),
-      currentLongitude: _toDouble(json['current_longitude']),
-      ratings: _toDoubleOrZero(json['average_rating']),
-      trips: _toIntOrZero(json['total_trips']),
-      cancellations: _toIntOrZero(json['consecutive_cancellations']),
+      currentLatitude: toDouble(json['current_latitude']),
+      currentLongitude: toDouble(json['current_longitude']),
+      ratings: toDoubleOrZero(json['average_rating']),
+      trips: toIntOrZero(json['total_trips']),
+      cancellations: toIntOrZero(json['consecutive_cancellations']),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      fcmToken: json['fcm_token'] as String?,
+      devicePlatform: json['device_platform'] as String?,
+      lastNotificationAt: json['last_notification_at'] != null 
+          ? DateTime.parse(json['last_notification_at'] as String) 
+          : null,
     );
   }
   final String id;
@@ -105,6 +113,9 @@ class Driver {
   final int cancellations;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? fcmToken;
+  final String? devicePlatform;
+  final DateTime? lastNotificationAt;
 
   Map<String, dynamic> toJson() => {
       'id': id,
@@ -137,6 +148,9 @@ class Driver {
       'consecutive_cancellations': cancellations,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'fcm_token': fcmToken,
+      'device_platform': devicePlatform,
+      'last_notification_at': lastNotificationAt?.toIso8601String(),
     };
 
   Driver copyWith({
@@ -170,6 +184,9 @@ class Driver {
     int? cancellations,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? fcmToken,
+    String? devicePlatform,
+    DateTime? lastNotificationAt,
   }) => Driver(
       id: id ?? this.id,
       userId: userId ?? this.userId,
@@ -201,5 +218,8 @@ class Driver {
       cancellations: cancellations ?? this.cancellations,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      fcmToken: fcmToken ?? this.fcmToken,
+      devicePlatform: devicePlatform ?? this.devicePlatform,
+      lastNotificationAt: lastNotificationAt ?? this.lastNotificationAt,
     );
 }

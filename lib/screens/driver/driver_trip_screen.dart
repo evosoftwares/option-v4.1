@@ -1,20 +1,22 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../config/app_config.dart';
 import '../../controllers/driver_status_controller.dart';
-import '../../services/location_service.dart';
-import '../../widgets/driver_earnings_widget.dart';
-import '../../widgets/driver_bottom_sheet.dart';
-import '../../services/map_style_service.dart';
-import '../../services/driver_service.dart';
-import '../../services/wallet_service.dart';
-import '../../services/user_service.dart';
 import '../../models/supabase/trip.dart';
+import '../../services/driver_service.dart';
+import '../../services/location_service.dart';
+import '../../services/map_style_service.dart';
+import '../../services/user_service.dart';
+import '../../services/wallet_service.dart';
+import '../../widgets/driver_bottom_sheet.dart';
+import '../../widgets/driver_earnings_widget.dart';
 
 class DriverTripScreen extends StatefulWidget {
   const DriverTripScreen({super.key});
@@ -167,7 +169,6 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
           distanceFilter: distanceFilter,
           intervalSeconds: intervalSeconds,
           enableWakeLock: enableWakeLock,
-          accuracy: LocationAccuracy.best,
         )
         .listen((pos) async {
       final controller = await _ensureController();
@@ -200,7 +201,7 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
         final lastPoint = _lastSentLatLng;
 
         // Criterios: 5s ou movimento >= 50m
-        bool shouldSend = false;
+        var shouldSend = false;
         if (lastAt == null || now.difference(lastAt) >= const Duration(seconds: 5)) {
           shouldSend = true;
         } else if (lastPoint != null) {
@@ -360,7 +361,7 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
         endCap: Cap.roundCap,
         jointType: JointType.round,
         zIndex: 1,
-      ));
+      ),);
 
       // Initialize progress polyline at the starting point
       if (_routePoints.isNotEmpty) {
@@ -374,7 +375,7 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
           endCap: Cap.roundCap,
           jointType: JointType.round,
           zIndex: 2,
-        ));
+        ),);
       }
     });
 
@@ -391,16 +392,16 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
         position: pos,
         icon: BitmapDescriptor.defaultMarkerWithHue(hue),
         infoWindow: title != null ? InfoWindow(title: title) : const InfoWindow(),
-      ));
+      ),);
     });
   }
 
   Future<void> _fitRouteBounds() async {
     if (_routePoints.isEmpty) return;
-    double minLat = _routePoints.first.latitude;
-    double maxLat = _routePoints.first.latitude;
-    double minLng = _routePoints.first.longitude;
-    double maxLng = _routePoints.first.longitude;
+    var minLat = _routePoints.first.latitude;
+    var maxLat = _routePoints.first.latitude;
+    var minLng = _routePoints.first.longitude;
+    var maxLng = _routePoints.first.longitude;
     for (final p in _routePoints) {
       if (p.latitude < minLat) minLat = p.latitude;
       if (p.latitude > maxLat) maxLat = p.latitude;
@@ -432,28 +433,28 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
     if (_routePoints.length < 2) return;
 
     // Helper to convert lat/lng to local XY meters relative to a reference point (here)
-    List<double> _toXY(LatLng p) {
+    List<double> toXY(LatLng p) {
       final lat0 = here.latitude * math.pi / 180.0;
       final dx = (p.longitude - here.longitude) * math.cos(lat0) * 111320.0; // meters per deg lon
       final dy = (p.latitude - here.latitude) * 110540.0; // meters per deg lat
       return [dx, dy];
     }
 
-    final pXY = _toXY(here);
-    double bestDist = double.infinity;
-    int bestIndex = 0; // segment start index
-    double bestT = 0.0;
+    final pXY = toXY(here);
+    var bestDist = double.infinity;
+    var bestIndex = 0; // segment start index
+    var bestT = 0.0;
 
-    for (int i = _lastProgressIndex; i < _routePoints.length - 1; i++) {
+    for (var i = _lastProgressIndex; i < _routePoints.length - 1; i++) {
       final a = _routePoints[i];
       final b = _routePoints[i + 1];
-      final aXY = _toXY(a);
-      final bXY = _toXY(b);
+      final aXY = toXY(a);
+      final bXY = toXY(b);
       final ab = [bXY[0] - aXY[0], bXY[1] - aXY[1]];
       final ap = [pXY[0] - aXY[0], pXY[1] - aXY[1]];
       final abLen2 = ab[0] * ab[0] + ab[1] * ab[1];
       if (abLen2 == 0) continue;
-      double t = (ap[0] * ab[0] + ap[1] * ab[1]) / abLen2;
+      var t = (ap[0] * ab[0] + ap[1] * ab[1]) / abLen2;
       t = t.clamp(0.0, 1.0);
       final proj = [aXY[0] + ab[0] * t, aXY[1] + ab[1] * t];
       final dx = pXY[0] - proj[0];
@@ -470,14 +471,12 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
     if (bestDist.isInfinite || bestDist > 150.0) return;
 
     // Interpolate snapped point in lat/lng
-    LatLng _lerp(LatLng a, LatLng b, double t) {
-      return LatLng(
+    LatLng lerp(LatLng a, LatLng b, double t) => LatLng(
         a.latitude + (b.latitude - a.latitude) * t,
         a.longitude + (b.longitude - a.longitude) * t,
       );
-    }
 
-    final snapped = _lerp(_routePoints[bestIndex], _routePoints[bestIndex + 1], bestT);
+    final snapped = lerp(_routePoints[bestIndex], _routePoints[bestIndex + 1], bestT);
 
     // Prevent regress due to GPS noise
     if (bestIndex + (bestT > 0.8 ? 1 : 0) < _lastProgressIndex) {
@@ -487,9 +486,9 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
     _lastProgressIndex = math.max(_lastProgressIndex, bestIndex);
 
     final colorScheme = Theme.of(context).colorScheme;
-    final newProgress = <LatLng>[]
-      ..addAll(_routePoints.sublist(0, bestIndex + 1))
-      ..add(snapped);
+    final newProgress = <LatLng>[..._routePoints.sublist(0, bestIndex + 1), snapped]
+      
+      ;
 
     setState(() {
       _progressPoints = newProgress;
@@ -503,7 +502,7 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
         endCap: Cap.roundCap,
         jointType: JointType.round,
         zIndex: 2,
-      ));
+      ),);
     });
   }
 

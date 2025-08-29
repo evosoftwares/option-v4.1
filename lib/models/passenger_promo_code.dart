@@ -15,8 +15,7 @@ class PassengerPromoCode {
     required this.createdAt,
   });
 
-  factory PassengerPromoCode.fromMap(Map<String, dynamic> map) {
-    return PassengerPromoCode(
+  factory PassengerPromoCode.fromMap(Map<String, dynamic> map) => PassengerPromoCode(
       id: map['id'] as String,
       code: map['code'] as String,
       type: PromoCodeType.fromString(map['type'] as String),
@@ -31,7 +30,6 @@ class PassengerPromoCode {
       validUntil: DateTime.parse(map['valid_until'] as String),
       createdAt: DateTime.parse(map['created_at'] as String),
     );
-  }
 
   final String id;
   final String code;
@@ -47,8 +45,7 @@ class PassengerPromoCode {
   final DateTime validUntil;
   final DateTime createdAt;
 
-  Map<String, dynamic> toMap() {
-    return {
+  Map<String, dynamic> toMap() => {
       'id': id,
       'code': code,
       'type': type.value,
@@ -63,7 +60,6 @@ class PassengerPromoCode {
       'valid_until': validUntil.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
     };
-  }
 
   bool get isValid {
     final now = DateTime.now();
@@ -73,13 +69,11 @@ class PassengerPromoCode {
            (usageLimit == null || usageCount < usageLimit!);
   }
 
-  bool canBeUsedForAmount(double amount) {
-    return amount >= minAmount;
-  }
+  bool canBeUsedForAmount(double amount) => amount >= minAmount;
 
   double calculateDiscount(double amount) {
     if (!isValid || !canBeUsedForAmount(amount)) {
-      return 0.0;
+      return 0;
     }
 
     double discount;
@@ -128,8 +122,7 @@ class PassengerPromoCode {
     DateTime? validFrom,
     DateTime? validUntil,
     DateTime? createdAt,
-  }) {
-    return PassengerPromoCode(
+  }) => PassengerPromoCode(
       id: id ?? this.id,
       code: code ?? this.code,
       type: type ?? this.type,
@@ -144,7 +137,6 @@ class PassengerPromoCode {
       validUntil: validUntil ?? this.validUntil,
       createdAt: createdAt ?? this.createdAt,
     );
-  }
 }
 
 enum PromoCodeType {
@@ -155,12 +147,10 @@ enum PromoCodeType {
   const PromoCodeType(this.value);
   final String value;
 
-  static PromoCodeType fromString(String value) {
-    return values.firstWhere(
+  static PromoCodeType fromString(String value) => values.firstWhere(
       (type) => type.value == value,
       orElse: () => throw ArgumentError('Unknown promo code type: $value'),
     );
-  }
 
   String get displayName {
     switch (this) {
@@ -186,8 +176,7 @@ class PassengerPromoCodeUsage {
     required this.usedAt,
   });
 
-  factory PassengerPromoCodeUsage.fromMap(Map<String, dynamic> map) {
-    return PassengerPromoCodeUsage(
+  factory PassengerPromoCodeUsage.fromMap(Map<String, dynamic> map) => PassengerPromoCodeUsage(
       id: map['id'] as String,
       userId: map['user_id'] as String,
       promoCodeId: map['promo_code_id'] as String,
@@ -197,7 +186,6 @@ class PassengerPromoCodeUsage {
       finalAmount: (map['final_amount'] as num).toDouble(),
       usedAt: DateTime.parse(map['used_at'] as String),
     );
-  }
 
   final String id;
   final String userId;
@@ -208,8 +196,7 @@ class PassengerPromoCodeUsage {
   final double finalAmount;
   final DateTime usedAt;
 
-  Map<String, dynamic> toMap() {
-    return {
+  Map<String, dynamic> toMap() => {
       'id': id,
       'user_id': userId,
       'promo_code_id': promoCodeId,
@@ -219,7 +206,6 @@ class PassengerPromoCodeUsage {
       'final_amount': finalAmount,
       'used_at': usedAt.toIso8601String(),
     };
-  }
 
   double get savingsPercentage => (discountAmount / originalAmount) * 100;
 

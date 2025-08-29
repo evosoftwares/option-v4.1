@@ -15,8 +15,7 @@ class PassengerWalletTransaction {
     this.processedAt,
   });
 
-  factory PassengerWalletTransaction.fromMap(Map<String, dynamic> map) {
-    return PassengerWalletTransaction(
+  factory PassengerWalletTransaction.fromMap(Map<String, dynamic> map) => PassengerWalletTransaction(
       id: map['id'] as String,
       walletId: map['wallet_id'] as String,
       passengerId: map['passenger_id'] as String,
@@ -33,7 +32,6 @@ class PassengerWalletTransaction {
           ? DateTime.parse(map['processed_at'] as String)
           : null,
     );
-  }
 
   final String id;
   final String walletId;
@@ -49,8 +47,7 @@ class PassengerWalletTransaction {
   final DateTime createdAt;
   final DateTime? processedAt;
 
-  Map<String, dynamic> toMap() {
-    return {
+  Map<String, dynamic> toMap() => {
       'id': id,
       'wallet_id': walletId,
       'passenger_id': passengerId,
@@ -65,7 +62,6 @@ class PassengerWalletTransaction {
       'created_at': createdAt.toIso8601String(),
       'processed_at': processedAt?.toIso8601String(),
     };
-  }
 
   PassengerWalletTransaction copyWith({
     String? id,
@@ -81,8 +77,7 @@ class PassengerWalletTransaction {
     Map<String, dynamic>? metadata,
     DateTime? createdAt,
     DateTime? processedAt,
-  }) {
-    return PassengerWalletTransaction(
+  }) => PassengerWalletTransaction(
       id: id ?? this.id,
       walletId: walletId ?? this.walletId,
       passengerId: passengerId ?? this.passengerId,
@@ -97,13 +92,12 @@ class PassengerWalletTransaction {
       createdAt: createdAt ?? this.createdAt,
       processedAt: processedAt ?? this.processedAt,
     );
-  }
 
   bool get isCredit => type == TransactionType.credit || type == TransactionType.cashback || type == TransactionType.refund;
   bool get isDebit => type == TransactionType.tripPayment || type == TransactionType.cancellationFee;
 
   String get formattedAmount {
-    final prefix = isCredit ? '+ R\$ ' : '- R\$ ';
+    final prefix = isCredit ? r'+ R$ ' : r'- R$ ';
     return '$prefix${amount.toStringAsFixed(2)}';
   }
 
@@ -127,8 +121,7 @@ class PassengerWalletTransaction {
   }
 
   @override
-  int get hashCode {
-    return id.hashCode ^
+  int get hashCode => id.hashCode ^
         walletId.hashCode ^
         passengerId.hashCode ^
         type.hashCode ^
@@ -140,12 +133,9 @@ class PassengerWalletTransaction {
         status.hashCode ^
         createdAt.hashCode ^
         processedAt.hashCode;
-  }
 
   @override
-  String toString() {
-    return 'PassengerWalletTransaction(id: $id, walletId: $walletId, passengerId: $passengerId, type: $type, amount: $amount, description: $description, status: $status, createdAt: $createdAt)';
-  }
+  String toString() => 'PassengerWalletTransaction(id: $id, walletId: $walletId, passengerId: $passengerId, type: $type, amount: $amount, description: $description, status: $status, createdAt: $createdAt)';
 }
 
 enum TransactionType {
@@ -158,12 +148,10 @@ enum TransactionType {
   const TransactionType(this.value);
   final String value;
 
-  static TransactionType fromString(String value) {
-    return values.firstWhere(
+  static TransactionType fromString(String value) => values.firstWhere(
       (type) => type.value == value,
       orElse: () => throw ArgumentError('Unknown transaction type: $value'),
     );
-  }
 
   String get displayName {
     switch (this) {
@@ -191,12 +179,10 @@ enum TransactionStatus {
   const TransactionStatus(this.value);
   final String value;
 
-  static TransactionStatus fromString(String value) {
-    return values.firstWhere(
+  static TransactionStatus fromString(String value) => values.firstWhere(
       (status) => status.value == value,
       orElse: () => throw ArgumentError('Unknown transaction status: $value'),
     );
-  }
 
   String get displayName {
     switch (this) {

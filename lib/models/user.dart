@@ -2,7 +2,6 @@ class User {
 
   const User({
     required this.id,
-    required this.userId,
     required this.email,
     required this.fullName,
     this.phone,
@@ -14,10 +13,8 @@ class User {
   });
 
   /// Cria um User a partir de um Map (dados do Supabase)
-  factory User.fromMap(Map<String, dynamic> map) {
-    return User(
+  factory User.fromMap(Map<String, dynamic> map) => User(
       id: map['id'] as String,
-      userId: map['user_id'] as String,
       email: map['email'] as String,
       fullName: map['full_name'] as String,
       phone: map['phone'] as String?,
@@ -27,9 +24,7 @@ class User {
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
     );
-  }
-  final String id;
-  final String userId; // UUID do usuário de autenticação
+  final String id; // UUID do usuário de autenticação (mesmo que auth.users.id)
   final String email;
   final String fullName;
   final String? phone;
@@ -42,7 +37,6 @@ class User {
   /// Converte o User para um Map (para enviar ao Supabase)
   Map<String, dynamic> toMap() => {
       'id': id,
-      'user_id': userId,
       'email': email,
       'full_name': fullName,
       'phone': phone,
@@ -56,7 +50,6 @@ class User {
   /// Converte para Map apenas com campos necessários para inserção
   Map<String, dynamic> toInsertMap() => {
       'id': id,
-      'user_id': userId,
       'email': email,
       'full_name': fullName,
       'phone': phone,
@@ -68,7 +61,6 @@ class User {
   /// Cria uma cópia do User com campos atualizados
   User copyWith({
     String? id,
-    String? userId,
     String? email,
     String? fullName,
     String? phone,
@@ -79,7 +71,6 @@ class User {
     DateTime? updatedAt,
   }) => User(
       id: id ?? this.id,
-      userId: userId ?? this.userId,
       email: email ?? this.email,
       fullName: fullName ?? this.fullName,
       phone: phone ?? this.phone,

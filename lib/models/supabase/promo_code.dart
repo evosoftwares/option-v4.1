@@ -21,8 +21,7 @@ class PromoCode {
     required this.createdAt,
   });
 
-  factory PromoCode.fromJson(Map<String, dynamic> json) {
-    return PromoCode(
+  factory PromoCode.fromJson(Map<String, dynamic> json) => PromoCode(
       id: json['id'] as String,
       code: json['code'] as String,
       description: json['description'] as String?,
@@ -42,7 +41,6 @@ class PromoCode {
       createdBy: json['created_by'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
-  }
   final String id;
   final String code;
   final String? description;
@@ -157,7 +155,7 @@ class PromoCode {
   }
 
   double calculateDiscount(double originalFare) {
-    if (!isValid) return 0.0;
+    if (!isValid) return 0;
     
     double discount;
     if (discountType == 'percentage') {
@@ -165,7 +163,7 @@ class PromoCode {
     } else if (discountType == 'fixed') {
       discount = discountValue;
     } else {
-      return 0.0;
+      return 0;
     }
     
     // Apply maximum discount limit

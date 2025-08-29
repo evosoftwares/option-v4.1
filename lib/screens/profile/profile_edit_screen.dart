@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../services/user_service.dart';
+
 import '../../models/user.dart' as app;
+import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../utils/phone_mask.dart';
 import '../../utils/phone_validator.dart';
+import '../../widgets/app_card.dart';
 import '../../widgets/logo_branding.dart';
 
 class ProfileEditScreen extends StatefulWidget {
@@ -136,8 +138,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 child: ListView(
                   children: [
                     // Container surface for user info
-                    Card(
-                      clipBehavior: Clip.antiAlias,
+                    AppCard(
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.lg),
                         child: Column(

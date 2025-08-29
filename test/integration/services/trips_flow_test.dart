@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase/supabase.dart';
 import 'package:option/services/trip_service.dart';
+import 'package:supabase/supabase.dart';
+
 import '../../helpers/supabase_test_helper.dart';
 
 void main() {

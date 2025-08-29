@@ -1,481 +1,387 @@
-import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../config/app_config.dart';
-import '../../models/favorite_location.dart';
-import '../../models/supabase/driver.dart';
-import '../../services/driver_service.dart';
-import '../../services/trip_service.dart';
-import '../../services/user_service.dart';
-import '../../services/location_service.dart';
-import '../../services/search_status_service.dart';
-import '../../widgets/logo_branding.dart';
-import '../../widgets/search_feedback_widget.dart';
 import '../../theme/app_colors.dart';
+import '../../models/supabase/driver.dart';
+import '../../models/trip_request_data.dart';
+import '../../models/trip_preferences.dart';
+import '../../models/vehicle_category.dart';
+import '../../services/driver_service.dart';
+import '../../services/driver_matching_service.dart';
+import '../../services/individual_pricing_service.dart';
+import '../../services/trip_request_manager.dart';
+import '../../services/driver_availability_service.dart';
+import '../../widgets/app_card.dart';
+import 'waiting_driver_screen.dart';
+
+class DriverWithUserData {
+
+  DriverWithUserData({
+    required this.driver,
+    required this.driverName,
+    this.driverPhotoUrl,
+    required this.distanceKm,
+    required this.etaMinutes,
+    this.estimatedFare,
+  });
+  final Driver driver;
+  final String driverName;
+  final String? driverPhotoUrl;
+  final double distanceKm;
+  final int etaMinutes;
+  final double? estimatedFare;
+}
 
 class DriverSelectionScreen extends StatefulWidget {
 
   const DriverSelectionScreen({
     super.key,
-    required this.origin,
-    required this.destination,
-    required this.category,
-    required this.needsPet,
-    required this.needsGrocery,
-    required this.needsCondo,
-    this.additionalStop,
-    this.appliedPromoCode,
-    this.promoDiscount,
+    required this.tripRequestData,
+    required this.userPosition,
   });
-
-  factory DriverSelectionScreen.fromArgs(Map<String, dynamic>? args) {
-    final originJson = (args?['origin'] as Map<String, dynamic>?) ?? {};
-    final destinationJson = (args?['destination'] as Map<String, dynamic>?) ?? {};
-    return DriverSelectionScreen(
-      origin: FavoriteLocation.fromJson(originJson),
-      destination: FavoriteLocation.fromJson(destinationJson),
-      category: (args?['vehicle_category'] as String?) ?? 'standard',
-      needsPet: (args?['needsPet'] as bool?) ?? false,
-      needsGrocery: (args?['needsGrocery'] as bool?) ?? false,
-      needsCondo: (args?['needsCondo'] as bool?) ?? false,
-      additionalStop: args?['additionalStop'] as String?,
-      appliedPromoCode: args?['appliedPromoCode'] as String?,
-      promoDiscount: args?['promoDiscount'] as double?,
-    );
-  }
   static const String routeName = '/driver_selection';
-
-  final FavoriteLocation origin;
-  final FavoriteLocation destination;
-  final String category;
-  final bool needsPet;
-  final bool needsGrocery;
-  final bool needsCondo;
-  final String? additionalStop;
-  final String? appliedPromoCode;
-  final double? promoDiscount;
+  
+  final TripRequestData tripRequestData;
+  final Position userPosition;
+  
+  static DriverSelectionScreen fromArgs(Map<String, dynamic> args) => DriverSelectionScreen(
+      tripRequestData: args['tripRequestData'] as TripRequestData,
+      userPosition: args['userPosition'] as Position,
+    );
 
   @override
   State<DriverSelectionScreen> createState() => _DriverSelectionScreenState();
 }
 
 class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
-  late final DriverService _driverService;
-  final SearchStatusService _searchStatusService = SearchStatusService();
-  late Future<List<Driver>> _futureDrivers;
-  bool _isLoading = false;
-  final _supabase = Supabase.instance.client;
+  final DriverService _driverService = DriverService(Supabase.instance.client);
+  final DriverMatchingService _driverMatchingService = DriverMatchingService(Supabase.instance.client);
+  final IndividualPricingService _individualPricingService = IndividualPricingService();
+  final TripRequestManager _tripRequestManager = TripRequestManager(Supabase.instance.client);
+  late final DriverAvailabilityService _availabilityService;
+
+  List<DriverWithUserData> _driversWithUserData = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+  
+  // Listener em tempo real aprimorado
+  StreamSubscription<Map<String, DriverAvailabilityStatus>>? _availabilitySubscription;
+  Map<String, DriverAvailabilityStatus> _driverAvailability = {};
 
   @override
   void initState() {
     super.initState();
-    _driverService = DriverService(Supabase.instance.client);
-    _futureDrivers = _loadDrivers();
-  }
-
-  Future<List<Driver>> _loadDrivers() async {
-    return await _loadDriversWithRetry();
-  }
-  
-  Future<List<Driver>> _loadDriversWithRetry({int attempt = 1, int maxAttempts = 3}) async {
-    try {
-      // Inicia o feedback de busca
-      if (attempt == 1) {
-        _searchStatusService.startSearch(
-          message: 'Procurando motoristas na sua região...',
-        );
-      } else {
-        _searchStatusService.startSearch(
-          message: 'Tentativa $attempt de $maxAttempts - Procurando motoristas...',
-        );
-      }
-
-      final lat = widget.origin.latitude;
-      final lng = widget.origin.longitude;
-      if (lat == null || lng == null) {
-        _searchStatusService.markError(
-          message: 'Erro de localização',
-          errorDetails: 'Não foi possível determinar sua localização atual.',
-        );
-        return [];
-      }
-      
-      // Extrair informações de localização do endereço de destino
-      // Por enquanto, deixamos como null até implementarmos um parser de endereço
-      // ou até que o modelo FavoriteLocation seja atualizado com esses campos
-      String? destinationNeighborhood;
-      String? destinationCity;
-      String? destinationState;
-      
-      // TODO: Implementar parser de endereço ou atualizar modelo FavoriteLocation
-      // para incluir campos neighborhood, city e state
-      
-      // Busca motoristas com timeout de 30 segundos
-      final drivers = await _driverService.getAvailableDriversNearby(
-        latitude: lat,
-        longitude: lng,
-        radiusKm: 8,
-        category: widget.category,
-        needsPet: widget.needsPet,
-        needsGrocery: widget.needsGrocery,
-        needsCondo: widget.needsCondo,
-        destinationNeighborhood: destinationNeighborhood,
-        destinationCity: destinationCity,
-        destinationState: destinationState,
-        limit: 20,
-      ).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw Exception('timeout: A busca por motoristas demorou mais que o esperado');
-        },
-      );
-
-      // Atualiza o status baseado no resultado
-      if (drivers.isEmpty) {
-        _searchStatusService.markNoDriversFound(
-          message: 'Nenhum motorista disponível no momento. Tente novamente em alguns minutos.',
-        );
-      } else {
-        _searchStatusService.markSuccess(
-          driversFound: drivers.length,
-          message: drivers.length == 1 
-              ? 'Encontramos 1 motorista disponível!' 
-              : 'Encontramos ${drivers.length} motoristas disponíveis!',
-        );
-      }
-
-      return drivers;
-    } catch (e) {
-      // Log detalhado do erro para diagnóstico
-      if (kDebugMode) {
-        debugPrint('🚨 [DriverSelectionScreen] Erro na tentativa $attempt/$maxAttempts:');
-        debugPrint('   Tipo: ${e.runtimeType}');
-        debugPrint('   Mensagem: $e');
-        debugPrint('   Parâmetros: lat=${widget.origin.latitude}, lng=${widget.origin.longitude}, category=${widget.category}');
-        debugPrint('   Radius: 8km, needsPet: ${widget.needsPet}, needsGrocery: ${widget.needsGrocery}, needsCondo: ${widget.needsCondo}');
-      }
-      
-      // Marca erro com mensagem específica
-      String errorMessage = 'Erro ao buscar motoristas';
-      String? errorDetails;
-      
-      final errorString = e.toString().toLowerCase();
-      
-      if (errorString.contains('timeout') || errorString.contains('time out')) {
-        errorMessage = 'Tempo limite excedido';
-        errorDetails = 'A busca demorou mais que o esperado. Verifique sua conexão e tente novamente.';
-      } else if (errorString.contains('network') || errorString.contains('connection') || errorString.contains('socket')) {
-        errorMessage = 'Problema de conexão';
-        errorDetails = 'Verifique sua conexão com a internet e tente novamente.';
-      } else if (errorString.contains('location') || errorString.contains('gps')) {
-        errorMessage = 'Erro de localização';
-        errorDetails = 'Não foi possível determinar sua localização atual. Verifique se o GPS está ativado.';
-      } else if (errorString.contains('auth') || errorString.contains('unauthorized')) {
-        errorMessage = 'Erro de autenticação';
-        errorDetails = 'Sessão expirada. Faça login novamente.';
-      } else if (errorString.contains('rate limit') || errorString.contains('too many requests')) {
-        errorMessage = 'Muitas tentativas';
-        errorDetails = 'Aguarde alguns segundos antes de tentar novamente.';
-      } else if (errorString.contains('server') || errorString.contains('500')) {
-        errorMessage = 'Erro no servidor';
-        errorDetails = 'Nossos servidores estão temporariamente indisponíveis. Tente novamente em alguns minutos.';
-      } else {
-        errorDetails = 'Tente novamente em alguns instantes. Se o problema persistir, entre em contato conosco.';
-      }
-      
-      // Tenta novamente se não for o último attempt e for um erro recuperável
-      if (attempt < maxAttempts && _isRetryableError(errorString)) {
-        await Future.delayed(Duration(seconds: attempt * 2)); // Backoff exponencial
-        return await _loadDriversWithRetry(attempt: attempt + 1, maxAttempts: maxAttempts);
-      }
-      
-      _searchStatusService.markError(
-        message: errorMessage,
-        errorDetails: errorDetails,
-      );
-      
-      throw Exception('Erro ao buscar motoristas: $e');
-    }
-  }
-  
-  bool _isRetryableError(String errorString) {
-    // Erros que podem ser recuperáveis com retry
-    return errorString.contains('timeout') ||
-           errorString.contains('network') ||
-           errorString.contains('connection') ||
-           errorString.contains('socket') ||
-           errorString.contains('server') ||
-           errorString.contains('500');
+    _availabilityService = DriverAvailabilityService(Supabase.instance.client);
+    _loadDriversWithUserData();
   }
 
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: const StandardAppBar(title: 'Selecionar motorista'),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              // Widget de feedback da busca
-              const SearchFeedbackWidget(showOnlyWhenActive: true),
-              
-              if ((widget.additionalStop ?? '').trim().isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: _AdditionalStopInfo(stopLabel: widget.additionalStop!.trim()),
-                ),
-              Expanded(
-                child: FutureBuilder<List<Driver>>(
-                  future: _futureDrivers,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return _ErrorState(onRetry: () => setState(() => _futureDrivers = _loadDrivers()));
-                    }
+  void dispose() {
+    _availabilitySubscription?.cancel();
+    _availabilityService.dispose();
+    super.dispose();
+  }
 
-                    final drivers = snapshot.data ?? [];
-                    if (drivers.isEmpty) {
-                      return _EmptyState(onRetry: () => setState(() => _futureDrivers = _loadDrivers()));
-                    }
+  /// Configura o listener em tempo real para monitorar disponibilidade dos motoristas
+  /// Conforme especificação do negócio: "observa o status dos Condutores em tempo real"
+  void _setupRealtimeListener(List<String> driverIds) {
+    // Cancelar subscrição anterior
+    _availabilitySubscription?.cancel();
+    
+    // Configurar novo listener usando o serviço dedicado
+    _availabilitySubscription = _availabilityService.availabilityStream.listen(
+      _handleAvailabilityUpdate,
+    );
+    
+    // Iniciar monitoramento dos motoristas
+    _availabilityService.startMonitoring(driverIds);
+  }
+  
+  /// Processa atualizações de disponibilidade em tempo real
+  void _handleAvailabilityUpdate(Map<String, DriverAvailabilityStatus> availability) {
+    if (!mounted) return;
+    
+    setState(() {
+      _driverAvailability = availability;
+    });
+  }
 
-                    return Column(
-                      children: [
-                        // Origin and Destination display
-                        Container(
-                          margin: const EdgeInsets.all(16),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: colorScheme.outlineVariant),
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.radio_button_checked, color: colorScheme.primary, size: 16),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      widget.origin.address,
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.onSurface,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(Icons.location_on, color: colorScheme.tertiary, size: 16),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      widget.destination.address,
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.onSurface,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.separated(
-                            physics: const BouncingScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: drivers.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final d = drivers[index];
-                        final distanceKm = _distanceKm(
-                          widget.origin.latitude ?? 0,
-                          widget.origin.longitude ?? 0,
-                          d.currentLatitude ?? 0,
-                          d.currentLongitude ?? 0,
-                        );
-                        final etaMin = (distanceKm / 0.6).clamp(1, 120).round(); // ~36km/h
-                        return _DriverCard(
-                           driver: d,
-                           distanceKm: distanceKm,
-                           etaMinutes: etaMin,
-                           onTap: () {
-                             if (!_isLoading) {
-                               _onSelect(d);
-                             }
-                           },
-                         );
-                          },
-                        ),
-                      ),
-                    ],
-                  );
-                  },
-                ),
+  Future<void> _loadDriversWithUserData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      // Buscar motoristas disponíveis próximos
+      final criteria = MatchingCriteria(
+          passengerLatitude: widget.userPosition.latitude,
+          passengerLongitude: widget.userPosition.longitude,
+          maxRadiusKm: 10,
+          vehicleCategory: widget.tripRequestData.vehicleCategory,
+          needsPet: widget.tripRequestData.needsPet,
+          needsAC: widget.tripRequestData.needsAc,
+          needsGrocery: widget.tripRequestData.needsGrocery,
+          needsCondo: widget.tripRequestData.needsCondo,
+        );
+        
+        final driversWithDistance = await _driverMatchingService.findBestDrivers(criteria);
+
+      if (driversWithDistance.isEmpty) {
+        setState(() {
+          _driversWithUserData = [];
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Buscar dados dos usuários dos motoristas
+      final driversWithUserData = <DriverWithUserData>[];
+      
+      for (final driverWithDistance in driversWithDistance) {
+        try {
+          final driverWithUser = await _driverService.getDriverWithUserData(driverWithDistance.driver.id);
+          
+          if (driverWithUser != null) {
+            // Calcular preço individual para este motorista
+            final estimatedFare = IndividualPricingService.calculateDriverPrice(
+              driver: driverWithDistance.driver,
+              totalDistanceKm: driverWithDistance.distanceKm + widget.tripRequestData.estimatedDistanceKm,
+              totalDurationMinutes: driverWithDistance.estimatedArrivalMinutes + widget.tripRequestData.estimatedDurationMinutes,
+              categoryData: VehicleCategoryData.defaultForCategory(
+                 VehicleCategory.fromId(widget.tripRequestData.vehicleCategory) ?? VehicleCategory.economico,
+               ),
+              preferences: TripPreferences(
+                needsPet: widget.tripRequestData.needsPet,
+                needsGrocery: widget.tripRequestData.needsGrocery,
+                needsCondo: widget.tripRequestData.needsCondo,
               ),
-            ],
+              numberOfStops: widget.tripRequestData.numberOfStops,
+            );
+
+            driversWithUserData.add(DriverWithUserData(
+              driver: driverWithDistance.driver,
+              driverName: driverWithUser['user_name'] ?? 'Motorista',
+              driverPhotoUrl: driverWithUser['user_photo_url'],
+              distanceKm: driverWithDistance.distanceKm,
+              etaMinutes: driverWithDistance.estimatedArrivalMinutes,
+              estimatedFare: estimatedFare,
+            ));
+          }
+        } catch (e) {
+          print('Erro ao buscar dados do motorista ${driverWithDistance.driver.id}: $e');
+          // Continuar com o próximo motorista em caso de erro
+        }
+      }
+
+      setState(() {
+        _driversWithUserData = driversWithUserData;
+        _isLoading = false;
+      });
+      
+      // Configurar listener em tempo real após carregar os motoristas
+      final driverIds = driversWithUserData.map((d) => d.driver.id).toList();
+      if (driverIds.isNotEmpty) {
+        _setupRealtimeListener(driverIds);
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Erro ao carregar motoristas: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showDriverSelectionConfirmation(BuildContext context, DriverWithUserData driverWithUserData) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar seleção'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Motorista: ${driverWithUserData.driverName}'),
+            Text('Veículo: ${driverWithUserData.driver.brand} ${driverWithUserData.driver.model}'),
+            Text('Placa: ${driverWithUserData.driver.plate}'),
+            Text('Distância: ${driverWithUserData.distanceKm.toStringAsFixed(1)} km'),
+            Text('Tempo estimado: ~${driverWithUserData.etaMinutes} min'),
+            Text('Preço: R\$ ${driverWithUserData.estimatedFare?.toStringAsFixed(2) ?? "0.00"}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
           ),
-          if (_isLoading)
-            Container(
-              color: Colors.black54,
-              child: const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Criando solicitação...',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _onDriverSelected(driverWithUserData.driver, driverWithUserData.estimatedFare);
+            },
+            child: const Text('Confirmar'),
+          ),
         ],
       ),
     );
   }
 
-  double _distanceKm(double lat1, double lon1, double lat2, double lon2) {
-    const R = 6371.0;
-    final dLat = _deg2rad(lat2 - lat1);
-    final dLon = _deg2rad(lon2 - lon1);
-    final a =
-        math.sin(dLat / 2) * math.sin(dLat / 2) +
-            math.cos(_deg2rad(lat1)) * math.cos(_deg2rad(lat2)) *
-                math.sin(dLon / 2) * math.sin(dLon / 2);
-    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-    return R * c;
-  }
-
-  double _deg2rad(double deg) => deg * (math.pi / 180.0);
-
-  Future<void> _onSelect(Driver driver) async {
-    setState(() => _isLoading = true);
-    
+  Future<void> _onDriverSelected(Driver driver, double? estimatedFare) async {
     try {
-      // Obter usuário atual
-      final user = await UserService.getCurrentUser();
-      if (user == null) {
-        throw Exception('Usuário não autenticado');
-      }
-
-      // Calcular rota e estimativa de preço
-      final routeResult = await LocationService(apiKey: AppConfig.googleMapsApiKey).getDrivingRoute(
-        originLat: widget.origin.latitude!,
-        originLng: widget.origin.longitude!,
-        destLat: widget.destination.latitude!,
-        destLng: widget.destination.longitude!,
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
       );
 
-      if (routeResult == null) {
-        throw Exception('Não foi possível calcular a rota');
-      }
-
-      // Buscar categoria do veículo para cálculo de preço
-      final categories = await DriverService(_supabase).getAvailableCategoriesInRegion(
-        latitude: widget.origin.latitude!,
-        longitude: widget.origin.longitude!,
-        radiusKm: 10,
-      );
-      
-      final selectedCategory = categories.firstWhere(
-        (cat) => cat.category.id == widget.category,
-        orElse: () => categories.first,
-      );
-
-      // Calcular preço estimado
-      final baseFare = selectedCategory.calculateEstimatedPrice(
-        routeResult.distanceMeters / 1000, // converter para km
-        (routeResult.durationSeconds / 60).round(),   // converter para minutos
-      );
-      
-      // Aplicar desconto promocional se disponível
-      final estimatedFare = widget.promoDiscount != null 
-          ? (baseFare - widget.promoDiscount!).clamp(0.0, baseFare)
-          : baseFare;
-
-      // Criar TripRequest
-      final tripRequest = await TripService(_supabase).createTripRequest(
-        passengerId: user.id,
-        originAddress: widget.origin.address,
-        originLatitude: widget.origin.latitude!,
-        originLongitude: widget.origin.longitude!,
-        originNeighborhood: widget.origin.type.name,
-        destinationAddress: widget.destination.address,
-        destinationLatitude: widget.destination.latitude!,
-        destinationLongitude: widget.destination.longitude!,
-        destinationNeighborhood: widget.destination.type.name,
-        vehicleCategory: widget.category,
-        needsPet: widget.needsPet,
-        needsGrocerySpace: widget.needsGrocery,
-        isCondoDestination: widget.needsCondo,
-        isCondoOrigin: false,
-        needsAc: false,
-        numberOfStops: widget.additionalStop != null ? 1 : 0,
-        estimatedDistanceKm: routeResult.distanceMeters / 1000,
-        estimatedDurationMinutes: (routeResult.durationSeconds / 60).round(),
-        estimatedFare: estimatedFare,
-      );
-
-      if (mounted) {
-        // Navegar para tela de aguardando motorista
-        Navigator.of(context).pushReplacementNamed(
-          '/waiting-driver',
-          arguments: {'tripRequestId': tripRequest.id},
+      final prioritizedDrivers = [driver] + _driversWithUserData
+            .where((d) => d.driver.id != driver.id)
+            .map((d) => d.driver)
+            .take(5)
+            .toList();
+        
+        final tripRequest = await _tripRequestManager.createDirectedTripRequest(
+          passengerId: Supabase.instance.client.auth.currentUser!.id,
+          prioritizedDrivers: prioritizedDrivers,
+          tripData: widget.tripRequestData,
         );
-      }
-    } on Exception catch (e) {
+
+      Navigator.of(context).pop();
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao criar solicitação: $e'),
-            backgroundColor: Colors.red,
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => WaitingDriverScreen(
+              tripRequestId: tripRequest,
+            ),
           ),
         );
       }
-    } finally {
+    } catch (e) {
+      Navigator.of(context).pop();
       if (mounted) {
-        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao criar solicitação: $e')),
+        );
       }
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Scaffold(
+      backgroundColor: AppColors.black,
+      appBar: AppBar(
+        backgroundColor: AppColors.black,
+        foregroundColor: AppColors.white,
+        title: const Text('Selecionar Motorista'),
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          // Informações da viagem
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.black,
+              border: Border(
+                bottom: BorderSide(color: colorScheme.outlineVariant),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.my_location, color: colorScheme.primary, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.tripRequestData.originAddress,
+                        style: textTheme.bodyMedium?.copyWith(color: AppColors.white),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.location_on, color: colorScheme.secondary, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.tripRequestData.destinationAddress,
+                        style: textTheme.bodyMedium?.copyWith(color: AppColors.white),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                if (widget.tripRequestData.numberOfStops > 0) ...[
+                  const SizedBox(height: 12),
+                  const _AdditionalStopInfo(
+                    stopLabel: 'Parada adicional',
+                  ),
+                ],
+              ],
+            ),
+          ),
+          // Lista de motoristas
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.white),
+                  )
+                : _errorMessage != null
+                    ? _ErrorState(onRetry: _loadDriversWithUserData)
+                    : _driversWithUserData.isEmpty
+                        ? _EmptyState(onRetry: _loadDriversWithUserData)
+                        : ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _driversWithUserData.length,
+                            separatorBuilder: (context, index) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final driverWithUserData = _driversWithUserData[index];
+                              final availabilityStatus = _driverAvailability[driverWithUserData.driver.id];
+                              final isAvailable = availabilityStatus?.isAvailable ?? true;
+                              
+                              return _DriverCard(
+                                driverWithUserData: driverWithUserData,
+                                availabilityStatus: availabilityStatus,
+                                onTap: isAvailable && !_isLoading ? () {
+                                  _showDriverSelectionConfirmation(context, driverWithUserData);
+                                } : null,
+                              );
+                            },
+                          ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
 class _DriverCard extends StatelessWidget {
-
   const _DriverCard({
-    required this.driver,
-    required this.distanceKm,
-    required this.etaMinutes,
+    required this.driverWithUserData,
     required this.onTap,
+    this.availabilityStatus,
   });
-  final Driver driver;
-  final double distanceKm;
-  final int etaMinutes;
-  final VoidCallback onTap;
+
+  final DriverWithUserData driverWithUserData;
+  final VoidCallback? onTap;
+  final DriverAvailabilityStatus? availabilityStatus;
+  
+  bool get isAvailable => availabilityStatus?.isAvailable ?? true;
 
   @override
   Widget build(BuildContext context) {
@@ -487,58 +393,197 @@ class _DriverCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.black,
+          color: isAvailable ? AppColors.black : AppColors.black.withOpacity(0.5),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: colorScheme.outlineVariant),
+          border: Border.all(
+            color: isAvailable ? colorScheme.outlineVariant : colorScheme.error,
+            width: isAvailable ? 1 : 2,
+          ),
         ),
-        child: Row(
+        child: Stack(
           children: [
-            CircleAvatar(
-              backgroundColor: AppColors.white,
-              child: Text(
-                (driver.brand.isNotEmpty ? driver.brand[0] : 'D').toUpperCase(),
-                style: const TextStyle(color: AppColors.black),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${driver.brand} ${driver.model} · ${driver.color}',
-                    style: textTheme.titleMedium?.copyWith(color: AppColors.white),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Placa ${driver.plate} · ${driver.category.toUpperCase()}',
-                    style: textTheme.bodyMedium?.copyWith(color: AppColors.white.withOpacity(0.8)),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                  backgroundImage: driverWithUserData.driverPhotoUrl != null 
+                      ? NetworkImage(driverWithUserData.driverPhotoUrl!) 
+                      : null,
+                  child: driverWithUserData.driverPhotoUrl == null 
+                      ? Text(
+                          driverWithUserData.driverName.isNotEmpty 
+                              ? driverWithUserData.driverName[0].toUpperCase() 
+                              : 'M',
+                          style: TextStyle(
+                            color: isAvailable ? AppColors.black : AppColors.black.withOpacity(0.5),
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.star, color: colorScheme.tertiary, size: 16),
-                      const SizedBox(width: 4),
-                      Text(driver.ratings.toStringAsFixed(1), style: textTheme.bodyMedium?.copyWith(color: AppColors.white)),
-                      const SizedBox(width: 12),
-                      Icon(Icons.place, color: colorScheme.secondary, size: 16),
-                      const SizedBox(width: 4),
-                      Text('${distanceKm.toStringAsFixed(1)} km', style: textTheme.bodyMedium?.copyWith(color: AppColors.white)),
-                      const SizedBox(width: 12),
-                      Icon(Icons.timer, color: colorScheme.primary, size: 16),
-                      const SizedBox(width: 4),
-                      Text('~$etaMinutes min', style: textTheme.bodyMedium?.copyWith(color: AppColors.white)),
+                      Text(
+                        driverWithUserData.driverName,
+                        style: textTheme.titleMedium?.copyWith(
+                          color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${driverWithUserData.driver.brand} ${driverWithUserData.driver.model} ${driverWithUserData.driver.year ?? ''} · ${driverWithUserData.driver.color}',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: isAvailable ? AppColors.white.withOpacity(0.9) : AppColors.white.withOpacity(0.4),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Placa ${driverWithUserData.driver.plate} · ${driverWithUserData.driver.category.toUpperCase()}',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: isAvailable ? AppColors.white.withOpacity(0.8) : AppColors.white.withOpacity(0.4),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.star, 
+                            color: isAvailable ? colorScheme.tertiary : colorScheme.tertiary.withOpacity(0.5), 
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            driverWithUserData.driver.ratings.toStringAsFixed(1), 
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.place, 
+                            color: isAvailable ? colorScheme.secondary : colorScheme.secondary.withOpacity(0.5), 
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${driverWithUserData.distanceKm.toStringAsFixed(1)} km', 
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.timer, 
+                            color: isAvailable ? colorScheme.primary : colorScheme.primary.withOpacity(0.5), 
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '~${driverWithUserData.etaMinutes} min', 
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (driverWithUserData.driver.acPolicy != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.ac_unit, 
+                              color: isAvailable ? colorScheme.primary : colorScheme.primary.withOpacity(0.5), 
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              driverWithUserData.driver.acPolicy!, 
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (driverWithUserData.estimatedFare != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.attach_money, 
+                              color: isAvailable ? colorScheme.primary : colorScheme.primary.withOpacity(0.5), 
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'R\$ ${driverWithUserData.estimatedFare!.toStringAsFixed(2)}', 
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+            // Indicador de disponibilidade aprimorado
+            if (!isAvailable && availabilityStatus != null)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(colorScheme, availabilityStatus),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        availabilityStatus!.statusIcon,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        availabilityStatus!.unavailabilityReason,
+                        style: textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onError,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
+  }
+  
+  /// Retorna a cor apropriada baseada no status de disponibilidade
+  Color _getStatusColor(ColorScheme colorScheme, DriverAvailabilityStatus? status) {
+    if (status == null) return colorScheme.error;
+    
+    if (!status.isOnline) return colorScheme.error;
+    if (!status.isApproved) return colorScheme.tertiary;
+    if (!status.hasCurrentLocation) return colorScheme.secondary;
+    if (status.isInActiveTrip) return colorScheme.primary;
+    if (status.hasPendingRequest) return colorScheme.outline;
+    
+    return colorScheme.error;
   }
 }
 

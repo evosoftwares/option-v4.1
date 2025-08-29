@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../exceptions/app_exceptions.dart';
 import '../../models/supabase/driver_excluded_zone.dart';
 import '../../services/secure_driver_excluded_zones_service.dart';
-import '../../services/zone_validation_service.dart';
 import '../../services/user_service.dart';
-import '../../widgets/logo_branding.dart';
+import '../../services/zone_validation_service.dart';
 import '../../theme/app_spacing.dart';
-import '../../exceptions/app_exceptions.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/logo_branding.dart';
 
 class DriverExcludedZonesScreen extends StatefulWidget {
   const DriverExcludedZonesScreen({super.key});
@@ -381,7 +383,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
               icon: const Icon(Icons.add_location_alt),
               label: Text(_excludedZones.length >= 50 ? 'Limite Atingido' : 'Adicionar Zona'),
               backgroundColor: _excludedZones.length >= 50 
-                  ? Theme.of(context).colorScheme.surfaceVariant
+                  ? Theme.of(context).colorScheme.surfaceContainerHighest
                   : null,
               foregroundColor: _excludedZones.length >= 50 
                   ? Theme.of(context).colorScheme.onSurfaceVariant
@@ -390,8 +392,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
     );
   }
 
-  Widget _buildEmptyState(ColorScheme colorScheme, TextTheme textTheme) {
-    return Center(
+  Widget _buildEmptyState(ColorScheme colorScheme, TextTheme textTheme) => Center(
       child: Padding(
         padding: AppSpacing.paddingLg,
         child: Column(
@@ -421,15 +422,13 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
         ),
       ),
     );
-  }
 
-  Widget _buildZonesList(ColorScheme colorScheme, TextTheme textTheme) {
-    return ListView.builder(
+  Widget _buildZonesList(ColorScheme colorScheme, TextTheme textTheme) => ListView.builder(
       padding: AppSpacing.screenMargin,
       itemCount: _excludedZones.length,
       itemBuilder: (context, index) {
         final zone = _excludedZones[index];
-        return Card(
+        return AppCard(
           margin: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: ListTile(
             leading: CircleAvatar(
@@ -464,5 +463,4 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
         );
       },
     );
-  }
 }

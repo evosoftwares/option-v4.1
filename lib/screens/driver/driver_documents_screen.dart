@@ -83,14 +83,13 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
       ),
     );
 
-    if (result == true) {
+    if (result ?? false) {
       _loadDocuments();
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
         title: const Text(
@@ -134,10 +133,8 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
                   ),
                 ),
     );
-  }
 
-  Widget _buildErrorState() {
-    return Center(
+  Widget _buildErrorState() => Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -181,7 +178,6 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         ),
       ),
     );
-  }
 
   Widget _buildStatusCard() {
     if (_documentationStatus == null) return const SizedBox.shrink();
@@ -228,7 +224,6 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: statusColor.withOpacity(0.2),
-          width: 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -371,11 +366,11 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         const SizedBox(height: 16),
         ...documentTypes.map((docType) {
           final document = _documents.firstWhere(
-            (doc) => doc.documentType == (docType['type'] as DocumentType).name,
+            (doc) => doc.documentType == (docType['type']! as DocumentType).name,
             orElse: () => DriverDocument(
               id: '',
               driverId: _driverId,
-              documentType: (docType['type'] as DocumentType).name,
+              documentType: (docType['type']! as DocumentType).name,
               fileUrl: '',
               status: 'missing',
               isCurrent: false,
@@ -390,7 +385,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
               document,
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -408,8 +403,8 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
     Color statusColor;
     IconData statusIcon;
     String statusText;
-    bool showExpiry = false;
-    bool isExpired = false;
+    var showExpiry = false;
+    var isExpired = false;
 
     switch (document.status) {
       case 'approved':
@@ -442,13 +437,12 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         statusText = 'Enviar';
     }
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.lightSurface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: AppColors.gray200,
-          width: 1,
         ),
       ),
       child: Material(
@@ -568,7 +562,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.info_outline,
                           color: AppColors.error,
                           size: 16,
@@ -594,7 +588,5 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-  }
+  String _formatDate(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 }

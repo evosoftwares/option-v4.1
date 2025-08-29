@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../models/vehicle_category.dart';
+import '../../services/driver_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../services/driver_service.dart';
-import '../../models/vehicle_category.dart';
+import '../../validators/database_constraints_validator.dart';
 
 class VehicleScreen extends StatefulWidget {
   const VehicleScreen({super.key});
@@ -107,7 +109,7 @@ class _VehicleScreenState extends State<VehicleScreen> {
         driverId,
         brand: _brandController.text.trim(),
         model: _modelController.text.trim(),
-        year: _selectedYear!,
+        year: _selectedYear,
         color: _colorController.text.trim(),
         category: _selectedCategory!.id,
         plate: _plateController.text.trim(),
@@ -214,11 +216,10 @@ class _VehicleScreenState extends State<VehicleScreen> {
     );
   }
 
-  Widget _buildVehicleForm() {
-    return Column(
+  Widget _buildVehicleForm() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Dados do Veículo',
           style: AppTypography.headlineSmall,
         ),
@@ -232,6 +233,14 @@ class _VehicleScreenState extends State<VehicleScreen> {
             if (value == null || value.trim().isEmpty) {
               return 'Marca é obrigatória';
             }
+            
+            // Usar DatabaseConstraintsValidator para validação adicional
+            try {
+              DatabaseConstraintsValidator.validateDriver({'vehicle_brand': value.trim()});
+            } catch (e) {
+              return e.toString().replaceAll('ValidationException: ', '');
+            }
+            
             return null;
           },
         ),
@@ -245,6 +254,14 @@ class _VehicleScreenState extends State<VehicleScreen> {
             if (value == null || value.trim().isEmpty) {
               return 'Modelo é obrigatório';
             }
+            
+            // Usar DatabaseConstraintsValidator para validação adicional
+            try {
+              DatabaseConstraintsValidator.validateDriver({'vehicle_model': value.trim()});
+            } catch (e) {
+              return e.toString().replaceAll('ValidationException: ', '');
+            }
+            
             return null;
           },
         ),
@@ -261,6 +278,14 @@ class _VehicleScreenState extends State<VehicleScreen> {
             if (value == null || value.trim().isEmpty) {
               return 'Cor é obrigatória';
             }
+            
+            // Usar DatabaseConstraintsValidator para validação adicional
+            try {
+              DatabaseConstraintsValidator.validateDriver({'vehicle_color': value.trim()});
+            } catch (e) {
+              return e.toString().replaceAll('ValidationException: ', '');
+            }
+            
             return null;
           },
         ),
@@ -274,6 +299,14 @@ class _VehicleScreenState extends State<VehicleScreen> {
             if (value == null || value.trim().isEmpty) {
               return 'Placa é obrigatória';
             }
+            
+            // Usar DatabaseConstraintsValidator para validação adicional
+            try {
+              DatabaseConstraintsValidator.validateDriver({'vehicle_plate': value.trim()});
+            } catch (e) {
+              return e.toString().replaceAll('ValidationException: ', '');
+            }
+            
             return null;
           },
         ),
@@ -282,7 +315,6 @@ class _VehicleScreenState extends State<VehicleScreen> {
         _buildCategoryDropdown(),
       ],
     );
-  }
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -347,12 +379,20 @@ class _VehicleScreenState extends State<VehicleScreen> {
         ),
         const SizedBox(height: AppSpacing.sm),
         DropdownButtonFormField<int>(
-          value: _selectedYear,
+          initialValue: _selectedYear,
           onChanged: (value) => setState(() => _selectedYear = value),
           validator: (value) {
             if (value == null) {
               return 'Ano é obrigatório';
             }
+            
+            // Usar DatabaseConstraintsValidator para validação adicional
+            try {
+              DatabaseConstraintsValidator.validateDriver({'vehicle_year': value});
+            } catch (e) {
+              return e.toString().replaceAll('ValidationException: ', '');
+            }
+            
             return null;
           },
           decoration: InputDecoration(
@@ -372,12 +412,10 @@ class _VehicleScreenState extends State<VehicleScreen> {
             filled: true,
             fillColor: cs.surfaceContainerHighest.withOpacity(0.3),
           ),
-          items: years.map((year) {
-            return DropdownMenuItem<int>(
+          items: years.map((year) => DropdownMenuItem<int>(
               value: year,
               child: Text(year.toString()),
-            );
-          }).toList(),
+            ),).toList(),
         ),
       ],
     );
@@ -397,12 +435,20 @@ class _VehicleScreenState extends State<VehicleScreen> {
         ),
         const SizedBox(height: AppSpacing.sm),
         DropdownButtonFormField<VehicleCategory>(
-          value: _selectedCategory,
+          initialValue: _selectedCategory,
           onChanged: (value) => setState(() => _selectedCategory = value),
           validator: (value) {
             if (value == null) {
               return 'Categoria é obrigatória';
             }
+            
+            // Usar DatabaseConstraintsValidator para validação adicional
+            try {
+              DatabaseConstraintsValidator.validateDriver({'vehicle_category': value.id});
+            } catch (e) {
+              return e.toString().replaceAll('ValidationException: ', '');
+            }
+            
             return null;
           },
           decoration: InputDecoration(
@@ -422,12 +468,10 @@ class _VehicleScreenState extends State<VehicleScreen> {
             filled: true,
             fillColor: cs.surfaceContainerHighest.withOpacity(0.3),
           ),
-          items: VehicleCategory.values.map((category) {
-            return DropdownMenuItem<VehicleCategory>(
+          items: VehicleCategory.values.map((category) => DropdownMenuItem<VehicleCategory>(
               value: category,
               child: Text(category.displayName),
-            );
-          }).toList(),
+            ),).toList(),
         ),
       ],
     );

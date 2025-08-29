@@ -85,7 +85,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             'total_earnings': totalEarnings,
             'recent_trips_30d': recentCompletedTrips,
             'recent_earnings_30d': recentEarnings,
-            'completion_rate': completedTrips.length > 0 
+            'completion_rate': completedTrips.isNotEmpty 
                 ? (completedTrips.length / (completedTrips.length + cancelledTrips.length) * 100)
                 : 0.0,
           };
@@ -149,11 +149,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
-  Widget _buildOverviewSection() {
-    return Column(
+  Widget _buildOverviewSection() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Visão Geral',
           style: AppTypography.headlineSmall,
         ),
@@ -204,13 +203,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         ),
       ],
     );
-  }
 
-  Widget _buildPerformanceSection() {
-    return Column(
+  Widget _buildPerformanceSection() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Últimos 30 dias',
           style: AppTypography.headlineSmall,
         ),
@@ -238,13 +235,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         ),
       ],
     );
-  }
 
-  Widget _buildEarningsSection() {
-    return Column(
+  Widget _buildEarningsSection() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Ganhos',
           style: AppTypography.headlineSmall,
         ),
@@ -272,13 +267,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         ),
       ],
     );
-  }
 
-  Widget _buildRecentTripsSection() {
-    return Column(
+  Widget _buildRecentTripsSection() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Viagens Recentes',
           style: AppTypography.headlineSmall,
         ),
@@ -289,7 +282,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           ..._recentTrips.take(5).map(_buildTripItem),
       ],
     );
-  }
 
   Widget _buildStatCard({
     required String title,

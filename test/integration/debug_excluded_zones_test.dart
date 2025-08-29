@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../lib/services/driver_excluded_zones_service.dart';
-import '../../lib/models/supabase/driver_excluded_zone.dart';
+import 'package:option/services/driver_excluded_zones_service.dart';
+
 import '../helpers/supabase_test_helper.dart';
 
 /// Teste de debug para reproduzir o problema das zonas excluídas
@@ -17,19 +16,10 @@ void main() {
           await SupabaseTestHelper.initialize();
           service = DriverExcludedZonesService(SupabaseTestHelper.client);
          
-         // Buscar um driver existente no banco de dados (evita problemas de permissão)
-         final response = await SupabaseTestHelper.client
-             .from('drivers')
-             .select('id')
-             .limit(1)
-             .maybeSingle();
-         
-         if (response != null) {
-           testDriverId = response['id'];
-           print('✅ Driver encontrado para teste: $testDriverId');
-         } else {
-           throw StateError('Nenhum driver disponível no banco de dados para teste');
-         }
+         // Criar um driver de teste ao invés de buscar um existente
+         final seededDriver = await SupabaseTestHelper.seedDriver();
+         testDriverId = seededDriver.driverId;
+         print('✅ Driver criado para teste: $testDriverId');
        } catch (e) {
          print('❌ Erro na inicialização: $e');
          rethrow;
@@ -50,7 +40,7 @@ void main() {
       print('\n🚀 === INICIANDO TESTE DE REPRODUÇÃO ===');
       
       const testZone = {
-        'neighborhood': 'Centro Debug',
+        'neighborhood': 'Centro',
         'city': 'São Paulo',
         'state': 'SP',
       };
@@ -113,7 +103,7 @@ void main() {
       
       // ETAPA 6: Múltiplas consultas consecutivas
       print('\n🔄 ETAPA 6: Testando múltiplas consultas consecutivas...');
-      for (int i = 1; i <= 3; i++) {
+      for (var i = 1; i <= 3; i++) {
         final zones = await service.getDriverExcludedZones(testDriverId);
         print('   Consulta $i: ${zones.length} zonas');
         await Future.delayed(const Duration(milliseconds: 100));

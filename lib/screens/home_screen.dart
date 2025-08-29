@@ -1,19 +1,22 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 import '../config/app_config.dart';
 import '../models/favorite_location.dart';
-import 'place_picker_screen.dart';
-import '../services/location_service.dart';
-import '../services/user_service.dart';
 import '../models/user.dart' as app_user;
+import '../services/location_service.dart';
+import '../services/map_style_service.dart';
+import '../services/recent_destinations_service.dart';
+import '../services/user_service.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/app_card.dart';
 import '../widgets/logo_branding.dart';
 import '../widgets/notification_icon_widget.dart';
-import '../services/map_style_service.dart';
-import '../theme/app_spacing.dart';
-import '../services/recent_destinations_service.dart';
+import 'place_picker_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   List<FavoriteLocation> _recentDestinations = [];
   
   final DraggableScrollableController _bottomSheetController = DraggableScrollableController();
-  bool _isBottomSheetExpanded = false;
+  final bool _isBottomSheetExpanded = false;
 
   static const CameraPosition _initialPos = CameraPosition(
     target: LatLng(-23.5505, -46.6333),
@@ -178,10 +181,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _fitRouteBounds() async {
     if (_routePoints.isEmpty) return;
-    double minLat = _routePoints.first.latitude;
-    double maxLat = _routePoints.first.latitude;
-    double minLng = _routePoints.first.longitude;
-    double maxLng = _routePoints.first.longitude;
+    var minLat = _routePoints.first.latitude;
+    var maxLat = _routePoints.first.latitude;
+    var minLng = _routePoints.first.longitude;
+    var maxLng = _routePoints.first.longitude;
     for (final p in _routePoints) {
       if (p.latitude < minLat) minLat = p.latitude;
       if (p.latitude > maxLat) maxLat = p.latitude;
@@ -238,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         endCap: Cap.roundCap,
         jointType: JointType.round,
         zIndex: 1,
-      ));
+      ),);
     });
 
     await _fitRouteBounds();
@@ -275,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           endCap: Cap.roundCap,
           jointType: JointType.round,
           zIndex: 2,
-        ));
+        ),);
       });
     });
   }
@@ -292,16 +295,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: AppSpacing.iconLg,
+              height: AppSpacing.iconLg,
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
@@ -309,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               child: Icon(icon, color: colorScheme.onSurface, size: AppSpacing.iconSm),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -321,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     value?.isNotEmpty ?? false ? value! : placeholder,
                     maxLines: 2,
@@ -353,10 +356,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 40),
+          const SizedBox(height: AppSpacing.xl),
           Container(
-            width: 120,
-            height: 120,
+            width: AppSpacing.avatarXl,
+            height: AppSpacing.avatarXl,
             decoration: BoxDecoration(
               color: colorScheme.primaryContainer.withValues(alpha: 0.3),
               shape: BoxShape.circle,
@@ -367,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               color: colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.lg),
           Text(
             'Seus destinos aparecerão aqui',
             style: textTheme.titleMedium?.copyWith(
@@ -375,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             'Quando você escolher um destino, ele será\nsalvo aqui para fácil acesso',
             style: textTheme.bodyMedium?.copyWith(
@@ -413,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             onPressed: _navigateToMenu,
           ),
           const Padding(
-            padding: EdgeInsets.only(right: 16),
+            padding: EdgeInsets.only(right: AppSpacing.md),
             child: NotificationIconWidget(),
           ),
         ],
@@ -445,8 +448,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             initialChildSize: 0.35,
             minChildSize: 0.35,
             maxChildSize: 0.85,
-            builder: (context, scrollController) {
-              return Container(
+            builder: (context, scrollController) => DecoratedBox(
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -527,9 +529,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                                       itemBuilder: (context, index) {
                                         final destination = _recentDestinations[index];
-                                        return Card(
-                                          elevation: 1,
-                                          color: colorScheme.surface,
+                                        return AppCard(
                                           child: ListTile(
                                             leading: Container(
                                               width: 40,
@@ -644,8 +644,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ],
                 ),
-              );
-            },
+              ),
           ),
         ],
       ),

@@ -3,17 +3,11 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Serviço de monitoramento para logs estruturados e métricas
 class MonitoringService {
   static final Logger _logger = Logger(
     printer: PrettyPrinter(
-      methodCount: 2,
-      errorMethodCount: 8,
-      lineLength: 120,
-      colors: true,
-      printEmojis: true,
       printTime: true,
     ),
   );
@@ -273,7 +267,7 @@ class MonitoringService {
       //     .insert(logData);
       
     } catch (e) {
-      _logger.e('Failed to send log to backend', error: e);
+      _logger.e('Falha ao enviar log para o backend', error: e);
     }
   }
 
@@ -291,8 +285,7 @@ class MonitoringService {
   }
 
   /// Health check do serviço
-  static Map<String, dynamic> healthCheck() {
-    return {
+  static Map<String, dynamic> healthCheck() => {
       'status': 'healthy',
       'timestamp': DateTime.now().toIso8601String(),
       'service': 'monitoring_service',
@@ -300,7 +293,6 @@ class MonitoringService {
       'sentry_enabled': !kDebugMode,
       'platform': Platform.operatingSystem,
     };
-  }
 
   /// Wrapper para medir duração de operações
   static Future<T> measureOperation<T>(
@@ -323,7 +315,6 @@ class MonitoringService {
           driverId: driverId,
           duration: stopwatch.elapsed,
           metadata: metadata,
-          status: 'success',
         );
       }
       

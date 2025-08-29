@@ -12,28 +12,28 @@ class DataNormalizationUtils {
         // Remove espaços extras
         .replaceAll(RegExp(r'\s+'), ' ')
         // Remove pontuação desnecessária
-        .replaceAll(RegExp(r'[.,;:!?]'), '')
+        .replaceAll(RegExp('[.,;:!?]'), '')
         // Converte para lowercase para processamento
         .toLowerCase()
         // Remove acentos
-        .replaceAll(RegExp(r'[àáâãäå]'), 'a')
-        .replaceAll(RegExp(r'[èéêë]'), 'e')
-        .replaceAll(RegExp(r'[ìíîï]'), 'i')
-        .replaceAll(RegExp(r'[òóôõö]'), 'o')
-        .replaceAll(RegExp(r'[ùúûü]'), 'u')
-        .replaceAll(RegExp(r'[ç]'), 'c')
-        .replaceAll(RegExp(r'[ñ]'), 'n')
-        .replaceAll(RegExp(r'[ý]'), 'y')
+        .replaceAll(RegExp('[àáâãäå]'), 'a')
+        .replaceAll(RegExp('[èéêë]'), 'e')
+        .replaceAll(RegExp('[ìíîï]'), 'i')
+        .replaceAll(RegExp('[òóôõö]'), 'o')
+        .replaceAll(RegExp('[ùúûü]'), 'u')
+        .replaceAll(RegExp('[ç]'), 'c')
+        .replaceAll(RegExp('[ñ]'), 'n')
+        .replaceAll(RegExp('[ý]'), 'y')
         // Capitaliza cada palavra
         .split(' ')
-        .map((word) => _capitalizeWord(word))
+        .map(_capitalizeWord)
         .join(' ');
   }
   
   /// Normaliza especificamente nomes de bairros
   /// Aplica regras específicas para bairros brasileiros
   static String normalizeNeighborhoodName(String input) {
-    String normalized = normalizeLocationName(input);
+    var normalized = normalizeLocationName(input);
     
     // Regras específicas para bairros
     normalized = normalized
@@ -45,11 +45,11 @@ class DataNormalizationUtils {
         .replaceAll(RegExp(r'\bCh\b'), 'Chácara')
         .replaceAll(RegExp(r'\bChacara\b'), 'Chácara')
         .replaceAll(RegExp(r'\bSt\b'), 'Setor')
-        .replaceAll(RegExp(r'\bSetor\s+([A-Z])'), 'Setor \1')
+        .replaceAll(RegExp(r'\bSetor\s+([A-Z])'), 'Setor 1')
         .replaceAll(RegExp(r'\bQd\b'), 'Quadra')
         .replaceAll(RegExp(r'\bQt\b'), 'Quadra')
         .replaceAll(RegExp(r'\bLt\b'), 'Lote')
-        .replaceAll(RegExp(r'\bCentro\s+([A-Z])'), 'Centro \1')
+        .replaceAll(RegExp(r'\bCentro\s+([A-Z])'), 'Centro 1')
         // Remove números de lote/quadra no final se existirem
         .replaceAll(RegExp(r'\s+\d+\s*$'), '')
         .trim();
@@ -60,20 +60,20 @@ class DataNormalizationUtils {
   /// Normaliza nomes de cidades
   /// Aplica regras específicas para cidades brasileiras
   static String normalizeCityName(String input) {
-    String normalized = normalizeLocationName(input);
+    var normalized = normalizeLocationName(input);
     
     // Regras específicas para cidades
     normalized = normalized
         // Padroniza abreviações de santos
         .replaceAll(RegExp(r'\bSto\b'), 'Santo')
         .replaceAll(RegExp(r'\bSta\b'), 'Santa')
-        .replaceAll(RegExp(r'\bS\.\s*([A-Z])'), 'São \1')
+        .replaceAll(RegExp(r'\bS\.\s*([A-Z])'), 'São 1')
         .replaceAll(RegExp(r'\bSao\b'), 'São')
         // Padroniza outras abreviações
         .replaceAll(RegExp(r'\bN\.\s*Sra\.'), 'Nossa Senhora')
         .replaceAll(RegExp(r'\bNossa\s+Sra\.'), 'Nossa Senhora')
         .replaceAll(RegExp(r'\bEsp\.\s*Santo'), 'Espírito Santo')
-        .replaceAll(RegExp(r'\bRio\s+([A-Z])'), 'Rio \1')
+        .replaceAll(RegExp(r'\bRio\s+([A-Z])'), 'Rio 1')
         .trim();
     
     return normalized;
@@ -82,7 +82,7 @@ class DataNormalizationUtils {
   /// Normaliza nomes de estados
   /// Converte abreviações para nomes completos quando possível
   static String normalizeStateName(String input) {
-    String normalized = normalizeLocationName(input);
+    final normalized = normalizeLocationName(input);
     
     // Mapa de abreviações para nomes completos
     const stateAbbreviations = {
@@ -133,21 +133,21 @@ class DataNormalizationUtils {
         .replaceAll(RegExp(r'[^a-zA-ZÀ-ÿ0-9\s\-\.]'), '')
         .replaceAll(RegExp(r'\s+'), ' ')
         // Remove pontuação desnecessária
-        .replaceAll(RegExp(r'[.,;:!?]'), '')
+        .replaceAll(RegExp('[.,;:!?]'), '')
         // Converte para lowercase para processamento
         .toLowerCase()
         // Remove acentos
-        .replaceAll(RegExp(r'[àáâãäå]'), 'a')
-        .replaceAll(RegExp(r'[èéêë]'), 'e')
-        .replaceAll(RegExp(r'[ìíîï]'), 'i')
-        .replaceAll(RegExp(r'[òóôõö]'), 'o')
-        .replaceAll(RegExp(r'[ùúûü]'), 'u')
-        .replaceAll(RegExp(r'[ç]'), 'c')
-        .replaceAll(RegExp(r'[ñ]'), 'n')
-        .replaceAll(RegExp(r'[ý]'), 'y')
+        .replaceAll(RegExp('[àáâãäå]'), 'a')
+        .replaceAll(RegExp('[èéêë]'), 'e')
+        .replaceAll(RegExp('[ìíîï]'), 'i')
+        .replaceAll(RegExp('[òóôõö]'), 'o')
+        .replaceAll(RegExp('[ùúûü]'), 'u')
+        .replaceAll(RegExp('[ç]'), 'c')
+        .replaceAll(RegExp('[ñ]'), 'n')
+        .replaceAll(RegExp('[ý]'), 'y')
         // Capitaliza cada palavra
         .split(' ')
-        .map((word) => _capitalizeWord(word))
+        .map(_capitalizeWord)
         .join(' ')
         .trim();
   }
@@ -191,7 +191,7 @@ class DataNormalizationUtils {
     // Palavras que devem permanecer em minúsculo (preposições, artigos)
     const lowercaseWords = {
       'da', 'de', 'do', 'das', 'dos', 'e', 'em', 'na', 'no', 'nas', 'nos',
-      'a', 'o', 'as', 'os', 'para', 'por', 'com', 'sem', 'sob', 'sobre'
+      'a', 'o', 'as', 'os', 'para', 'por', 'com', 'sem', 'sob', 'sobre',
     };
     
     if (lowercaseWords.contains(word.toLowerCase())) {
@@ -208,14 +208,12 @@ class DataNormalizationUtils {
     required String city,
     required String state,
     String? reason,
-  }) {
-    return {
+  }) => {
       'neighborhood_name': normalizeNeighborhoodName(neighborhood),
       'city': normalizeCityName(city),
       'state': normalizeStateName(state),
       'reason': reason != null ? normalizeReason(reason) : '',
     };
-  }
   
   /// Valida um endereço completo
   static ValidationResult validateAddress({
@@ -251,18 +249,16 @@ class DataNormalizationUtils {
 
 /// Resultado da validação de dados
 class ValidationResult {
-  final bool isValid;
-  final List<String> errors;
   
   const ValidationResult({
     required this.isValid,
     required this.errors,
   });
+  final bool isValid;
+  final List<String> errors;
   
   bool get hasErrors => errors.isNotEmpty;
   
   @override
-  String toString() {
-    return 'ValidationResult(isValid: $isValid, errors: $errors)';
-  }
+  String toString() => 'ValidationResult(isValid: $isValid, errors: $errors)';
 }

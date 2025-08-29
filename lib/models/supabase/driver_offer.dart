@@ -15,8 +15,7 @@ class DriverOffer {
     this.createdAt,
   });
 
-  factory DriverOffer.fromJson(Map<String, dynamic> json) {
-    return DriverOffer(
+  factory DriverOffer.fromJson(Map<String, dynamic> json) => DriverOffer(
       id: json['id'] as String,
       tripId: (json['request_id'] as String?) ?? (json['trip_id'] as String?),
       driverId: json['driver_id'] as String?,
@@ -32,7 +31,6 @@ class DriverOffer {
           ? DateTime.parse(json['created_at'] as String)
           : null,
     );
-  }
   final String id;
   final String? tripId; // request_id (fallback trip_id)
   final String? driverId;

@@ -1,10 +1,12 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../exceptions/app_exceptions.dart';
-import '../models/user.dart' as app_user;
 import '../models/passenger_wallet_transaction.dart';
 import '../models/payment_method.dart';
+import '../models/user.dart' as app_user;
 import 'asaas_service.dart';
 import 'wallet_service.dart';
 
@@ -50,8 +52,12 @@ class PassengerPaymentService {
             description: description ?? 'Recarga de carteira',
             passengerId: passengerId,
           );
-        // case PaymentMethodType.creditCard: // Removido: não suportado
-        // case PaymentMethodType.debitCard: // Removido: não suportado
+        case PaymentMethodType.creditCard:
+          throw const DatabaseException('Cartão de crédito ainda não implementado');
+        case PaymentMethodType.debitCard:
+          throw const DatabaseException('Cartão de débito ainda não implementado');
+        case PaymentMethodType.cash:
+          throw const DatabaseException('Pagamento em dinheiro não aplicável para recarga de carteira');
         case PaymentMethodType.wallet:
           throw const DatabaseException('Não é possível adicionar crédito usando a própria carteira');
       }
@@ -74,7 +80,6 @@ class PassengerPaymentService {
         customerId: customerId,
         amount: amount,
         description: description,
-        dueInMinutes: 30,
         externalReference: 'wallet-credit-$passengerId-${DateTime.now().millisecondsSinceEpoch}',
       );
 
@@ -262,7 +267,7 @@ class PassengerPaymentService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
-        throw NetworkException('Erro ao consultar status do pagamento');
+        throw const NetworkException('Erro ao consultar status do pagamento');
       }
     } catch (e) {
       if (e is AppException) rethrow;
@@ -292,9 +297,7 @@ class PassengerPaymentService {
   }
 
   /// Calculate cashback for a trip
-  double calculateCashback(double tripAmount, {double percentage = 0.02}) {
-    return tripAmount * percentage;
-  }
+  double calculateCashback(double tripAmount, {double percentage = 0.02}) => tripAmount * percentage;
 
   /// Process trip payment using wallet balance
   Future<PassengerWalletTransaction> processTripPayment({

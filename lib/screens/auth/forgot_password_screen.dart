@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../theme/app_spacing.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_text_field.dart';
 import '../../widgets/logo_branding.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -63,14 +67,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Center(child: VerticalBrandLogo()),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
                   Text(
                     'Esqueceu sua senha?',
                     style: textTheme.headlineSmall?.copyWith(
@@ -78,14 +82,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     'Informe seu e-mail para receber as instruções de recuperação',
                     style: textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
                   if (_isSuccess)
                     _buildSuccessMessage()
                   else
@@ -103,17 +107,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
+    return AppCard(
+      padding: AppSpacing.paddingLg,
+      child: Column(
           children: [
             Icon(
               Icons.check_circle_outline,
               size: 48,
               color: colorScheme.primary,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'E-mail enviado!',
               style: textTheme.headlineSmall?.copyWith(
@@ -121,7 +124,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Enviamos as instruções para ${_emailController.text}. Verifique sua caixa de entrada e spam.',
               textAlign: TextAlign.center,
@@ -129,7 +132,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -140,30 +143,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 
   Widget _buildForm() {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
+    return AppCard(
+      padding: AppSpacing.paddingMd,
+      child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
+              AppEmailField(
                 controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => _onSubmit(),
-                decoration: const InputDecoration(
-                  labelText: 'E-mail',
-                  prefixIcon: Icon(Icons.email_outlined),
-                ),
+                onSubmitted: (_) => _onSubmit(),
                 validator: (value) {
                   final v = value?.trim() ?? '';
                   if (v.isEmpty) return 'Informe seu e-mail';
@@ -172,7 +167,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -193,7 +188,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 }

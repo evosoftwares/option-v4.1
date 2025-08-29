@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 
 import '../models/supabase/driver_excluded_zone.dart';
 import 'secure_driver_excluded_zones_service.dart';
@@ -154,9 +153,7 @@ class CachedDriverExcludedZonesService {
   }
 
   /// Gets driver zone statistics (no caching for dynamic stats)
-  Future<Map<String, dynamic>> getDriverZoneStats(String driverId) async {
-    return _secureService.getDriverZoneStats(driverId);
-  }
+  Future<Map<String, dynamic>> getDriverZoneStats(String driverId) async => _secureService.getDriverZoneStats(driverId);
 
   /// Updates driver cache with new zones
   void _updateDriverCache(String driverId, List<DriverExcludedZone> zones) {

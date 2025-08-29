@@ -1,19 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../../models/supabase/driver_document.dart';
 import '../../services/driver_document_service.dart';
-import '../../services/file_upload_service.dart';
 import '../../services/photo_service.dart';
 import '../../theme/app_colors.dart';
 
 /// Tela para captura e upload de documentos do motorista
 class DocumentCaptureScreen extends StatefulWidget {
-  final DocumentType documentType;
-  final String driverId;
-  final DriverDocument? existingDocument;
 
   const DocumentCaptureScreen({
     super.key,
@@ -21,6 +14,9 @@ class DocumentCaptureScreen extends StatefulWidget {
     required this.driverId,
     this.existingDocument,
   });
+  final DocumentType documentType;
+  final String driverId;
+  final DriverDocument? existingDocument;
 
   @override
   State<DocumentCaptureScreen> createState() => _DocumentCaptureScreenState();
@@ -41,11 +37,9 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
     }
   }
 
-  bool get _requiresExpiryDate {
-    return widget.documentType == DocumentType.cnhFront ||
+  bool get _requiresExpiryDate => widget.documentType == DocumentType.cnhFront ||
         widget.documentType == DocumentType.cnhBack ||
         widget.documentType == DocumentType.crlv;
-  }
 
   String get _documentTitle {
     switch (widget.documentType) {
@@ -147,8 +141,7 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
       initialDate: _expiryDate ?? now.add(const Duration(days: 365)),
       firstDate: firstDate,
       lastDate: lastDate,
-      builder: (context, child) {
-        return Theme(
+      builder: (context, child) => Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
               primary: AppColors.lightPrimary,
@@ -158,8 +151,7 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
             ),
           ),
           child: child!,
-        );
-      },
+        ),
     );
 
     if (selectedDate != null) {
@@ -200,8 +192,8 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Documento enviado com sucesso!'),
+          const SnackBar(
+            content: Text('Documento enviado com sucesso!'),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
           ),
@@ -282,14 +274,12 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
-  }) {
-    return Container(
+  }) => DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.gray50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: AppColors.gray200,
-          width: 1,
         ),
       ),
       child: Material(
@@ -327,11 +317,9 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
         ),
       ),
     );
-  }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
         title: Text(
@@ -372,10 +360,8 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
         ),
       ),
     );
-  }
 
-  Widget _buildInstructionsCard() {
-    return Container(
+  Widget _buildInstructionsCard() => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -383,7 +369,6 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: AppColors.info.withOpacity(0.2),
-          width: 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -404,7 +389,7 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
                   color: AppColors.info.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.info_outline,
                   color: AppColors.info,
                   size: 24,
@@ -433,10 +418,8 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
         ],
       ),
     );
-  }
 
-  Widget _buildImageSection() {
-    return Column(
+  Widget _buildImageSection() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -453,17 +436,14 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
           _buildImagePlaceholder(),
       ],
     );
-  }
 
-  Widget _buildImagePreview() {
-    return Container(
+  Widget _buildImagePreview() => Container(
       width: double.infinity,
       height: 200,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: AppColors.gray200,
-          width: 1,
         ),
       ),
       child: ClipRRect(
@@ -479,7 +459,7 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
             Positioned(
               top: 8,
               right: 8,
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: AppColors.black.withOpacity(0.7),
                   borderRadius: BorderRadius.circular(20),
@@ -501,7 +481,7 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
             Positioned(
               bottom: 8,
               right: 8,
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: AppColors.black.withOpacity(0.7),
                   borderRadius: BorderRadius.circular(20),
@@ -520,10 +500,8 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
         ),
       ),
     );
-  }
 
-  Widget _buildImagePlaceholder() {
-    return Container(
+  Widget _buildImagePlaceholder() => Container(
       width: double.infinity,
       height: 200,
       decoration: BoxDecoration(
@@ -532,7 +510,6 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
         border: Border.all(
           color: AppColors.gray200,
           width: 2,
-          style: BorderStyle.solid,
         ),
       ),
       child: Material(
@@ -549,7 +526,7 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
                   color: AppColors.lightPrimary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.add_a_photo,
                   color: AppColors.lightPrimary,
                   size: 32,
@@ -575,10 +552,8 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
         ),
       ),
     );
-  }
 
-  Widget _buildExpiryDateSection() {
-    return Column(
+  Widget _buildExpiryDateSection() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -596,7 +571,6 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: AppColors.gray200,
-              width: 1,
             ),
           ),
           child: Material(
@@ -608,7 +582,7 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.calendar_today,
                       color: AppColors.gray600,
                       size: 20,
@@ -626,7 +600,7 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
                         ),
                       ),
                     ),
-                    Icon(
+                    const Icon(
                       Icons.arrow_forward_ios,
                       color: AppColors.gray400,
                       size: 16,
@@ -639,10 +613,8 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
         ),
       ],
     );
-  }
 
-  Widget _buildErrorMessage() {
-    return Container(
+  Widget _buildErrorMessage() => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -650,12 +622,11 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: AppColors.error.withOpacity(0.3),
-          width: 1,
         ),
       ),
       child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.error_outline,
             color: AppColors.error,
             size: 20,
@@ -672,7 +643,6 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
         ],
       ),
     );
-  }
 
   Widget _buildUploadButton() {
     final canUpload = _selectedImage != null && 
@@ -694,7 +664,7 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
           ),
         ),
         child: _isUploading
-            ? Row(
+            ? const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   SizedBox(
@@ -707,8 +677,8 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  const Text(
+                  SizedBox(width: 12),
+                  Text(
                     'Enviando...',
                     style: TextStyle(
                       fontSize: 16,
@@ -730,7 +700,5 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-  }
+  String _formatDate(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 }

@@ -18,8 +18,7 @@ class PassengerRequest {
     required this.updatedAt,
   });
 
-  factory PassengerRequest.fromJson(Map<String, dynamic> json) {
-    return PassengerRequest(
+  factory PassengerRequest.fromJson(Map<String, dynamic> json) => PassengerRequest(
       id: json['id'],
       passengerId: json['passenger_id'],
       originAddress: json['origin_address'],
@@ -38,7 +37,6 @@ class PassengerRequest {
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
-  }
   final String id;
   final String passengerId;
   final String originAddress;

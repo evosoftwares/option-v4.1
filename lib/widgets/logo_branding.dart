@@ -5,8 +5,7 @@ class VerticalBrandLogo extends StatelessWidget {
   const VerticalBrandLogo({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Image.asset(
@@ -16,7 +15,6 @@ class VerticalBrandLogo extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class LogoAppBar extends StatelessWidget implements PreferredSizeWidget {

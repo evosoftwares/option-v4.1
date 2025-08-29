@@ -1,8 +1,11 @@
 import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/supabase/driver_excluded_zone.dart';
+
 import '../exceptions/app_exceptions.dart';
+import '../models/supabase/driver_excluded_zone.dart';
 import '../utils/data_normalization_utils.dart';
+import '../utils/supabase_helper.dart';
 import 'geographic_validation_service.dart';
 import 'transaction_service.dart';
 import 'zone_limit_service.dart';
@@ -10,7 +13,13 @@ import 'zone_limit_service.dart';
 /// Serviço aprimorado para gerenciar zonas excluídas de motoristas
 /// Inclui validações geográficas, normalização de dados e controle de concorrência
 class EnhancedDriverExcludedZonesService {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  SupabaseClient get _supabase {
+    final c = SupabaseHelper.client;
+    if (c == null) {
+      throw Exception('Supabase não inicializado');
+    }
+    return c;
+  }
   final ZoneLimitService _zoneLimitService = ZoneLimitService();
   static const String _tableName = 'driver_excluded_zones';
   
@@ -53,8 +62,7 @@ class EnhancedDriverExcludedZonesService {
     required String city,
     required String state,
     String? reason,
-  }) async {
-    return await TransactionService.executeWithRetry(
+  }) async => TransactionService.executeWithRetry(
       () async {
         // Validação de entrada
         _validateInputData(neighborhoodName, city, state);
@@ -80,7 +88,7 @@ class EnhancedDriverExcludedZonesService {
         
         if (!validationResult.isValid) {
           throw ValidationException(
-            'Dados geográficos inválidos: ${validationResult.errors.join(', ')}'
+            'Dados geográficos inválidos: ${validationResult.errors.join(', ')}',
           );
         }
         
@@ -113,7 +121,6 @@ class EnhancedDriverExcludedZonesService {
       },
       operationName: 'addExcludedZone',
     );
-  }
   
   /// Adiciona múltiplas zonas excluídas em uma transação
   Future<List<DriverExcludedZone>> addMultipleExcludedZones({
@@ -121,11 +128,11 @@ class EnhancedDriverExcludedZonesService {
     required List<Map<String, String>> zones,
   }) async {
     if (zones.isEmpty) {
-      throw ValidationException('Lista de zonas não pode estar vazia');
+      throw const ValidationException('Lista de zonas não pode estar vazia');
     }
     
     if (zones.length > 20) {
-      throw ValidationException('Máximo de 20 zonas podem ser adicionadas por vez');
+      throw const ValidationException('Máximo de 20 zonas podem ser adicionadas por vez');
     }
     
     // Validação e normalização de todas as zonas
@@ -158,7 +165,7 @@ class EnhancedDriverExcludedZonesService {
       
       if (!validationResult.isValid) {
         throw ValidationException(
-          'Dados inválidos para $neighborhood, $city, $state: ${validationResult.errors.join(', ')}'
+          'Dados inválidos para $neighborhood, $city, $state: ${validationResult.errors.join(', ')}',
         );
       }
       
@@ -172,7 +179,7 @@ class EnhancedDriverExcludedZonesService {
       });
     }
     
-    return await TransactionService.executeWithRetry(
+    return TransactionService.executeWithRetry(
       () async {
         // Verifica limite total
         await _zoneLimitService.validateAndEnforceLimit(driverId, normalizedZones.length);
@@ -207,8 +214,7 @@ class EnhancedDriverExcludedZonesService {
   }
   
   /// Remove uma zona excluída
-  Future<void> removeExcludedZone(String zoneId, String driverId) async {
-    return await TransactionService.executeWithRetry(
+  Future<void> removeExcludedZone(String zoneId, String driverId) async => TransactionService.executeWithRetry(
       () async {
         await _supabase
             .from(_tableName)
@@ -221,13 +227,12 @@ class EnhancedDriverExcludedZonesService {
       },
       operationName: 'removeExcludedZone',
     );
-  }
   
   /// Remove múltiplas zonas excluídas
   Future<void> removeMultipleExcludedZones(List<String> zoneIds, String driverId) async {
     if (zoneIds.isEmpty) return;
     
-    return await TransactionService.executeWithRetry(
+    return TransactionService.executeWithRetry(
       () async {
         await _supabase
             .from(_tableName)
@@ -243,8 +248,7 @@ class EnhancedDriverExcludedZonesService {
   }
   
   /// Remove todas as zonas excluídas de um motorista
-  Future<void> removeAllExcludedZones(String driverId) async {
-    return await TransactionService.executeWithRetry(
+  Future<void> removeAllExcludedZones(String driverId) async => TransactionService.executeWithRetry(
       () async {
         await _supabase
             .from(_tableName)
@@ -256,7 +260,6 @@ class EnhancedDriverExcludedZonesService {
       },
       operationName: 'removeAllExcludedZones',
     );
-  }
   
   /// Verifica se uma zona específica está excluída
   Future<bool> isZoneExcluded({
@@ -319,9 +322,7 @@ class EnhancedDriverExcludedZonesService {
   }
   
   /// Conta o número total de zonas excluídas de um motorista
-  Future<int> getExcludedZonesCount(String driverId) async {
-    return await _zoneLimitService.getCurrentZoneCount(driverId);
-  }
+  Future<int> getExcludedZonesCount(String driverId) async => _zoneLimitService.getCurrentZoneCount(driverId);
   
   /// Busca estatísticas de zonas excluídas
   Future<Map<String, dynamic>> getZoneStatistics(String driverId) async {
@@ -367,25 +368,19 @@ class EnhancedDriverExcludedZonesService {
     
     if (!validationResult.isValid) {
       throw ValidationException(
-        'Dados inválidos: ${validationResult.errors.join(', ')}'
+        'Dados inválidos: ${validationResult.errors.join(', ')}',
       );
     }
   }
   
   /// Obtém contagem atual de zonas (delegado para ZoneLimitService)
-  Future<int> getZoneCount(String driverId) async {
-    return await _zoneLimitService.getCurrentZoneCount(driverId);
-  }
+  Future<int> getZoneCount(String driverId) async => _zoneLimitService.getCurrentZoneCount(driverId);
   
   /// Obtém estatísticas de uso de zonas
-  Future<ZoneUsageStats> getZoneUsageStats(String driverId) async {
-    return await _zoneLimitService.getZoneUsageStats(driverId);
-  }
+  Future<ZoneUsageStats> getZoneUsageStats(String driverId) async => _zoneLimitService.getZoneUsageStats(driverId);
   
   /// Obtém limite máximo para um motorista
-  Future<int> getZoneLimitForDriver(String driverId) async {
-    return await _zoneLimitService.getZoneLimitForDriver(driverId);
-  }
+  Future<int> getZoneLimitForDriver(String driverId) async => _zoneLimitService.getZoneLimitForDriver(driverId);
   
   Future<void> _checkDuplicateZone(
     String driverId,
@@ -402,7 +397,7 @@ class EnhancedDriverExcludedZonesService {
     
     if (exists) {
       throw ValidationException(
-        'Zona "$neighborhood, $city, $state" já está excluída'
+        'Zona "$neighborhood, $city, $state" já está excluída',
       );
     }
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/stepper_controller.dart';
-import 'step1_phone_screen.dart';
+import 'phone_step.dart';
 
 class StepperDemoScreen extends StatelessWidget {
   const StepperDemoScreen({super.key});
@@ -11,11 +11,9 @@ class StepperDemoScreen extends StatelessWidget {
       create: (_) => StepperController(),
       child: Scaffold(
         body: Navigator(
-          onGenerateRoute: (settings) {
-            return MaterialPageRoute(
-              builder: (context) => const Step1PhoneScreen(),
-            );
-          },
+          onGenerateRoute: (settings) => MaterialPageRoute(
+              builder: (context) => PhoneStep(onNext: () {}),
+            ),
         ),
       ),
     );

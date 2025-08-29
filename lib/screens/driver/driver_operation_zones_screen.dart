@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../models/supabase/driver_operation_zone.dart';
 import '../../services/driver_operation_zones_service.dart';
 import '../../services/user_service.dart';
+import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/app_card.dart';
 
 class DriverOperationZonesScreen extends StatefulWidget {
   const DriverOperationZonesScreen({super.key});
@@ -21,7 +24,7 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
   GoogleMapController? _mapController;
   
   List<DriverOperationZone> _operationZones = [];
-  List<LatLng> _currentPolygonPoints = [];
+  final List<LatLng> _currentPolygonPoints = [];
   bool _isLoading = true;
   bool _isDrawingMode = false;
   String? _driverId;
@@ -30,15 +33,15 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
   final Set<Marker> _markers = {};
 
   // Cores para os polígonos
-  static const List<Color> _polygonColors = [
-    Colors.blue,
-    Colors.red,
-    Colors.green,
-    Colors.orange,
-    Colors.purple,
-    Colors.teal,
-    Colors.indigo,
-    Colors.brown,
+  static final List<Color> _polygonColors = [
+    AppColors.blue,
+    AppColors.error,
+    AppColors.success,
+    AppColors.warning,
+    AppColors.blue.withOpacity(0.8),
+    AppColors.success.withOpacity(0.8),
+    AppColors.error.withOpacity(0.8),
+    AppColors.gray600,
   ];
 
   @override
@@ -89,7 +92,7 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
   void _updateMapPolygons() {
     _polygons.clear();
     
-    for (int i = 0; i < _operationZones.length; i++) {
+    for (var i = 0; i < _operationZones.length; i++) {
       final zone = _operationZones[i];
       final color = _polygonColors[i % _polygonColors.length];
       
@@ -112,9 +115,8 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
         Polygon(
           polygonId: const PolygonId('current_drawing'),
           points: _currentPolygonPoints,
-          strokeColor: Colors.black,
           strokeWidth: 3,
-          fillColor: Colors.black.withOpacity(0.2),
+          fillColor: AppColors.black.withOpacity(0.2),
         ),
       );
     }
@@ -294,7 +296,7 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
                 Icon(
                   zone.isActive ? Icons.check_circle : Icons.cancel,
                   size: 16,
-                  color: zone.isActive ? Colors.green : Colors.red,
+                  color: zone.isActive ? AppColors.success : AppColors.error,
                 ),
                 const SizedBox(width: 4),
                 Text(zone.isActive ? 'Ativa' : 'Inativa'),
@@ -321,7 +323,7 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
               Navigator.of(context).pop();
               _deleteZone(zone);
             },
-            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+            child: const Text('Excluir', style: TextStyle(color: AppColors.error)),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -357,13 +359,13 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+            child: const Text('Excluir', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
+    if (confirm ?? false) {
       try {
         await _service.removeOperationZone(zone.id);
         await _loadOperationZones();
@@ -387,14 +389,13 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.success,
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('Áreas de Atuação'),
         actions: [
@@ -421,17 +422,14 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
                     polygons: _polygons,
                     markers: _markers,
                     myLocationEnabled: true,
-                    myLocationButtonEnabled: true,
                   ),
                 ),
                 _buildZonesList(),
               ],
             ),
     );
-  }
 
-  Widget _buildDrawingControls() {
-    return Container(
+  Widget _buildDrawingControls() => Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       color: Theme.of(context).colorScheme.primaryContainer,
       child: Row(
@@ -460,7 +458,6 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
         ],
       ),
     );
-  }
 
   Widget _buildZonesList() {
     if (_operationZones.isEmpty) {
@@ -469,12 +466,12 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
         child: const Text(
           'Nenhuma área criada ainda.\nToque no + para criar sua primeira área.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey),
+          style: TextStyle(color: AppColors.gray600),
         ),
       );
     }
 
-    return Container(
+    return SizedBox(
       height: 120,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -487,7 +484,7 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
           return Container(
             width: 160,
             margin: const EdgeInsets.only(right: AppSpacing.sm),
-            child: Card(
+            child: AppCard(
               child: InkWell(
                 onTap: () => _showZoneDetails(zone),
                 child: Padding(
@@ -531,7 +528,7 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
                           Icon(
                             zone.isActive ? Icons.check_circle : Icons.cancel,
                             size: 14,
-                            color: zone.isActive ? Colors.green : Colors.red,
+                            color: zone.isActive ? AppColors.success : AppColors.error,
                           ),
                           const SizedBox(width: 4),
                           Text(

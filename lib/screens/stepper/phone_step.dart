@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../controllers/stepper_controller.dart';
 import '../../utils/phone_mask.dart';
 import '../../utils/phone_validator.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 
 class PhoneStep extends StatefulWidget {
 
@@ -76,28 +78,28 @@ class _PhoneStepState extends State<PhoneStep> {
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 40),
+            const SizedBox(height: AppSpacing.xl),
             Text(
               'Qual é o seu número?',
               style: textTheme.headlineSmall?.copyWith(
                 color: colorScheme.onSurface,
-                fontWeight: FontWeight.bold,
+                fontWeight: AppTypography.bold,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Vamos enviar um código para verificar seu número',
               style: textTheme.bodyLarge?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: AppSpacing.xl),
             TextFormField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
@@ -111,15 +113,15 @@ class _PhoneStepState extends State<PhoneStep> {
                 prefixText: '+55 ',
                 prefixStyle: TextStyle(color: colorScheme.onSurface),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSpacing.sm),
                   borderSide: BorderSide(color: colorScheme.outline),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSpacing.sm),
                   borderSide: BorderSide(color: colorScheme.outline),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSpacing.sm),
                   borderSide: BorderSide(color: colorScheme.primary),
                 ),
               ),
@@ -128,28 +130,28 @@ class _PhoneStepState extends State<PhoneStep> {
             const Spacer(),
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: AppSpacing.buttonHeight,
               child: FilledButton(
                 onPressed: _isLoading ? null : _submitPhone,
                 child: _isLoading
                     ? SizedBox(
-                        width: 24,
-                        height: 24,
+                        width: AppSpacing.lg,
+                        height: AppSpacing.lg,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                          strokeWidth: AppSpacing.xs / 2,
                           valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
                         ),
                       )
                     : const Text(
                         'Continuar',
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontSize: AppSpacing.md,
+                          fontWeight: AppTypography.semiBold,
                         ),
                       ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
           ],
         ),
       ),

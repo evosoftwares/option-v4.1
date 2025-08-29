@@ -17,7 +17,7 @@ class DriverDocument {
   });
 
   factory DriverDocument.fromJson(Map<String, dynamic> json) {
-    int? _toInt(dynamic v) => v == null
+    int? toInt(dynamic v) => v == null
         ? null
         : (v is num ? v.toInt() : int.tryParse(v.toString()));
 
@@ -26,7 +26,7 @@ class DriverDocument {
       driverId: json['driver_id'] as String,
       documentType: json['document_type'] as String,
       fileUrl: json['file_url'] as String,
-      fileSize: _toInt(json['file_size']),
+      fileSize: toInt(json['file_size']),
       mimeType: json['mime_type'] as String?,
       expiryDate: json['expiry_date'] != null
           ? DateTime.parse(json['expiry_date'] as String)
@@ -92,8 +92,7 @@ class DriverDocument {
     bool? isCurrent,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return DriverDocument(
+  }) => DriverDocument(
       id: id ?? this.id,
       driverId: driverId ?? this.driverId,
       documentType: documentType ?? this.documentType,
@@ -109,7 +108,6 @@ class DriverDocument {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 
   @override
   bool operator ==(Object other) {
@@ -132,8 +130,7 @@ class DriverDocument {
   }
 
   @override
-  int get hashCode {
-    return Object.hash(
+  int get hashCode => Object.hash(
       id,
       driverId,
       documentType,
@@ -149,12 +146,9 @@ class DriverDocument {
       createdAt,
       updatedAt,
     );
-  }
 
   @override
-  String toString() {
-    return 'DriverDocument(id: $id, driverId: $driverId, documentType: $documentType, status: $status, isCurrent: $isCurrent)';
-  }
+  String toString() => 'DriverDocument(id: $id, driverId: $driverId, documentType: $documentType, status: $status, isCurrent: $isCurrent)';
 }
 
 // Enum para tipos de documentos
@@ -171,12 +165,10 @@ enum DocumentType {
   const DocumentType(this.value);
   final String value;
 
-  static DocumentType fromString(String value) {
-    return DocumentType.values.firstWhere(
+  static DocumentType fromString(String value) => DocumentType.values.firstWhere(
       (type) => type.value == value,
       orElse: () => throw ArgumentError('Invalid document type: $value'),
     );
-  }
 }
 
 // Enum para status dos documentos
@@ -189,10 +181,8 @@ enum DocumentStatus {
   const DocumentStatus(this.value);
   final String value;
 
-  static DocumentStatus fromString(String value) {
-    return DocumentStatus.values.firstWhere(
+  static DocumentStatus fromString(String value) => DocumentStatus.values.firstWhere(
       (status) => status.value == value,
       orElse: () => throw ArgumentError('Invalid document status: $value'),
     );
-  }
 }

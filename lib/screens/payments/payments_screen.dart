@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../../models/payment_method.dart';
 import '../../services/payment_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../utils/snackbar_utils.dart';
+import '../../widgets/logo_branding.dart';
 
 class PaymentsScreen extends StatefulWidget {
   const PaymentsScreen({super.key});
@@ -12,35 +16,9 @@ class PaymentsScreen extends StatefulWidget {
 }
 
 class _PaymentsScreenState extends State<PaymentsScreen> {
-  List<PaymentMethod> _paymentMethods = [];
-  bool _isLoading = true;
-  String? _error;
-
   @override
   void initState() {
     super.initState();
-    _loadPaymentMethods();
-  }
-
-  Future<void> _loadPaymentMethods() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
-
-      final methods = await PaymentService.getPaymentMethods();
-      
-      setState(() {
-        _paymentMethods = methods;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
   }
 
   Future<void> _addPaymentMethod() async {
@@ -52,21 +30,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     if (result != null) {
       try {
         await PaymentService.addPaymentMethod(result);
-        _loadPaymentMethods();
+        setState(() {}); // Refresh the FutureBuilder
         
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Método de pagamento adicionado com sucesso'),
-          ),
-        );
+        SnackBarUtils.showSuccess(context, 'Método de pagamento adicionado com sucesso');
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao adicionar método: $e'),
-          ),
-        );
+        SnackBarUtils.showError(context, 'Erro ao adicionar método: $e');
       }
     }
   }
@@ -75,8 +45,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remover método'),
-        content: Text('Deseja remover ${method.displayName}?'),
+        title: const Text('Confirmar remoção'),
+        content: Text('Tem certeza que deseja remover o método ${method.displayName}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -90,10 +60,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       ),
     );
 
-    if (confirm == true) {
+    if (confirm ?? false) {
       try {
         await PaymentService.removePaymentMethod(method.id);
-        _loadPaymentMethods();
+        setState(() {}); // Refresh the FutureBuilder
         
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -119,10 +89,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 
     return Scaffold(
       backgroundColor: cs.surface,
-      appBar: AppBar(
-        title: const Text('Métodos de Pagamento'),
-        backgroundColor: cs.surface,
-        foregroundColor: cs.onSurface,
+      appBar: StandardAppBar(
+        title: 'Métodos de Pagamento',
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -130,78 +98,91 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: cs.error,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        'Erro ao carregar métodos',
-                        style: AppTypography.titleMedium.copyWith(color: cs.error),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        _error!,
-                        style: AppTypography.bodyMedium.copyWith(color: cs.onSurfaceVariant),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      ElevatedButton(
-                        onPressed: _loadPaymentMethods,
-                        child: const Text('Tentar novamente'),
-                      ),
-                    ],
+      body: FutureBuilder<List<PaymentMethod>>(
+        future: PaymentService.getPaymentMethods(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: cs.error,
                   ),
-                )
-              : _paymentMethods.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.credit_card_off,
-                            size: 64,
-                            color: cs.onSurfaceVariant,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            'Nenhum método cadastrado',
-                            style: AppTypography.titleMedium.copyWith(color: cs.onSurfaceVariant),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            'Adicione um método PIX para facilitar seus pagamentos',
-                            style: AppTypography.bodyMedium.copyWith(color: cs.onSurfaceVariant),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          ElevatedButton.icon(
-                            onPressed: _addPaymentMethod,
-                            icon: const Icon(Icons.add),
-                            label: const Text('Adicionar método'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: AppSpacing.paddingLg,
-                      itemCount: _paymentMethods.length,
-                      itemBuilder: (context, index) {
-                        final method = _paymentMethods[index];
-                        return _PaymentMethodCard(
-                          method: method,
-                          onRemove: () => _removePaymentMethod(method),
-                        );
-                      },
-                    ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Erro ao carregar métodos de pagamento',
+                    style: AppTypography.titleMedium.copyWith(color: cs.error),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    snapshot.error.toString(),
+                    style: AppTypography.bodyMedium.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  ElevatedButton(
+                    onPressed: () => setState(() {}), // Rebuild to retry
+                    child: const Text('Tentar novamente'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final paymentMethods = snapshot.data ?? [];
+          
+          if (paymentMethods.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.credit_card_off,
+                    size: 64,
+                    color: cs.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Nenhum método cadastrado',
+                    style: AppTypography.titleMedium.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Adicione um método PIX ou configure sua carteira para facilitar seus pagamentos',
+                    style: AppTypography.bodyMedium.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  ElevatedButton.icon(
+                    onPressed: _addPaymentMethod,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Adicionar método'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: AppSpacing.paddingLg,
+            itemCount: paymentMethods.length,
+            itemBuilder: (context, index) {
+              final method = paymentMethods[index];
+              return _PaymentMethodCard(
+                method: method,
+                onRemove: () => _removePaymentMethod(method),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
@@ -226,15 +207,27 @@ class _PaymentMethodCard extends StatelessWidget {
           return Icons.account_balance_wallet;
         case PaymentMethodType.pix:
           return Icons.pix;
+        case PaymentMethodType.creditCard:
+          return Icons.credit_card;
+        case PaymentMethodType.debitCard:
+          return Icons.payment;
+        case PaymentMethodType.cash:
+          return Icons.money;
       }
     }
 
     String getSubtitle() {
       switch (method.type) {
         case PaymentMethodType.wallet:
-          return 'Carteira Option';
+          return r'Saldo: R$ 0,00'; // TODO: Implementar saldo real
         case PaymentMethodType.pix:
-          return method.pixData?.displayName ?? 'PIX';
+          return method.pixData?.displayName ?? 'Chave PIX não configurada';
+        case PaymentMethodType.creditCard:
+          return 'Cartão de Crédito';
+        case PaymentMethodType.debitCard:
+          return 'Cartão de Débito';
+        case PaymentMethodType.cash:
+          return 'Dinheiro';
       }
     }
 
@@ -300,6 +293,18 @@ class _AddPaymentMethodDialogState extends State<_AddPaymentMethodDialog> {
   PaymentMethodType _selectedType = PaymentMethodType.pix;
   PixKeyType _selectedPixKeyType = PixKeyType.cpf;
   final _pixKeyController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  
+  // Formatadores de máscara
+  final _cpfMask = MaskTextInputFormatter(
+    mask: '###.###.###-##',
+    filter: {'#': RegExp('[0-9]')},
+  );
+  
+  final _phoneMask = MaskTextInputFormatter(
+    mask: '(##) #####-####',
+    filter: {'#': RegExp('[0-9]')},
+  );
 
   @override
   void dispose() {
@@ -317,19 +322,22 @@ class _AddPaymentMethodDialogState extends State<_AddPaymentMethodDialog> {
         isActive: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-      ));
+      ),);
       return;
     }
 
     if (_selectedType == PaymentMethodType.pix) {
-      final pixKey = _pixKeyController.text.trim();
-      
-      if (pixKey.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Preencha a chave PIX')),
-        );
+      if (!_formKey.currentState!.validate()) {
         return;
       }
+
+      final pixKey = _pixKeyController.text.trim();
+      
+      // Para CPF e telefone, salva apenas os números
+      final keyValue = _selectedPixKeyType == PixKeyType.cpf || 
+                      _selectedPixKeyType == PixKeyType.phone
+          ? pixKey.replaceAll(RegExp('[^0-9]'), '')
+          : pixKey;
 
       Navigator.of(context).pop(PaymentMethod(
         id: '',
@@ -339,42 +347,157 @@ class _AddPaymentMethodDialogState extends State<_AddPaymentMethodDialog> {
         isActive: true,
         pixData: PixData(
           keyType: _selectedPixKeyType,
-          keyValue: pixKey,
+          keyValue: keyValue,
         ),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-      ));
+      ),);
+      return;
+    }
+
+    // Para cartões de crédito/débito e dinheiro, apenas criar o método básico
+    if (_selectedType == PaymentMethodType.creditCard || 
+        _selectedType == PaymentMethodType.debitCard ||
+        _selectedType == PaymentMethodType.cash) {
+      Navigator.of(context).pop(PaymentMethod(
+        id: '',
+        userId: '',
+        type: _selectedType,
+        isDefault: false,
+        isActive: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),);
     }
   }
 
+  String _getPixKeyHint() {
+    switch (_selectedPixKeyType) {
+      case PixKeyType.cpf:
+        return '000.000.000-00';
+      case PixKeyType.email:
+        return 'exemplo@email.com';
+      case PixKeyType.phone:
+        return '(11) 99999-9999';
+      case PixKeyType.randomKey:
+        return 'Ex: 123e4567-e12b-12d1-a456-426655440000';
+    }
+  }
+
+  IconData _getPixKeyIcon() {
+    switch (_selectedPixKeyType) {
+      case PixKeyType.cpf:
+        return Icons.badge; // Documento de identificação
+      case PixKeyType.email:
+        return Icons.email;
+      case PixKeyType.phone:
+        return Icons.phone;
+      case PixKeyType.randomKey:
+        return Icons.vpn_key; // Chave mais específica
+    }
+  }
+
+  TextInputType _getKeyboardType() {
+    switch (_selectedPixKeyType) {
+      case PixKeyType.cpf:
+      case PixKeyType.phone:
+        return TextInputType.number;
+      case PixKeyType.email:
+        return TextInputType.emailAddress;
+      case PixKeyType.randomKey:
+        return TextInputType.text;
+    }
+  }
+
+  List<TextInputFormatter> _getInputFormatters() {
+    switch (_selectedPixKeyType) {
+      case PixKeyType.cpf:
+        return [_cpfMask];
+      case PixKeyType.phone:
+        return [_phoneMask];
+      case PixKeyType.email:
+        return [FilteringTextInputFormatter.deny(RegExp(' '))];
+      case PixKeyType.randomKey:
+        return [FilteringTextInputFormatter.allow(RegExp('[a-zA-Z0-9-]'))];
+    }
+  }
+
+  bool _isValidPixKey(String key, PixKeyType type) {
+    switch (type) {
+      case PixKeyType.cpf:
+        // Remove caracteres especiais e verifica se tem 11 dígitos
+        final numbers = key.replaceAll(RegExp('[^0-9]'), '');
+        return numbers.length == 11 && _isValidCPF(numbers);
+      case PixKeyType.email:
+        return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(key);
+      case PixKeyType.phone:
+        // Remove caracteres especiais e verifica se tem 11 dígitos (celular brasileiro)
+        final numbers = key.replaceAll(RegExp('[^0-9]'), '');
+        return numbers.length == 11 && 
+               numbers.length >= 3 && 
+               ['9'].contains(numbers[2]); // 3º dígito deve ser 9 para celulares
+      case PixKeyType.randomKey:
+        // Chave aleatória deve ter pelo menos 32 caracteres
+        return key.length >= 32;
+    }
+  }
+
+  bool _isValidCPF(String cpf) {
+    if (cpf.length != 11) return false;
+    
+    // Verifica se todos os dígitos são iguais
+    if (RegExp(r'^(\d)\1{10}$').hasMatch(cpf)) return false;
+    
+    // Validação dos dígitos verificadores
+    var sum = 0;
+    for (var i = 0; i < 9; i++) {
+      sum += int.parse(cpf[i]) * (10 - i);
+    }
+    var digit1 = 11 - (sum % 11);
+    if (digit1 >= 10) digit1 = 0;
+    
+    sum = 0;
+    for (var i = 0; i < 10; i++) {
+      sum += int.parse(cpf[i]) * (11 - i);
+    }
+    var digit2 = 11 - (sum % 11);
+    if (digit2 >= 10) digit2 = 0;
+    
+    return int.parse(cpf[9]) == digit1 && int.parse(cpf[10]) == digit2;
+  }
+
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Adicionar Método'),
+  Widget build(BuildContext context) => AlertDialog(
+      title: const Text('Adicionar Método de Pagamento'),
       content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<PaymentMethodType>(
-              value: _selectedType,
-              decoration: const InputDecoration(
-                labelText: 'Tipo',
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(value: PaymentMethodType.pix, child: Text('PIX')),
-                DropdownMenuItem(value: PaymentMethodType.wallet, child: Text('Carteira')),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedType = value!;
-                });
-              },
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<PaymentMethodType>(
+                initialValue: _selectedType,
+                decoration: const InputDecoration(
+                  labelText: 'Tipo',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: PaymentMethodType.pix, child: Text('PIX')),
+                  DropdownMenuItem(value: PaymentMethodType.wallet, child: Text('Carteira')),
+                  DropdownMenuItem(value: PaymentMethodType.creditCard, child: Text('Cartão de Crédito')),
+                  DropdownMenuItem(value: PaymentMethodType.debitCard, child: Text('Cartão de Débito')),
+                  DropdownMenuItem(value: PaymentMethodType.cash, child: Text('Dinheiro')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedType = value!;
+                  });
+                },
             ),
             if (_selectedType == PaymentMethodType.pix) ...[
               const SizedBox(height: AppSpacing.md),
               DropdownButtonFormField<PixKeyType>(
-                value: _selectedPixKeyType,
+                initialValue: _selectedPixKeyType,
                 decoration: const InputDecoration(
                   labelText: 'Tipo de chave PIX',
                   border: OutlineInputBorder(),
@@ -397,15 +520,27 @@ class _AddPaymentMethodDialogState extends State<_AddPaymentMethodDialog> {
                 decoration: InputDecoration(
                   labelText: 'Chave ${_selectedPixKeyType.displayName}',
                   border: const OutlineInputBorder(),
+                  hintText: _getPixKeyHint(),
+                  prefixIcon: Icon(_getPixKeyIcon()),
                 ),
-                keyboardType: _selectedPixKeyType == PixKeyType.email
-                    ? TextInputType.emailAddress
-                    : _selectedPixKeyType == PixKeyType.phone
-                        ? TextInputType.phone
-                        : TextInputType.text,
+                keyboardType: _getKeyboardType(),
+                inputFormatters: _getInputFormatters(),
+                textCapitalization: _selectedPixKeyType == PixKeyType.email 
+                    ? TextCapitalization.none 
+                    : TextCapitalization.characters,
+                validator: (value) {
+                  if (value?.isEmpty ?? true) {
+                    return 'Campo obrigatório';
+                  }
+                  if (!_isValidPixKey(value!.trim(), _selectedPixKeyType)) {
+                    return '${_selectedPixKeyType.displayName} inválido';
+                  }
+                  return null;
+                },
               ),
-            ],
+            ], // Fecha o array "if"
           ],
+          ),
         ),
       ),
       actions: [
@@ -419,5 +554,4 @@ class _AddPaymentMethodDialogState extends State<_AddPaymentMethodDialog> {
         ),
       ],
     );
-  }
 }

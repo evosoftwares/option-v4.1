@@ -1,6 +1,4 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -28,7 +26,7 @@ class LocalNotificationService {
 
     const initializationSettingsIOS =
         DarwinInitializationSettings(
-      requestBadgePermission: true,
+      
     );
 
     const initializationSettings = InitializationSettings(
@@ -87,6 +85,7 @@ class LocalNotificationService {
     required String title,
     required String body,
     String? offerId,
+    bool isDriver = false,
   }) async {
     if (!_isInitialized) {
       await initialize();
@@ -100,21 +99,26 @@ class LocalNotificationService {
       return;
     }
 
-    const androidPlatformChannelSpecifics =
+    // Configurar som baseado no tipo de usuário
+    final androidSound = isDriver ? 'chegoucorridaoption' : null;
+    final iOSSound = isDriver ? 'chegoucorridaoption.mp3' : null;
+
+    final androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'ride_offers',
       'Ofertas de Corrida',
       channelDescription: 'Notificações quando uma nova corrida está disponível',
       importance: Importance.high,
       priority: Priority.high,
+      sound: androidSound != null ? RawResourceAndroidNotificationSound(androidSound) : null,
       // vibrationPattern removed to avoid const factory usage in const context
       category: AndroidNotificationCategory.call,
       fullScreenIntent: true,
     );
 
-    const iOSPlatformChannelSpecifics =
+    final iOSPlatformChannelSpecifics =
         DarwinNotificationDetails(
-      sound: 'chegoucorridaOption.mp3',
+      sound: iOSSound,
       presentAlert: true,
       presentBadge: true,
       presentSound: true,

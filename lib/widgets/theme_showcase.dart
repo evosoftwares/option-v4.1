@@ -6,7 +6,7 @@ class ThemeShowcase extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.paddingMd,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -48,16 +48,16 @@ class ThemeShowcase extends StatelessWidget {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
-          TextField(
-            decoration: const InputDecoration(
+          const TextField(
+            decoration: InputDecoration(
               labelText: 'Endereço de partida',
               hintText: 'Digite seu endereço',
               prefixIcon: Icon(Icons.location_on),
             ),
           ),
           const SizedBox(height: 16),
-          TextField(
-            decoration: const InputDecoration(
+          const TextField(
+            decoration: InputDecoration(
               labelText: 'Destino',
               hintText: 'Para onde você vai?',
               prefixIcon: Icon(Icons.flag),
@@ -73,7 +73,7 @@ class ThemeShowcase extends StatelessWidget {
           const SizedBox(height: 16),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: AppSpacing.paddingMd,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -88,7 +88,7 @@ class ThemeShowcase extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'R\$ 15-20',
+                    r'R$ 15-20',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           color: Theme.of(context).colorScheme.primary,
                         ),
@@ -105,20 +105,20 @@ class ThemeShowcase extends StatelessWidget {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
-          Wrap(
+          const Wrap(
             spacing: 8,
             children: [
               Chip(
-                label: const Text('Econômico'),
-                avatar: const Icon(Icons.directions_car, size: AppSpacing.iconXs),
+                label: Text('Econômico'),
+                avatar: Icon(Icons.directions_car, size: AppSpacing.iconXs),
               ),
               Chip(
-                label: const Text('Conforto'),
-                avatar: const Icon(Icons.airline_seat_recline_normal, size: AppSpacing.iconXs),
+                label: Text('Conforto'),
+                avatar: Icon(Icons.airline_seat_recline_normal, size: AppSpacing.iconXs),
               ),
               Chip(
-                label: const Text('Premium'),
-                avatar: const Icon(Icons.star, size: AppSpacing.iconXs),
+                label: Text('Premium'),
+                avatar: Icon(Icons.star, size: AppSpacing.iconXs),
               ),
             ],
           ),
@@ -145,7 +145,6 @@ class ThemeShowcase extends StatelessWidget {
                 label: 'Perfil',
               ),
             ],
-            selectedIndex: 0,
           ),
         ],
       ),

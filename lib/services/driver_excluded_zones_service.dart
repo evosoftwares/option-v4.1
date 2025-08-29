@@ -1,8 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/supabase/driver_excluded_zone.dart';
+
 import '../exceptions/app_exceptions.dart';
-import 'geographic_validation_service.dart';
+import '../models/supabase/driver_excluded_zone.dart';
 import '../utils/data_normalization_utils.dart';
+import 'geographic_validation_service.dart';
 import 'transaction_service.dart';
 import 'zone_limit_service.dart';
 
@@ -43,8 +44,7 @@ class DriverExcludedZonesService {
     required String city,
     required String state,
     String? reason,
-  }) async {
-    return await TransactionService.executeWithRetry(
+  }) async => TransactionService.executeWithRetry(
       () async {
         // Normaliza os dados de entrada
         final normalizedNeighborhood = DataNormalizationUtils.normalizeNeighborhoodName(neighborhoodName);
@@ -62,7 +62,7 @@ class DriverExcludedZonesService {
         
         if (!locationValidation.isValid) {
           throw ValidationException(
-            'Dados de localização inválidos: ${locationValidation.errors.join(', ')}'
+            'Dados de localização inválidos: ${locationValidation.errors.join(', ')}',
           );
         }
         
@@ -74,7 +74,7 @@ class DriverExcludedZonesService {
         
         if (!geoValidation) {
           throw ValidationException(
-            'Localização não encontrada: ${normalizedCity}, ${normalizedState}'
+            'Localização não encontrada: $normalizedCity, $normalizedState',
           );
         }
         
@@ -115,14 +115,12 @@ class DriverExcludedZonesService {
       },
       operationName: 'addExcludedZone',
     );
-  }
 
   /// Adiciona múltiplas zonas excluídas para o motorista
   Future<List<DriverExcludedZone>> addMultipleExcludedZones({
     required String driverId,
     required List<Map<String, String>> zones,
-  }) async {
-    return await TransactionService.executeWithRetry(
+  }) async => TransactionService.executeWithRetry(
       () async {
         // Verifica limite antes de processar
         await _zoneLimitService.validateAndEnforceLimit(driverId, zones.length);
@@ -146,7 +144,7 @@ class DriverExcludedZonesService {
            
            if (!locationValidation.isValid) {
              throw ValidationException(
-               'Dados inválidos para ${zone['neighborhoodName']}: ${locationValidation.errors.join(', ')}'
+               'Dados inválidos para ${zone['neighborhoodName']}: ${locationValidation.errors.join(', ')}',
              );
            }
            
@@ -158,7 +156,7 @@ class DriverExcludedZonesService {
            
            if (!geoValidation) {
              throw ValidationException(
-               'Localização não encontrada para ${zone['city']}, ${zone['state']}'
+               'Localização não encontrada para ${zone['city']}, ${zone['state']}',
              );
            }
           
@@ -182,7 +180,6 @@ class DriverExcludedZonesService {
       },
       operationName: 'addMultipleExcludedZones',
     );
-  }
 
   /// Remove uma zona excluída específica
   Future<void> removeExcludedZone(String excludedZoneId) async {

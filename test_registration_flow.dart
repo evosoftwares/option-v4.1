@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'lib/services/user_service.dart';
 
 /// Script para testar o fluxo de cadastro
@@ -8,11 +6,11 @@ void main() async {
   
   try {
     // Simular dados de um usuário de teste
-    final testUserId = 'test-user-id-123';
-    final testEmail = 'teste@example.com';
-    final testFullName = 'Usuário Teste';
-    final testPhone = '(11) 99999-9999';
-    final testUserType = 'passenger';
+    const testUserId = 'test-user-id-123';
+    const testEmail = 'teste@example.com';
+    const testFullName = 'Usuário Teste';
+    const testPhone = '(11) 99999-9999';
+    const testUserType = 'passenger';
     
     print('📋 Dados de teste:');
     print('  - ID: $testUserId');

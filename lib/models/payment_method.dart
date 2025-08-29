@@ -5,21 +5,22 @@ class PaymentMethod {
     required this.type,
     required this.isDefault,
     required this.isActive,
-    // this.cardData, // Removido: cartões não são mais suportados
+    this.cardData,
     this.pixData,
     this.asaasCustomerId,
     required this.createdAt,
     required this.updatedAt,
   });
 
-  factory PaymentMethod.fromMap(Map<String, dynamic> map) {
-    return PaymentMethod(
+  factory PaymentMethod.fromMap(Map<String, dynamic> map) => PaymentMethod(
       id: map['id'] as String,
       userId: map['user_id'] as String,
       type: PaymentMethodType.fromString(map['type'] as String),
       isDefault: map['is_default'] as bool,
       isActive: map['is_active'] as bool,
-      // cardData: Removido - cartões não são mais suportados
+      cardData: map['card_data'] != null 
+          ? CardData.fromMap(map['card_data'] as Map<String, dynamic>)
+          : null,
       pixData: map['pix_data'] != null 
           ? PixData.fromMap(map['pix_data'] as Map<String, dynamic>)
           : null,
@@ -27,33 +28,30 @@ class PaymentMethod {
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
     );
-  }
 
   final String id;
   final String userId;
   final PaymentMethodType type;
   final bool isDefault;
   final bool isActive;
-  // final CardData? cardData; // Removido: cartões não são mais suportados
+  final CardData? cardData;
   final PixData? pixData;
   final String? asaasCustomerId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  Map<String, dynamic> toMap() {
-    return {
+  Map<String, dynamic> toMap() => {
       'id': id,
       'user_id': userId,
       'type': type.value,
       'is_default': isDefault,
       'is_active': isActive,
-      // 'card_data': cardData?.toMap(), // Removido: cartões não são mais suportados
+      'card_data': cardData?.toMap(),
       'pix_data': pixData?.toMap(),
       'asaas_customer_id': asaasCustomerId,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
 
   PaymentMethod copyWith({
     String? id,
@@ -61,104 +59,128 @@ class PaymentMethod {
     PaymentMethodType? type,
     bool? isDefault,
     bool? isActive,
-    // CardData? cardData, // Removido: cartões não são mais suportados
+    CardData? cardData,
     PixData? pixData,
     String? asaasCustomerId,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return PaymentMethod(
+  }) => PaymentMethod(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       type: type ?? this.type,
       isDefault: isDefault ?? this.isDefault,
       isActive: isActive ?? this.isActive,
-      // cardData: cardData ?? this.cardData, // Removido: cartões não são mais suportados
+      cardData: cardData ?? this.cardData,
       pixData: pixData ?? this.pixData,
       asaasCustomerId: asaasCustomerId ?? this.asaasCustomerId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 
   String get displayName {
     switch (type) {
       case PaymentMethodType.wallet:
         return 'Carteira Option';
-      // case PaymentMethodType.creditCard: // Removido: não suportado
-      // case PaymentMethodType.debitCard: // Removido: não suportado
+      case PaymentMethodType.creditCard:
+        return 'Cartão de Crédito';
+      case PaymentMethodType.debitCard:
+        return 'Cartão de Débito';
       case PaymentMethodType.pix:
         return 'Pix';
+      case PaymentMethodType.cash:
+        return 'Dinheiro';
     }
   }
 
   String get iconPath {
     switch (type) {
       case PaymentMethodType.wallet:
-        return 'assets/icons/wallet.png';
-      // case PaymentMethodType.creditCard: // Removido: não suportado
-      // case PaymentMethodType.debitCard: // Removido: não suportado
+        return 'assets/icons/wallet.svg';
+      case PaymentMethodType.creditCard:
+        return 'assets/icons/credit_card.svg';
+      case PaymentMethodType.debitCard:
+        return 'assets/icons/debit_card.svg';
       case PaymentMethodType.pix:
-        return 'assets/icons/pix.png';
+        return 'assets/icons/pix.svg';
+      case PaymentMethodType.cash:
+        return 'assets/icons/cash.svg';
     }
   }
 }
 
 class CardData {
+
+  factory CardData.fromMap(Map<String, dynamic> map) => CardData(
+      cardNumber: map['card_number'] as String,
+      expiryMonth: map['expiry_month'] as int,
+      expiryYear: map['expiry_year'] as int,
+      cvv: map['cvv'] as String,
+      holderName: map['holder_name'] as String,
+      brand: CardBrand.fromString(map['brand'] as String),
+    );
   const CardData({
-    required this.lastFourDigits,
-    required this.brand,
+    required this.cardNumber,
+    required this.expiryMonth,
+    required this.expiryYear,
+    required this.cvv,
     required this.holderName,
-    this.expiryMonth,
-    this.expiryYear,
-    this.asaasCardToken,
+    required this.brand,
   });
 
-  factory CardData.fromMap(Map<String, dynamic> map) {
-    return CardData(
-      lastFourDigits: map['last_four_digits'] as String,
-      brand: CardBrand.fromString(map['brand'] as String),
-      holderName: map['holder_name'] as String,
-      expiryMonth: map['expiry_month'] as int?,
-      expiryYear: map['expiry_year'] as int?,
-      asaasCardToken: map['asaas_card_token'] as String?,
-    );
-  }
-
-  final String lastFourDigits;
-  final CardBrand brand;
+  final String cardNumber;
+  final int expiryMonth;
+  final int expiryYear;
+  final String cvv;
   final String holderName;
-  final int? expiryMonth;
-  final int? expiryYear;
-  final String? asaasCardToken;
+  final CardBrand brand;
 
-  Map<String, dynamic> toMap() {
-    return {
-      'last_four_digits': lastFourDigits,
-      'brand': brand.value,
-      'holder_name': holderName,
+  Map<String, dynamic> toMap() => {
+      'card_number': cardNumber,
       'expiry_month': expiryMonth,
       'expiry_year': expiryYear,
-      'asaas_card_token': asaasCardToken,
+      'cvv': cvv,
+      'holder_name': holderName,
+      'brand': brand.value,
     };
+
+  CardData copyWith({
+    String? cardNumber,
+    int? expiryMonth,
+    int? expiryYear,
+    String? cvv,
+    String? holderName,
+    CardBrand? brand,
+  }) => CardData(
+      cardNumber: cardNumber ?? this.cardNumber,
+      expiryMonth: expiryMonth ?? this.expiryMonth,
+      expiryYear: expiryYear ?? this.expiryYear,
+      cvv: cvv ?? this.cvv,
+      holderName: holderName ?? this.holderName,
+      brand: brand ?? this.brand,
+    );
+
+  @override
+  String toString() => 'CardData(cardNumber: $cardNumber, expiryMonth: $expiryMonth, expiryYear: $expiryYear, cvv: $cvv, holderName: $holderName, brand: $brand)';
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is CardData &&
+        other.cardNumber == cardNumber &&
+        other.expiryMonth == expiryMonth &&
+        other.expiryYear == expiryYear &&
+        other.cvv == cvv &&
+        other.holderName == holderName &&
+        other.brand == brand;
   }
 
-  String get displayName => '**** **** **** $lastFourDigits';
-  
-  String get brandIconPath {
-    switch (brand) {
-      case CardBrand.visa:
-        return 'assets/icons/visa.png';
-      case CardBrand.mastercard:
-        return 'assets/icons/mastercard.png';
-      case CardBrand.elo:
-        return 'assets/icons/elo.png';
-      case CardBrand.amex:
-        return 'assets/icons/amex.png';
-      case CardBrand.other:
-        return 'assets/icons/credit_card.png';
-    }
-  }
+  @override
+  int get hashCode => cardNumber.hashCode ^
+      expiryMonth.hashCode ^
+      expiryYear.hashCode ^
+      cvv.hashCode ^
+      holderName.hashCode ^
+      brand.hashCode;
 }
 
 class PixData {
@@ -168,25 +190,21 @@ class PixData {
     this.qrCodeData,
   });
 
-  factory PixData.fromMap(Map<String, dynamic> map) {
-    return PixData(
+  factory PixData.fromMap(Map<String, dynamic> map) => PixData(
       keyType: PixKeyType.fromString(map['key_type'] as String),
       keyValue: map['key_value'] as String,
       qrCodeData: map['qr_code_data'] as String?,
     );
-  }
 
   final PixKeyType keyType;
   final String keyValue;
   final String? qrCodeData;
 
-  Map<String, dynamic> toMap() {
-    return {
+  Map<String, dynamic> toMap() => {
       'key_type': keyType.value,
       'key_value': keyValue,
       'qr_code_data': qrCodeData,
     };
-  }
 
   String get displayName => '${keyType.displayName}: ${_maskedValue()}';
 
@@ -219,28 +237,43 @@ class PixData {
 
 enum PaymentMethodType {
   wallet('wallet'),
-  // creditCard('credit_card'), // Removido: não suportado
-  // debitCard('debit_card'), // Removido: não suportado
-  pix('pix');
+  pix('pix'),
+  creditCard('credit_card'),
+  debitCard('debit_card'),
+  cash('cash');
 
   const PaymentMethodType(this.value);
   final String value;
 
   static PaymentMethodType fromString(String value) {
-    return values.firstWhere(
-      (type) => type.value == value,
-      orElse: () => throw ArgumentError('Unknown payment method type: $value'),
-    );
+    switch (value) {
+      case 'wallet':
+        return PaymentMethodType.wallet;
+      case 'pix':
+        return PaymentMethodType.pix;
+      case 'credit_card':
+        return PaymentMethodType.creditCard;
+      case 'debit_card':
+        return PaymentMethodType.debitCard;
+      case 'cash':
+        return PaymentMethodType.cash;
+      default:
+        throw ArgumentError('Unknown payment method type: $value');
+    }
   }
 
   String get displayName {
     switch (this) {
       case PaymentMethodType.wallet:
-        return 'Carteira';
-      // case PaymentMethodType.creditCard: // Removido: não suportado
-      // case PaymentMethodType.debitCard: // Removido: não suportado
+        return 'Carteira Digital';
       case PaymentMethodType.pix:
-        return 'Pix';
+        return 'PIX';
+      case PaymentMethodType.creditCard:
+        return 'Cartão de Crédito';
+      case PaymentMethodType.debitCard:
+        return 'Cartão de Débito';
+      case PaymentMethodType.cash:
+        return 'Dinheiro';
     }
   }
 }
@@ -255,12 +288,10 @@ enum CardBrand {
   const CardBrand(this.value);
   final String value;
 
-  static CardBrand fromString(String value) {
-    return values.firstWhere(
+  static CardBrand fromString(String value) => values.firstWhere(
       (brand) => brand.value == value,
       orElse: () => CardBrand.other,
     );
-  }
 }
 
 enum PixKeyType {
@@ -272,12 +303,10 @@ enum PixKeyType {
   const PixKeyType(this.value);
   final String value;
 
-  static PixKeyType fromString(String value) {
-    return values.firstWhere(
+  static PixKeyType fromString(String value) => values.firstWhere(
       (type) => type.value == value,
       orElse: () => throw ArgumentError('Unknown PIX key type: $value'),
     );
-  }
 
   String get displayName {
     switch (this) {

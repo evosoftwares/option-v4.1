@@ -8,8 +8,7 @@ class DriverExcludedZone {
     required this.createdAt,
   });
 
-  factory DriverExcludedZone.fromJson(Map<String, dynamic> json) {
-    return DriverExcludedZone(
+  factory DriverExcludedZone.fromJson(Map<String, dynamic> json) => DriverExcludedZone(
       id: json['id'] as String,
       driverId: json['driver_id'] as String,
       neighborhoodName: json['neighborhood_name'] as String,
@@ -17,10 +16,8 @@ class DriverExcludedZone {
       state: json['state'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
-  }
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'driver_id': driverId,
       'neighborhood_name': neighborhoodName,
@@ -28,16 +25,13 @@ class DriverExcludedZone {
       'state': state,
       'created_at': createdAt.toIso8601String(),
     };
-  }
 
-  Map<String, dynamic> toInsertJson() {
-    return {
+  Map<String, dynamic> toInsertJson() => {
       'driver_id': driverId,
       'neighborhood_name': neighborhoodName,
       'city': city,
       'state': state,
     };
-  }
 
   final String id;
   final String driverId;
@@ -58,20 +52,16 @@ class DriverExcludedZone {
   }
 
   @override
-  int get hashCode {
-    return Object.hash(
+  int get hashCode => Object.hash(
       id,
       driverId,
       neighborhoodName,
       city,
       state,
     );
-  }
 
   @override
-  String toString() {
-    return 'DriverExcludedZone(id: $id, driverId: $driverId, neighborhoodName: $neighborhoodName, city: $city, state: $state, createdAt: $createdAt)';
-  }
+  String toString() => 'DriverExcludedZone(id: $id, driverId: $driverId, neighborhoodName: $neighborhoodName, city: $city, state: $state, createdAt: $createdAt)';
 
   /// Retorna uma representação legível da zona excluída
   String get displayName => '$neighborhoodName, $city - $state';
@@ -84,8 +74,7 @@ class DriverExcludedZone {
     String? city,
     String? state,
     DateTime? createdAt,
-  }) {
-    return DriverExcludedZone(
+  }) => DriverExcludedZone(
       id: id ?? this.id,
       driverId: driverId ?? this.driverId,
       neighborhoodName: neighborhoodName ?? this.neighborhoodName,
@@ -93,5 +82,4 @@ class DriverExcludedZone {
       state: state ?? this.state,
       createdAt: createdAt ?? this.createdAt,
     );
-  }
 }

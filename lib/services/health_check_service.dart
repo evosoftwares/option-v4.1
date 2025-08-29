@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
+
 import 'package:dio/dio.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'monitoring_service.dart';
+
+import '../config/app_config.dart';
 import 'metrics_service.dart';
+import 'monitoring_service.dart';
 
 /// Enum para status de health check
 enum HealthStatus {
@@ -16,12 +16,6 @@ enum HealthStatus {
 
 /// Modelo para resultado de health check
 class HealthCheckResult {
-  final String serviceName;
-  final HealthStatus status;
-  final Duration responseTime;
-  final String? errorMessage;
-  final Map<String, dynamic> metadata;
-  final DateTime timestamp;
 
   HealthCheckResult({
     required this.serviceName,
@@ -32,17 +26,7 @@ class HealthCheckResult {
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
 
-  Map<String, dynamic> toJson() => {
-        'service_name': serviceName,
-        'status': status.name,
-        'response_time_ms': responseTime.inMilliseconds,
-        'error_message': errorMessage,
-        'metadata': metadata,
-        'timestamp': timestamp.toIso8601String(),
-      };
-
-  factory HealthCheckResult.fromJson(Map<String, dynamic> json) {
-    return HealthCheckResult(
+  factory HealthCheckResult.fromJson(Map<String, dynamic> json) => HealthCheckResult(
       serviceName: json['service_name'],
       status: HealthStatus.values.firstWhere(
         (e) => e.name == json['status'],
@@ -53,19 +37,25 @@ class HealthCheckResult {
       metadata: json['metadata'] ?? {},
       timestamp: DateTime.parse(json['timestamp']),
     );
-  }
+  final String serviceName;
+  final HealthStatus status;
+  final Duration responseTime;
+  final String? errorMessage;
+  final Map<String, dynamic> metadata;
+  final DateTime timestamp;
+
+  Map<String, dynamic> toJson() => {
+        'service_name': serviceName,
+        'status': status.name,
+        'response_time_ms': responseTime.inMilliseconds,
+        'error_message': errorMessage,
+        'metadata': metadata,
+        'timestamp': timestamp.toIso8601String(),
+      };
 }
 
 /// Configuração para health check de um serviço
 class HealthCheckConfig {
-  final String serviceName;
-  final String endpoint;
-  final Duration timeout;
-  final Duration interval;
-  final Map<String, String> headers;
-  final int expectedStatusCode;
-  final String? expectedResponsePattern;
-  final bool enabled;
 
   const HealthCheckConfig({
     required this.serviceName,
@@ -77,13 +67,21 @@ class HealthCheckConfig {
     this.expectedResponsePattern,
     this.enabled = true,
   });
+  final String serviceName;
+  final String endpoint;
+  final Duration timeout;
+  final Duration interval;
+  final Map<String, String> headers;
+  final int expectedStatusCode;
+  final String? expectedResponsePattern;
+  final bool enabled;
 }
 
 /// Serviço para monitoramento de health checks
 class HealthCheckService {
-  static final HealthCheckService _instance = HealthCheckService._internal();
   factory HealthCheckService() => _instance;
   HealthCheckService._internal();
+  static final HealthCheckService _instance = HealthCheckService._internal();
 
   final Dio _dio = Dio();
   final Map<String, Timer> _timers = {};
@@ -92,28 +90,27 @@ class HealthCheckService {
   bool _isInitialized = false;
 
   /// Configurações padrão para serviços externos
-  static const List<HealthCheckConfig> defaultConfigs = [
-    HealthCheckConfig(
+  static List<HealthCheckConfig> get defaultConfigs => [
+    const HealthCheckConfig(
       serviceName: 'supabase_api',
-      endpoint: 'https://your-project.supabase.co/rest/v1/',
+      endpoint: '${AppConfig.supabaseUrl}/rest/v1/',
       timeout: Duration(seconds: 5),
       interval: Duration(minutes: 2),
-      headers: {'apikey': 'your-anon-key'},
+      headers: {'apikey': AppConfig.supabaseAnonKey},
     ),
-    HealthCheckConfig(
+    const HealthCheckConfig(
       serviceName: 'google_maps_api',
       endpoint: 'https://maps.googleapis.com/maps/api/geocode/json?address=test&key=YOUR_API_KEY',
-      timeout: Duration(seconds: 10),
       interval: Duration(minutes: 5),
     ),
-    HealthCheckConfig(
+    const HealthCheckConfig(
       serviceName: 'payment_gateway',
       endpoint: 'https://api.stripe.com/v1/charges',
       timeout: Duration(seconds: 15),
       interval: Duration(minutes: 3),
       headers: {'Authorization': 'Bearer YOUR_SECRET_KEY'},
     ),
-    HealthCheckConfig(
+    const HealthCheckConfig(
       serviceName: 'notification_service',
       endpoint: 'https://fcm.googleapis.com/fcm/send',
       timeout: Duration(seconds: 8),
@@ -186,7 +183,7 @@ class HealthCheckService {
       final isStatusOk = response.statusCode == config.expectedStatusCode;
       
       // Verifica padrão de resposta se especificado
-      bool isResponseOk = true;
+      var isResponseOk = true;
       if (config.expectedResponsePattern != null) {
         final responseBody = response.data.toString();
         isResponseOk = responseBody.contains(config.expectedResponsePattern!);
@@ -295,7 +292,7 @@ class HealthCheckService {
       orElse: () => throw ArgumentError('Serviço $serviceName não encontrado'),
     );
     
-    return await _performHealthCheck(config);
+    return _performHealthCheck(config);
   }
 
   /// Executa health check para todos os serviços
@@ -313,14 +310,10 @@ class HealthCheckService {
   }
 
   /// Obtém o último resultado de health check para um serviço
-  HealthCheckResult? getLastResult(String serviceName) {
-    return _lastResults[serviceName];
-  }
+  HealthCheckResult? getLastResult(String serviceName) => _lastResults[serviceName];
 
   /// Obtém todos os últimos resultados
-  Map<String, HealthCheckResult> getAllLastResults() {
-    return Map.from(_lastResults);
-  }
+  Map<String, HealthCheckResult> getAllLastResults() => Map.from(_lastResults);
 
   /// Obtém status geral do sistema
   HealthStatus getOverallStatus() {
@@ -414,12 +407,8 @@ class HealthCheckService {
 /// Extensão para facilitar uso do HealthCheckService
 extension HealthCheckExtension on Object {
   /// Executa health check para um serviço
-  Future<HealthCheckResult> checkServiceHealth(String serviceName) {
-    return HealthCheckService().checkService(serviceName);
-  }
+  Future<HealthCheckResult> checkServiceHealth(String serviceName) => HealthCheckService().checkService(serviceName);
   
   /// Obtém status geral do sistema
-  HealthStatus getSystemHealth() {
-    return HealthCheckService().getOverallStatus();
-  }
+  HealthStatus getSystemHealth() => HealthCheckService().getOverallStatus();
 }

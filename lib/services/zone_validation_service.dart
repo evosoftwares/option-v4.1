@@ -159,9 +159,7 @@ class ZoneValidationService {
     required String neighborhood,
     required String city,
     required String state,
-  }) {
-    return '${normalizeText(neighborhood)}|${normalizeText(city)}|${normalizeText(state)}';
-  }
+  }) => '${normalizeText(neighborhood)}|${normalizeText(city)}|${normalizeText(state)}';
   
   /// Validates complete zone data before database operations
   static Future<Map<String, String>> validateAndNormalizeZoneData({
@@ -183,7 +181,7 @@ class ZoneValidationService {
     
     if (!isValidLocation) {
       throw ValidationException(
-        'Localização não encontrada: $normalizedNeighborhood, $normalizedCity - $normalizedState'
+        'Localização não encontrada: $normalizedNeighborhood, $normalizedCity - $normalizedState',
       );
     }
     
@@ -195,13 +193,9 @@ class ZoneValidationService {
   }
   
   /// Checks if a driver has reached the maximum number of zones
-  static bool hasReachedZoneLimit(int currentZoneCount) {
-    return currentZoneCount >= maxZonesPerDriver;
-  }
+  static bool hasReachedZoneLimit(int currentZoneCount) => currentZoneCount >= maxZonesPerDriver;
   
   /// Gets the remaining zone slots for a driver
-  static int getRemainingZoneSlots(int currentZoneCount) {
-    return maxZonesPerDriver - currentZoneCount;
-  }
+  static int getRemainingZoneSlots(int currentZoneCount) => maxZonesPerDriver - currentZoneCount;
 }
 

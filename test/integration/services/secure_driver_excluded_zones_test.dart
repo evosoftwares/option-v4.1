@@ -1,7 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:option/services/secure_driver_excluded_zones_service.dart';
 import 'package:option/exceptions/app_exceptions.dart';
+import 'package:option/services/secure_driver_excluded_zones_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../helpers/supabase_test_helper.dart';
 
 void main() {
@@ -11,7 +12,8 @@ void main() {
     late String testDriverId;
 
     setUpAll(() async {
-      supabase = await SupabaseTestHelper.createTestClient();
+      await SupabaseTestHelper.initialize();
+      supabase = SupabaseTestHelper.client;
       service = SecureDriverExcludedZonesService(supabase);
       testDriverId = 'test-driver-${DateTime.now().millisecondsSinceEpoch}';
     });
@@ -112,7 +114,7 @@ void main() {
       test('should enforce zone limit', () async {
         // Add zones up to the limit (this test assumes a low limit for testing)
         // We'll add 5 zones and then mock the count check
-        for (int i = 0; i < 5; i++) {
+        for (var i = 0; i < 5; i++) {
           await service.addExcludedZone(
             driverId: testDriverId,
             neighborhoodName: 'Test Neighborhood $i',
@@ -174,7 +176,7 @@ void main() {
           },
         ];
 
-        final zones = await service.addMultipleExcludedZones(
+        await service.addMultipleExcludedZones(
           driverId: testDriverId,
           zones: zonesData,
         );

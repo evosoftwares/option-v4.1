@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/favorite_location.dart';
 
 class RecentDestinationsService {
+  
+  RecentDestinationsService._internal();
   static const String _key = 'recent_destinations';
   static const int _maxRecentItems = 10;
   
@@ -12,8 +14,6 @@ class RecentDestinationsService {
     _instance ??= RecentDestinationsService._internal();
     return _instance!;
   }
-  
-  RecentDestinationsService._internal();
 
   Future<List<FavoriteLocation>> getRecentDestinations() async {
     try {
@@ -41,7 +41,7 @@ class RecentDestinationsService {
       currentList.removeWhere((item) => 
           item.placeId == destination.placeId || 
           (item.latitude == destination.latitude && 
-           item.longitude == destination.longitude));
+           item.longitude == destination.longitude),);
       
       currentList.insert(0, destination);
       

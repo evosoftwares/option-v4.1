@@ -182,7 +182,7 @@ class PassengerPromoService {
   /// Calculate dynamic cashback percentage based on user activity
   double calculateDynamicCashback(int tripsThisMonth, double totalSpent) {
     // Base cashback rate
-    double baseRate = 0.02; // 2%
+    var baseRate = 0.02; // 2%
 
     // Bonus for frequent users
     if (tripsThisMonth >= 20) {
@@ -205,7 +205,7 @@ class PassengerPromoService {
     try {
       // Get current month data
       final now = DateTime.now();
-      final firstDayOfMonth = DateTime(now.year, now.month, 1);
+      final firstDayOfMonth = DateTime(now.year, now.month);
       
       // Count trips this month
       final tripsData = await _supabase
@@ -217,7 +217,7 @@ class PassengerPromoService {
 
       final tripsThisMonth = (tripsData as List).length;
       final totalSpentThisMonth = (tripsData as List)
-          .fold<double>(0.0, (sum, trip) => sum + ((trip['total_fare'] as num?)?.toDouble() ?? 0.0));
+          .fold<double>(0, (sum, trip) => sum + ((trip['total_fare'] as num?)?.toDouble() ?? 0.0));
 
       // Get total cashback earned
       final cashbackData = await _supabase
@@ -227,7 +227,7 @@ class PassengerPromoService {
           .eq('type', 'cashback');
 
       final totalCashbackEarned = (cashbackData as List)
-          .fold<double>(0.0, (sum, tx) => sum + ((tx['amount'] as num?)?.toDouble() ?? 0.0));
+          .fold<double>(0, (sum, tx) => sum + ((tx['amount'] as num?)?.toDouble() ?? 0.0));
 
       final currentCashbackRate = calculateDynamicCashback(tripsThisMonth, totalSpentThisMonth);
 
@@ -294,9 +294,9 @@ class PassengerPromoService {
           .insert(promoPayload);
     } on PostgrestException catch (e) {
       // Don't throw error for promo creation failure to not block user registration
-      print('Failed to create welcome promo: ${e.message}');
+      print('Falha ao criar promoção de boas-vindas: ${e.message}');
     } catch (e) {
-      print('Failed to create welcome promo: $e');
+      print('Falha ao criar promoção de boas-vindas: $e');
     }
   }
 
@@ -304,8 +304,8 @@ class PassengerPromoService {
   double calculateReferralBonus(double refereeFirstTripAmount) {
     // Both referrer and referee get 10% of first trip amount (min R$ 5, max R$ 25)
     final bonus = refereeFirstTripAmount * 0.10;
-    if (bonus < 5.0) return 5.0;
-    if (bonus > 25.0) return 25.0;
+    if (bonus < 5.0) return 5;
+    if (bonus > 25.0) return 25;
     return bonus;
   }
 }

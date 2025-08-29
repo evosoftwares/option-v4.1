@@ -25,8 +25,7 @@ class Trip {
     required this.updatedAt,
   });
 
-  factory Trip.fromJson(Map<String, dynamic> json) {
-    return Trip(
+  factory Trip.fromJson(Map<String, dynamic> json) => Trip(
       id: json['id'] as String,
       tripRequestId: json['trip_request_id'] as String,
       driverId: json['driver_id'] as String,
@@ -52,7 +51,6 @@ class Trip {
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
-  }
   final String id;
   final String tripRequestId;
   final String driverId;

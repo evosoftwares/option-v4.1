@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../widgets/logo_branding.dart';
-import '../../services/user_service.dart';
-import '../../exceptions/app_exceptions.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../controllers/stepper_controller.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/logo_branding.dart';
 
 class UserTypeScreen extends StatefulWidget {
   const UserTypeScreen({super.key});
@@ -40,8 +40,11 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
       final emailFromArgs = (args?['email'] as String?)?.trim();
       final email = emailFromArgs ?? currentUser.email;
 
-      print('📋 Argumentos recebidos:');
-      print('  - fullName: $fullName');
+      print('📋 [DEBUG] Argumentos completos recebidos:');
+      print('  - args: $args');
+      print('  - fullName raw: ${args?['fullName']}');
+      print('  - fullName trimmed: $fullName');
+      print('  - fullName type: ${args?['fullName'].runtimeType}');
       print('  - emailFromArgs: $emailFromArgs');
       print('  - email final: $email');
       print('  - tipo selecionado: $_selectedType');
@@ -51,15 +54,17 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
         throw Exception('E-mail do usuário não disponível.');
       }
 
+      if (fullName == null || fullName.isEmpty) {
+        print('❌ Erro: Nome completo não disponível nos argumentos');
+        throw Exception('Nome completo é obrigatório para continuar.');
+      }
+
       // Armazenar em App State (StepperController) e seguir para o stepper
       final controller = Provider.of<StepperController>(context, listen: false);
-      controller.setUserType(_selectedType!);
-      if (fullName != null && fullName.isNotEmpty) {
-        controller.setFullName(fullName);
-      } else {
-        print('⚠️ Nome completo não encontrado nos argumentos');
-      }
-      controller.setEmail(email);
+      controller
+        ..setUserType(_selectedType!)
+        ..setFullName(fullName)
+        ..setEmail(email);
 
       print('📝 Dados salvos no controller:');
       print('  - userType: ${controller.userType}');
@@ -68,7 +73,7 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
 
       if (!mounted) return;
       print('📱 Navegando para /registration_stepper');
-      Navigator.of(context).pushReplacementNamed(
+      await Navigator.of(context).pushReplacementNamed(
         '/registration_stepper',
         arguments: {
           'userType': _selectedType,
@@ -96,7 +101,7 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
               child: Column(
@@ -109,14 +114,14 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     'Selecione uma opção para continuar',
                     style: textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
                   _OptionCard(
                     icon: Icons.person_outline,
                     title: 'Passageiro',
@@ -124,7 +129,7 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
                     selected: _selectedType == 'passenger',
                     onTap: () => _onSelect('passenger'),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.xs * 3),
                   _OptionCard(
                     icon: Icons.drive_eta,
                     title: 'Motorista',
@@ -191,14 +196,14 @@ class _OptionCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.paddingMd,
           decoration: BoxDecoration(
             color: containerColor,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             border: Border.all(color: borderColor, width: selected ? 2 : 1),
             boxShadow: [
               if (selected)
@@ -223,7 +228,7 @@ class _OptionCard extends StatelessWidget {
                 ),
                 child: Icon(icon, color: iconColor),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,7 +240,7 @@ class _OptionCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       description,
                       style: textTheme.bodyMedium?.copyWith(
@@ -245,7 +250,7 @@ class _OptionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Icon(
                 selected
                     ? Icons.radio_button_checked

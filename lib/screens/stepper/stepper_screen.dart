@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/stepper_controller.dart';
 import '../../widgets/logo_branding.dart';
-import 'step1_phone_screen.dart';
-import 'step2_photo_screen.dart';
-import 'step3_locations_screen.dart';
+import 'phone_step.dart';
+import 'photo_step.dart';
+import 'places_step.dart';
 
 class StepperScreen extends StatefulWidget {
   const StepperScreen({super.key});
@@ -65,19 +65,17 @@ class _StepperScreenState extends State<StepperScreen> {
               child: Consumer<StepperController>(
                 builder: (context, controller, child) => Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(3, (index) {
-                      return Container(
+                    children: List.generate(3, (index) => Container(
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         width: index == controller.currentStep ? 24 : 8,
                         height: 8,
                         decoration: BoxDecoration(
                           color: index <= controller.currentStep
                               ? colors.primary
-                              : colors.surfaceVariant,
+                              : colors.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                      );
-                    }),
+                      ),),
                   ),
               ),
             ),
@@ -87,10 +85,10 @@ class _StepperScreenState extends State<StepperScreen> {
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
-                children: const [
-                  Step1PhoneScreen(),
-                  Step2PhotoScreen(),
-                  Step3LocationsScreen(),
+                children: [
+                  PhoneStep(onNext: () {}),
+                  PhotoStep(onNext: () {}),
+                  PlacesStep(onNext: () {}),
                 ],
               ),
             ),

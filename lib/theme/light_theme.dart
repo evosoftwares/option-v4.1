@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'app_colors.dart';
-import 'app_typography.dart';
 import 'app_spacing.dart';
+import 'app_typography.dart';
 
 class LightTheme {
   static ThemeData get theme {

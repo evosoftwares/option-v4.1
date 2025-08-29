@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../models/driver_status.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
 class DriverEarningsWidget extends StatelessWidget {
@@ -29,7 +31,7 @@ class DriverEarningsWidget extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: AppColors.black.withOpacity(0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),

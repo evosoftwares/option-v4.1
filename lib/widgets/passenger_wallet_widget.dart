@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../models/passenger_wallet.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 
@@ -30,7 +32,7 @@ class PassengerWalletWidget extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
+              color: AppColors.black.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -51,14 +53,14 @@ class PassengerWalletWidget extends StatelessWidget {
               children: [
                 Text(
                   'R\$ ${balance.toStringAsFixed(2)}',
-                  style: AppTypography.titleMedium?.copyWith(
+                  style: AppTypography.titleMedium.copyWith(
                     color: colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   'Carteira',
-                  style: AppTypography.bodySmall?.copyWith(
+                  style: AppTypography.bodySmall.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_config.dart';
-import '../services/location_service.dart';
 import '../models/favorite_location.dart';
+import '../services/location_service.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/app_card.dart';
+import '../widgets/logo_branding.dart';
 
 class PlacePickerScreen extends StatefulWidget {
 
@@ -86,7 +89,7 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
     if (!mounted) return;
 
     // Convert search results to FavoriteLocation objects
-    final List<FavoriteLocation> locations = [];
+    final locations = <FavoriteLocation>[];
     for (final result in results) {
       final placeId = result['placeId'] as String?;
       if (placeId != null) {
@@ -106,7 +109,8 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
               latitude: lat.toDouble(),
               longitude: lng.toDouble(),
               placeId: placeId,
-            ));
+              userId: '', // Temporary empty userId for search results
+            ),);
           }
         }
       }
@@ -143,7 +147,7 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
                     IconButton(
                       icon: Icon(Icons.close, color: colorScheme.onSurfaceVariant),
                       onPressed: () => Navigator.pop(context),
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -201,6 +205,7 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
         latitude: _selectedLocation!.latitude,
         longitude: _selectedLocation!.longitude,
         placeId: _selectedLocation!.placeId,
+        userId: _selectedLocation!.userId,
       );
       
       if (!mounted) return;
@@ -215,13 +220,9 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: colorScheme.surface,
-        surfaceTintColor: colorScheme.surface,
-        title: Text(
-          widget.title ?? 'Selecionar local',
-          style: textTheme.titleLarge?.copyWith(color: colorScheme.onSurface),
-        ),
+      appBar: StandardAppBar(
+        title: widget.title ?? 'Selecionar local',
+        showMenuIcon: false,
         actions: [
           if ((widget.allowMultiple && _multiSelected.isNotEmpty) || 
               (!widget.allowMultiple && _selectedLocation != null))
@@ -250,10 +251,10 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
                 fillColor: colorScheme.surfaceContainerHighest,
                 hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.xs * 3, horizontal: AppSpacing.md),
               ),
             ),
           ),
@@ -264,16 +265,15 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
                 ? ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: _searchResults.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       final location = _searchResults[index];
                       final isSelected = widget.allowMultiple 
                           ? _multiSelected.any((l) => l.id == location.id)
                           : _selectedLocation?.id == location.id;
                       
-                      return Card(
+                      return AppCard(
                         elevation: isSelected ? 4 : 1,
-                        color: isSelected ? colorScheme.primaryContainer : colorScheme.surface,
                         child: ListTile(
                           leading: Icon(
                             location.type.icon,

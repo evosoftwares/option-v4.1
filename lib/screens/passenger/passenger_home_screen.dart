@@ -1,20 +1,25 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 import '../../config/app_config.dart';
 import '../../models/favorite_location.dart';
-import '../place_picker_screen.dart';
-import '../../services/location_service.dart';
-import '../../services/user_service.dart';
 import '../../models/user.dart' as app_user;
+import '../../services/fcm_service.dart';
+import '../../services/location_service.dart';
+import '../../services/map_style_service.dart';
+import '../../services/recent_destinations_service.dart';
+import '../../services/user_service.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/emergency_button.dart';
 import '../../widgets/logo_branding.dart';
 import '../../widgets/notification_icon_widget.dart';
-import '../../services/map_style_service.dart';
-import '../../theme/app_spacing.dart';
-import '../../services/recent_destinations_service.dart';
-import '../../theme/app_colors.dart';
+import '../place_picker_screen.dart';
 
 class PassengerHomeScreen extends StatefulWidget {
   const PassengerHomeScreen({super.key});
@@ -43,7 +48,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
   List<FavoriteLocation> _recentDestinations = [];
   
   final DraggableScrollableController _bottomSheetController = DraggableScrollableController();
-  bool _isBottomSheetExpanded = false;
+  final bool _isBottomSheetExpanded = false;
 
   static const CameraPosition _initialPos = CameraPosition(
     target: LatLng(-23.5505, -46.6333),
@@ -60,6 +65,11 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
     _loadCustomMarkers();
     _initLocation();
     _loadRecentDestinations();
+    
+    // Inicializar FCM Service para notificações push
+    FCMService().initialize().catchError((e) {
+      debugPrint('Erro ao inicializar FCMService: $e');
+    });
   }
 
   Future<void> _loadCustomMarkers() async {
@@ -198,10 +208,10 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
 
   Future<void> _fitRouteBounds() async {
     if (_routePoints.isEmpty) return;
-    double minLat = _routePoints.first.latitude;
-    double maxLat = _routePoints.first.latitude;
-    double minLng = _routePoints.first.longitude;
-    double maxLng = _routePoints.first.longitude;
+    var minLat = _routePoints.first.latitude;
+    var maxLat = _routePoints.first.latitude;
+    var minLng = _routePoints.first.longitude;
+    var maxLng = _routePoints.first.longitude;
     for (final p in _routePoints) {
       if (p.latitude < minLat) minLat = p.latitude;
       if (p.latitude > maxLat) maxLat = p.latitude;
@@ -258,7 +268,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
         endCap: Cap.roundCap,
         jointType: JointType.round,
         zIndex: 1,
-      ));
+      ),);
     });
 
     await _fitRouteBounds();
@@ -295,7 +305,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
           endCap: Cap.roundCap,
           jointType: JointType.round,
           zIndex: 2,
-        ));
+        ),);
       });
     });
   }
@@ -312,7 +322,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: AppSpacing.paddingMd,
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
@@ -323,13 +333,13 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.white,
                 shape: BoxShape.circle,
                 border: Border.all(color: colorScheme.outlineVariant),
               ),
               child: Icon(icon, color: colorScheme.onSurface, size: AppSpacing.iconSm),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,7 +351,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     value?.isNotEmpty ?? false ? value! : placeholder,
                     maxLines: 2,
@@ -373,7 +383,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 40),
+          const SizedBox(height: AppSpacing.xl),
           Container(
             width: 120,
             height: 120,
@@ -387,7 +397,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
               color: colorScheme.primary,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.lg),
           Text(
             'Seus destinos aparecerão aqui',
             style: textTheme.titleMedium?.copyWith(
@@ -395,7 +405,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             'Quando você escolher um destino, ele será\nsalvo aqui para fácil acesso',
             style: textTheme.bodyMedium?.copyWith(
@@ -428,14 +438,14 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
       backgroundColor: colorScheme.surface,
       appBar: LogoAppBar(
         actions: [
+          const NotificationIconWidget(),
+          const CompactEmergencyButton(),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.menu),
             onPressed: _navigateToMenu,
           ),
-          const Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: NotificationIconWidget(),
-          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Stack(
@@ -467,14 +477,13 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
             maxChildSize: 0.85,
             snap: true,
             snapSizes: const [0.45, 0.85],
-            builder: (context, scrollController) {
-              return Container(
+            builder: (context, scrollController) => DecoratedBox(
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: AppColors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, -2),
                     ),
@@ -510,7 +519,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 20),
+                                  const SizedBox(height: AppSpacing.lg),
                                   
                                   _buildLocationCard(
                                     label: 'Origem',
@@ -520,7 +529,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
                                     value: _origin?.name ?? _origin?.address,
                                   ),
                                   
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: AppSpacing.md),
                                   
                                   _buildLocationCard(
                                     label: 'Destino',
@@ -530,7 +539,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
                                     value: _destination?.name ?? _destination?.address,
                                   ),
                                   
-                                  const SizedBox(height: 24),
+                                  const SizedBox(height: AppSpacing.lg),
                             
                                   if (_recentDestinations.isNotEmpty) ...[
                                     Text(
@@ -540,18 +549,17 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    const SizedBox(height: 16),
+                                    const SizedBox(height: AppSpacing.md),
                                     
                                     ListView.separated(
                                       shrinkWrap: true,
                                       physics: const NeverScrollableScrollPhysics(),
                                       itemCount: _recentDestinations.length,
-                                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                                      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
                                       itemBuilder: (context, index) {
                                         final destination = _recentDestinations[index];
-                                        return Card(
+                                        return AppCard(
                                           elevation: 1,
-                                          color: colorScheme.surface,
                                           child: ListTile(
                                             leading: Container(
                                               width: 40,
@@ -597,7 +605,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
                           
                           // Fixed Trip button at bottom
                           Container(
-                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.md),
                             child: SizedBox(
                               width: double.infinity,
                               height: 56,
@@ -648,7 +656,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     const Icon(Icons.directions_car),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: AppSpacing.sm),
                                     Text(
                                       'Vamos',
                                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -668,8 +676,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
                     ),
                   ],
                 ),
-              );
-            },
+              ),
           ),
         ],
       ),

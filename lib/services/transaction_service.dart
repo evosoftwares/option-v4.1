@@ -1,12 +1,19 @@
 import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../exceptions/app_exceptions.dart';
+import '../utils/supabase_helper.dart';
 
 /// Serviço para gerenciar transações e concorrência no Supabase
 /// Como o Supabase não suporta transações explícitas no cliente,
 /// implementamos estratégias de retry e controle de concorrência
 class TransactionService {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  SupabaseClient get _supabase {
+    final c = SupabaseHelper.client;
+    if (c == null) {
+      throw Exception('Supabase não inicializado');
+    }
+    return c;
+  }
   
   static const int _maxRetries = 3;
   static const Duration _baseDelay = Duration(milliseconds: 100);
@@ -18,7 +25,7 @@ class TransactionService {
     Duration baseDelay = _baseDelay,
     String? operationName,
   }) async {
-    int attempts = 0;
+    var attempts = 0;
     
     while (attempts < maxRetries) {
       try {
@@ -41,7 +48,7 @@ class TransactionService {
         // Se não é retryable ou excedeu tentativas, relança o erro
         if (operationName != null) {
           throw DatabaseException(
-            'Falha na operação "$operationName" após $attempts tentativas: ${e.toString()}'
+            'Falha na operação "$operationName" após $attempts tentativas: ${e.toString()}',
           );
         }
         
@@ -50,7 +57,7 @@ class TransactionService {
     }
     
     throw DatabaseException(
-      'Operação falhou após $maxRetries tentativas'
+      'Operação falhou após $maxRetries tentativas',
     );
   }
   
@@ -63,7 +70,7 @@ class TransactionService {
     final results = <T>[];
     final errors = <String>[];
     
-    for (int i = 0; i < operations.length; i++) {
+    for (var i = 0; i < operations.length; i++) {
       try {
         final result = await executeWithRetry(
           operations[i],
@@ -75,7 +82,7 @@ class TransactionService {
         
         if (stopOnFirstError) {
           throw DatabaseException(
-            'Falha no lote ${batchName ?? ""}: ${errors.join("; ")}'
+            'Falha no lote ${batchName ?? ""}: ${errors.join("; ")}',
           );
         }
       }
@@ -83,7 +90,7 @@ class TransactionService {
     
     if (errors.isNotEmpty && !stopOnFirstError) {
       throw DatabaseException(
-        'Algumas operações falharam no lote ${batchName ?? ""}: ${errors.join("; ")}'
+        'Algumas operações falharam no lote ${batchName ?? ""}: ${errors.join("; ")}',
       );
     }
     
@@ -98,9 +105,12 @@ class TransactionService {
     String versionColumn = 'updated_at',
     int maxRetries = _maxRetries,
   }) async {
-    final supabase = Supabase.instance.client;
+    final supabase = SupabaseHelper.client;
+    if (supabase == null) {
+      throw Exception('Supabase não inicializado');
+    }
     
-    return await executeWithRetry(
+    return executeWithRetry(
       () async {
         // 1. Busca o registro atual com sua versão
         final currentRecord = await supabase
@@ -122,8 +132,8 @@ class TransactionService {
             .single();
         
         if (updatedRecord[versionColumn] != currentVersion) {
-          throw ConcurrencyException(
-            'Registro foi modificado por outro processo. Tentando novamente...'
+          throw const ConcurrencyException(
+            'Registro foi modificado por outro processo. Tentando novamente...',
           );
         }
         
@@ -142,7 +152,10 @@ class TransactionService {
     Duration lockTimeout = const Duration(seconds: 30),
     Duration pollInterval = const Duration(milliseconds: 500),
   }) async {
-    final supabase = Supabase.instance.client;
+    final supabase = SupabaseHelper.client;
+    if (supabase == null) {
+      throw Exception('Supabase não inicializado');
+    }
     final lockId = _generateLockId();
     final expiresAt = DateTime.now().add(lockTimeout);
     
@@ -215,7 +228,7 @@ class TransactionService {
         // Verifica se ainda há tempo
         if (DateTime.now().isAfter(expiresAt)) {
           throw TimeoutException(
-            'Timeout ao tentar adquirir lock para "$lockKey"'
+            'Timeout ao tentar adquirir lock para "$lockKey"',
           );
         }
         
@@ -225,7 +238,7 @@ class TransactionService {
     }
     
     throw TimeoutException(
-      'Timeout ao tentar adquirir lock para "$lockKey"'
+      'Timeout ao tentar adquirir lock para "$lockKey"',
     );
   }
   
@@ -260,17 +273,15 @@ class TransactionService {
   }
   
   /// Gera um ID único para o lock
-  static String _generateLockId() {
-    return '${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecond}';
-  }
+  static String _generateLockId() => '${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecond}';
 }
 
 /// Exceção específica para problemas de concorrência
 class ConcurrencyException extends DatabaseException {
-  const ConcurrencyException(String message) : super(message);
+  const ConcurrencyException(super.message);
 }
 
 /// Exceção para timeout de operações
 class TimeoutException extends DatabaseException {
-  const TimeoutException(String message) : super(message);
+  const TimeoutException(super.message);
 }

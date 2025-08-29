@@ -17,7 +17,7 @@ class GeographicValidationService {
     try {
       final normalizedCity = _normalizeString(city);
       final normalizedState = _normalizeString(state);
-      final cacheKey = '${normalizedState}_${normalizedCity}';
+      final cacheKey = '${normalizedState}_$normalizedCity';
       
       // Verifica cache primeiro
       if (_validationCache.containsKey(cacheKey)) {
@@ -58,7 +58,7 @@ class GeographicValidationService {
         final List<dynamic> states = json.decode(response.body);
         final isValid = states.any((s) => 
           _normalizeString(s['nome']) == normalizedState ||
-          _normalizeString(s['sigla']) == normalizedState
+          _normalizeString(s['sigla']) == normalizedState,
         );
         
         // Armazena no cache
@@ -103,7 +103,7 @@ class GeographicValidationService {
       
       if (response.statusCode == 200) {
         final List<dynamic> states = json.decode(response.body);
-        List<String> stateNames = states.map((s) => s['nome'] as String).toList();
+        final stateNames = states.map((s) => s['nome'] as String).toList();
         
         if (query == null || query.isEmpty) {
           return stateNames;
@@ -241,24 +241,20 @@ class GeographicValidationService {
   }
   
   /// Normaliza string para comparação
-  static String _normalizeString(String input) {
-    return input
+  static String _normalizeString(String input) => input
         .toLowerCase()
-        .replaceAll(RegExp(r'[àáâãäå]'), 'a')
-        .replaceAll(RegExp(r'[èéêë]'), 'e')
-        .replaceAll(RegExp(r'[ìíîï]'), 'i')
-        .replaceAll(RegExp(r'[òóôõö]'), 'o')
-        .replaceAll(RegExp(r'[ùúûü]'), 'u')
-        .replaceAll(RegExp(r'[ç]'), 'c')
-        .replaceAll(RegExp(r'[ñ]'), 'n')
+        .replaceAll(RegExp('[àáâãäå]'), 'a')
+        .replaceAll(RegExp('[èéêë]'), 'e')
+        .replaceAll(RegExp('[ìíîï]'), 'i')
+        .replaceAll(RegExp('[òóôõö]'), 'o')
+        .replaceAll(RegExp('[ùúûü]'), 'u')
+        .replaceAll(RegExp('[ç]'), 'c')
+        .replaceAll(RegExp('[ñ]'), 'n')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
-  }
   
   /// Verifica se o nome contém apenas caracteres válidos
-  static bool _isValidLocationName(String name) {
-    return RegExp(r'^[a-zA-ZÀ-ÿ\s\-\.]+$').hasMatch(name);
-  }
+  static bool _isValidLocationName(String name) => RegExp(r'^[a-zA-ZÀ-ÿ\s\-\.]+$').hasMatch(name);
   
   /// Limpa o cache (útil para testes)
   static void clearCache() {
@@ -269,21 +265,19 @@ class GeographicValidationService {
 
 /// Resultado da validação geográfica
 class ValidationResult {
-  final bool isValid;
-  final List<String> errors;
-  final List<String> warnings;
   
   const ValidationResult({
     required this.isValid,
     required this.errors,
     required this.warnings,
   });
+  final bool isValid;
+  final List<String> errors;
+  final List<String> warnings;
   
   bool get hasErrors => errors.isNotEmpty;
   bool get hasWarnings => warnings.isNotEmpty;
   
   @override
-  String toString() {
-    return 'ValidationResult(isValid: $isValid, errors: $errors, warnings: $warnings)';
-  }
+  String toString() => 'ValidationResult(isValid: $isValid, errors: $errors, warnings: $warnings)';
 }

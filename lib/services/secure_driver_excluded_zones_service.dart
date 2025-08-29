@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/supabase/driver_excluded_zone.dart';
+
 import '../exceptions/app_exceptions.dart';
+import '../models/supabase/driver_excluded_zone.dart';
 import 'zone_validation_service.dart';
 
 /// Secure service for managing driver excluded zones
@@ -65,9 +66,9 @@ class SecureDriverExcludedZonesService {
       // The database will handle duplicate prevention via unique constraint
       final insertData = {
         'driver_id': driverId,
-        'neighborhood_name': normalizedData['neighborhood_name']!,
-        'city': normalizedData['city']!,
-        'state': normalizedData['state']!,
+        'neighborhood_name': normalizedData['neighborhood_name'],
+        'city': normalizedData['city'],
+        'state': normalizedData['state'],
         'updated_by': _currentUserId,
       };
 

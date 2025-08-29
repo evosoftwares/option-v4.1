@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
+
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart' as ph;
-import 'package:geolocator_android/geolocator_android.dart';
 
 class LocationService {
 
@@ -47,7 +47,7 @@ class LocationService {
             'description': prediction['description'],
             'mainText': prediction['structured_formatting']?['main_text'] ?? '',
             'secondaryText': prediction['structured_formatting']?['secondary_text'] ?? '',
-          }).toList();
+          },).toList();
       } else {
         print('Erro HTTP: ${response.statusCode} - ${response.body}');
         // Se houve erro HTTP, retornar resultado básico para entrada manual
@@ -264,8 +264,8 @@ class LocationService {
       if (overview == null) return null;
 
       final legs = route['legs'] as List?;
-      int distanceMeters = 0;
-      int durationSeconds = 0;
+      var distanceMeters = 0;
+      var durationSeconds = 0;
       if (legs != null && legs.isNotEmpty) {
         for (final leg in legs) {
           distanceMeters += (leg['distance']?['value'] as num?)?.toInt() ?? 0;
@@ -285,10 +285,56 @@ class LocationService {
     }
   }
 
+  /// Geocodifica um endereço para obter coordenadas (latitude/longitude)
+  Future<Map<String, dynamic>?> geocodeAddress(String address) async {
+    if (address.trim().isEmpty) return null;
+
+    final url = Uri.parse(
+      'https://maps.googleapis.com/maps/api/geocode/json'
+      '?address=${Uri.encodeComponent(address)}'
+      '&key=$apiKey'
+      '&language=pt-BR'
+      '&components=country:BR'
+    );
+
+    try {
+      print('🌍 Geocodificando endereço: $address');
+      final response = await http.get(url);
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        if (data['status'] == 'OK') {
+          final results = data['results'] as List?;
+          if (results != null && results.isNotEmpty) {
+            final result = results.first;
+            final location = result['geometry']['location'];
+            final formattedAddress = result['formatted_address'];
+            
+            print('✅ Geocodificação bem-sucedida: $formattedAddress');
+            return {
+              'latitude': location['lat'].toDouble(),
+              'longitude': location['lng'].toDouble(),
+              'formatted_address': formattedAddress,
+            };
+          }
+        } else {
+          print('❌ Erro na geocodificação: ${data['status']} - ${data['error_message'] ?? 'Sem mensagem'}');
+        }
+      } else {
+        print('❌ Erro HTTP na geocodificação: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exceção na geocodificação: $e');
+    }
+    
+    return null;
+  }
+
   List<LatLng> _decodePolyline(String encoded) {
-    final List<LatLng> poly = [];
-    int index = 0, len = encoded.length;
-    int lat = 0, lng = 0;
+    final poly = <LatLng>[];
+    var index = 0, len = encoded.length;
+    var lat = 0, lng = 0;
 
     while (index < len) {
       int b, shift = 0, result = 0;
@@ -324,13 +370,13 @@ class LocationService {
 }
 
 class RouteResult {
-  final List<LatLng> points;
-  final int distanceMeters;
-  final int durationSeconds;
 
   RouteResult({
     required this.points,
     required this.distanceMeters,
     required this.durationSeconds,
   });
+  final List<LatLng> points;
+  final int distanceMeters;
+  final int durationSeconds;
 }

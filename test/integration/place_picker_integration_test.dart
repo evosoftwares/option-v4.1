@@ -5,11 +5,10 @@ import 'package:option/screens/place_picker_screen.dart';
 
 void main() {
   group('PlacePickerScreen Integration Tests', () {
-    testWidgets('should not show favorite type in manual selection', (WidgetTester tester) async {
+    testWidgets('should not show favorite type in manual selection', (tester) async {
       // Arrange
       const testApp = MaterialApp(
         home: PlacePickerScreen(
-          isForFavorites: false,
           title: 'Test Selection',
         ),
       );
@@ -27,7 +26,7 @@ void main() {
       expect(find.text('Test Selection'), findsOneWidget);
     });
 
-    testWidgets('should show correct title for favorites', (WidgetTester tester) async {
+    testWidgets('should show correct title for favorites', (tester) async {
       // Arrange
       const testApp = MaterialApp(
         home: PlacePickerScreen(
@@ -49,6 +48,7 @@ void main() {
       // Arrange
       final location = FavoriteLocation(
         id: 'test-id',
+        userId: 'test-user-id',
         name: 'Test Location',
         address: 'Test Address',
         type: LocationType.favorite,
@@ -67,6 +67,7 @@ void main() {
       // Arrange
       final originalLocation = FavoriteLocation(
         id: 'test-id',
+        userId: 'test-user-id',
         name: 'Test Location',
         address: 'Test Address',
         type: LocationType.favorite,

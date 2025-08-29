@@ -1,7 +1,10 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../exceptions/app_exceptions.dart';
-import 'local_notification_service.dart';
 import 'dart:convert';
+
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../exceptions/app_exceptions.dart';
+import 'fcm_service.dart';
+import 'local_notification_service.dart';
 
 class NotificationService {
 
@@ -110,8 +113,8 @@ class NotificationService {
         .from('notifications')
         .stream(primaryKey: ['id'])
         .eq('user_id', userId)
-        .order('created_at', ascending: false)
-        .map((data) => data.map((notif) => NotificationModel.fromJson(notif)).toList());
+        .order('created_at')
+        .map((data) => data.map(NotificationModel.fromJson).toList());
 
   // Stream unread count
   Stream<int> streamUnreadCount(String userId) => _supabase
@@ -174,6 +177,98 @@ class NotificationService {
       type: 'chat',
       relatedId: chatId,
     );
+  }
+
+  /// Send driver notification for targeted trip requests
+  Future<void> sendDriverNotification(String driverId, String requestId) async {
+    try {
+      // 1. Buscar FCM token do motorista
+      final driverData = await _supabase
+          .from('drivers')
+          .select('fcm_token, app_users(full_name)')
+          .eq('id', driverId)
+          .single();
+      
+      final fcmToken = driverData['fcm_token'] as String?;
+      if (fcmToken == null) {
+        print('❌ Motorista $driverId não tem FCM token');
+        // Continue sem FCM, apenas salvar notificação no database
+      }
+      
+      // 2. Buscar dados do request para payload
+      final requestData = await _supabase
+          .from('trip_requests')
+          .select()
+          .eq('id', requestId)
+          .single();
+      
+      // 3. Criar payload da notificação
+      const title = 'Nova Solicitação de Viagem';
+      final body = 'De: ${requestData['origin_address']}\nPara: ${requestData['destination_address']}';
+      
+      final payload = {
+        'title': title,
+        'body': body,
+        'data': {
+          'type': 'trip_request',
+          'request_id': requestId,
+          'origin': requestData['origin_address'],
+          'destination': requestData['destination_address'],
+          'estimated_fare': requestData['estimated_fare']?.toString() ?? '0',
+          'expires_at': requestData['expires_at'],
+        }
+      };
+      
+      // 4. Enviar via FCM se token disponível
+      if (fcmToken != null) {
+        await _sendFCMNotification(fcmToken, payload);
+      }
+      
+      // 5. Salvar no database também
+      await createNotification(
+        userId: driverId,
+        title: title,
+        message: body,
+        type: 'trip_request',
+        relatedId: requestId,
+        priority: 'high',
+      );
+      
+      // 6. Show local notification with custom sound
+      await _localNotificationService.showRideOfferNotification(
+        title: title,
+        body: body,
+        offerId: requestId,
+        isDriver: true, // Sempre true pois é notificação para motorista
+      );
+      
+    } catch (e) {
+      print('❌ Erro ao enviar notificação para motorista $driverId: $e');
+      // Log error mas não propagar para não quebrar fluxo
+    }
+  }
+  
+  /// Send FCM notification using HTTP API
+  Future<void> _sendFCMNotification(String fcmToken, Map<String, dynamic> payload) async {
+    try {
+      // Use FCMService que já tem a implementação completa
+       final success = await FCMService().sendNotificationToToken(
+        token: fcmToken,
+        title: payload['title'] ?? '',
+        body: payload['body'] ?? '',
+        data: payload['data'] as Map<String, dynamic>? ?? {},
+      );
+      
+      if (success) {
+        print('🔔 FCM Notification sent successfully to ${fcmToken.substring(0, 20)}...');
+      } else {
+        print('❌ Failed to send FCM notification to ${fcmToken.substring(0, 20)}...');
+      }
+      
+    } catch (e) {
+      print('❌ Error sending FCM notification: $e');
+      // Log error but don't throw to avoid breaking the flow
+    }
   }
 }
 

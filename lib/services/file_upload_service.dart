@@ -1,11 +1,18 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:image/image.dart' as img;
-import '../exceptions/app_exceptions.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../utils/supabase_helper.dart';
 
 class FileUploadService {
-  static final SupabaseClient _supabase = Supabase.instance.client;
+  static SupabaseClient get _supabase {
+    final c = SupabaseHelper.client;
+    if (c == null) {
+      throw FileUploadException('Supabase não inicializado');
+    }
+    return c;
+  }
   
   // Configurações de upload
   static const int maxFileSizeBytes = 5 * 1024 * 1024; // 5MB
@@ -13,7 +20,7 @@ class FileUploadService {
     'image/jpeg',
     'image/jpg', 
     'image/png',
-    'image/webp'
+    'image/webp',
   ];
   static const int maxImageWidth = 1920;
   static const int maxImageHeight = 1920;
@@ -49,7 +56,7 @@ class FileUploadService {
       final fileSize = await file.length();
       if (fileSize > maxFileSizeBytes) {
         throw FileUploadException(
-          'Arquivo muito grande: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB. Máximo permitido: ${(maxFileSizeBytes / 1024 / 1024).toStringAsFixed(2)}MB'
+          'Arquivo muito grande: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB. Máximo permitido: ${(maxFileSizeBytes / 1024 / 1024).toStringAsFixed(2)}MB',
         );
       }
 
@@ -57,7 +64,7 @@ class FileUploadService {
       final mimeType = _getMimeType(file.path);
       if (!allowedMimeTypes.contains(mimeType)) {
         throw FileUploadException(
-          'Tipo de arquivo não permitido: $mimeType. Tipos permitidos: ${allowedMimeTypes.join(', ')}'
+          'Tipo de arquivo não permitido: $mimeType. Tipos permitidos: ${allowedMimeTypes.join(', ')}',
         );
       }
 
@@ -145,7 +152,7 @@ class FileUploadService {
       }
 
       // Redimensionar se necessário
-      img.Image resizedImage = image;
+      var resizedImage = image;
       if (image.width > maxImageWidth || image.height > maxImageHeight) {
         resizedImage = img.copyResize(
           image,
@@ -166,7 +173,7 @@ class FileUploadService {
     } catch (e) {
       print('❌ Erro ao comprimir imagem: $e');
       // Se falhar na compressão, retorna o arquivo original
-      return await file.readAsBytes();
+      return file.readAsBytes();
     }
   }
 
@@ -202,6 +209,15 @@ class FileUploadService {
   }) {
     final uniqueFileName = generateUniqueFileName(fileName);
     return 'drivers/$driverId/documents/$documentType/$uniqueFileName';
+  }
+
+  /// Gera um caminho para fotos de perfil do usuário
+  static String generateUserPhotoPath({
+    required String userId,
+    required String fileName,
+  }) {
+    final uniqueFileName = generateUniqueFileName(fileName);
+    return 'users/$userId/profile/$uniqueFileName';
   }
 
   /// Valida se um arquivo é uma imagem válida
@@ -242,9 +258,9 @@ class FileUploadService {
 
 /// Exceção personalizada para erros de upload
 class FileUploadException implements Exception {
-  final String message;
   
   FileUploadException(this.message);
+  final String message;
   
   @override
   String toString() => 'FileUploadException: $message';

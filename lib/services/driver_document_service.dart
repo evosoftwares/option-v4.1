@@ -1,11 +1,19 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/supabase/driver_document.dart';
-import '../exceptions/app_exceptions.dart';
-import 'file_upload_service.dart';
 import 'dart:io';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../models/supabase/driver_document.dart';
+import '../utils/supabase_helper.dart';
+import 'file_upload_service.dart';
+
 class DriverDocumentService {
-  static final SupabaseClient _supabase = Supabase.instance.client;
+  static SupabaseClient get _supabase {
+    final client = SupabaseHelper.client;
+    if (client == null) {
+      throw Exception('Supabase não foi inicializado. Verifique a configuração antes de usar DriverDocumentService.');
+    }
+    return client;
+  }
   static const String _tableName = 'driver_documents';
   static const String _bucketName = 'driver-documents';
 
@@ -48,7 +56,6 @@ class DriverDocumentService {
         file: imageFile,
         bucket: _bucketName,
         path: filePath,
-        compress: true,
       );
 
       print('✅ Upload concluído: $fileUrl');
@@ -106,7 +113,7 @@ class DriverDocumentService {
           .order('created_at', ascending: false);
 
       print('✅ Documentos encontrados: ${response.length}');
-      return response.map((doc) => DriverDocument.fromJson(doc)).toList();
+      return response.map(DriverDocument.fromJson).toList();
 
     } on PostgrestException catch (e) {
       print('❌ Erro ao buscar documentos: ${e.message}');
@@ -131,7 +138,7 @@ class DriverDocumentService {
           .order('created_at', ascending: false);
 
       print('✅ Documentos atuais encontrados: ${response.length}');
-      return response.map((doc) => DriverDocument.fromJson(doc)).toList();
+      return response.map(DriverDocument.fromJson).toList();
 
     } on PostgrestException catch (e) {
       print('❌ Erro ao buscar documentos atuais: ${e.message}');
@@ -384,7 +391,7 @@ class DriverDocumentService {
           .order('expiry_date', ascending: true);
 
       print('✅ Documentos próximos do vencimento: ${response.length}');
-      return response.map((doc) => DriverDocument.fromJson(doc)).toList();
+      return response.map(DriverDocument.fromJson).toList();
 
     } on PostgrestException catch (e) {
       print('❌ Erro ao buscar documentos próximos do vencimento: ${e.message}');
@@ -398,9 +405,9 @@ class DriverDocumentService {
 
 /// Exceção personalizada para erros de documentos
 class DocumentException implements Exception {
-  final String message;
   
   DocumentException(this.message);
+  final String message;
   
   @override
   String toString() => 'DocumentException: $message';

@@ -1,8 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../../../lib/services/zone_limit_service.dart';
-import '../../../lib/utils/data_normalization_utils.dart';
-import '../../../lib/services/geographic_validation_service.dart';
-import '../../../lib/exceptions/app_exceptions.dart';
+import 'package:option/services/geographic_validation_service.dart';
+import 'package:option/utils/data_normalization_utils.dart';
 
 void main() {
   group('Driver Excluded Zones Integration Tests', () {

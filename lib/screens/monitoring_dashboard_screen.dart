@@ -1,10 +1,14 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:convert';
-import '../services/monitoring_service.dart';
-import '../services/metrics_service.dart';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import '../services/alert_service.dart';
+import '../services/metrics_service.dart';
+import '../services/monitoring_service.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_card.dart';
 
 /// Tela do dashboard de monitoramento
 class MonitoringDashboardScreen extends StatefulWidget {
@@ -23,7 +27,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
   Map<String, dynamic> _systemMetrics = {};
   Map<String, dynamic> _alertStats = {};
   List<Alert> _activeAlerts = [];
-  List<Map<String, dynamic>> _recentLogs = [];
+  final List<Map<String, dynamic>> _recentLogs = [];
   
   bool _isLoading = true;
   String? _error;
@@ -88,8 +92,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard de Monitoramento'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -141,11 +144,9 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
                   ],
                 ),
     );
-  }
 
   /// Widget de erro
-  Widget _buildErrorWidget() {
-    return Center(
+  Widget _buildErrorWidget() => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -173,11 +174,9 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         ],
       ),
     );
-  }
 
   /// Tab de visão geral
-  Widget _buildOverviewTab() {
-    return SingleChildScrollView(
+  Widget _buildOverviewTab() => SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,13 +191,12 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         ],
       ),
     );
-  }
 
   /// Card de status do sistema
   Widget _buildSystemStatusCard() {
     final isHealthy = _activeAlerts.where((a) => a.severity == AlertSeverity.critical).isEmpty;
     
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -279,8 +277,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
   }
 
   /// Card de estatística individual
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
-    return Card(
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) => AppCard(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -304,13 +301,12 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         ),
       ),
     );
-  }
 
   /// Card de alertas recentes
   Widget _buildRecentAlertsCard() {
     final recentAlerts = _activeAlerts.take(3).toList();
     
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -324,7 +320,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
             if (recentAlerts.isEmpty)
               const Text('Nenhum alerta ativo')
             else
-              ...recentAlerts.map((alert) => _buildAlertListItem(alert)),
+              ...recentAlerts.map(_buildAlertListItem),
           ],
         ),
       ),
@@ -332,8 +328,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
   }
 
   /// Gráfico de performance
-  Widget _buildPerformanceChart() {
-    return Card(
+  Widget _buildPerformanceChart() => AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -362,11 +357,9 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         ),
       ),
     );
-  }
 
   /// Tab de métricas
-  Widget _buildMetricsTab() {
-    return SingleChildScrollView(
+  Widget _buildMetricsTab() => SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,11 +372,9 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         ],
       ),
     );
-  }
 
   /// Seção de métricas
-  Widget _buildMetricsSection(String title, Map<String, dynamic> metrics) {
-    return Card(
+  Widget _buildMetricsSection(String title, Map<String, dynamic> metrics) => AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -402,7 +393,6 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         ),
       ),
     );
-  }
 
   /// Item de métrica individual
   Widget _buildMetricItem(String name, dynamic value) {
@@ -436,8 +426,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
   }
 
   /// Seção de histogramas
-  Widget _buildHistogramSection(String title, Map<String, dynamic> histograms) {
-    return Card(
+  Widget _buildHistogramSection(String title, Map<String, dynamic> histograms) => AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -456,7 +445,6 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         ),
       ),
     );
-  }
 
   /// Item de histograma
   Widget _buildHistogramItem(String name, dynamic value) {
@@ -488,8 +476,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
   }
 
   /// Linha de estatística
-  Widget _buildStatRow(String label, String value) {
-    return Padding(
+  Widget _buildStatRow(String label, String value) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -499,11 +486,9 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         ],
       ),
     );
-  }
 
   /// Tab de alertas
-  Widget _buildAlertsTab() {
-    return Column(
+  Widget _buildAlertsTab() => Column(
       children: [
         _buildAlertsSummary(),
         Expanded(
@@ -511,20 +496,16 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
               ? const Center(child: Text('Nenhum alerta ativo'))
               : ListView.builder(
                   itemCount: _activeAlerts.length,
-                  itemBuilder: (context, index) {
-                    return _buildAlertCard(_activeAlerts[index]);
-                  },
+                  itemBuilder: (context, index) => _buildAlertCard(_activeAlerts[index]),
                 ),
         ),
       ],
     );
-  }
 
   /// Resumo de alertas
-  Widget _buildAlertsSummary() {
-    return Container(
+  Widget _buildAlertsSummary() => Container(
       padding: const EdgeInsets.all(16),
-      color: Theme.of(context).colorScheme.surfaceVariant,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -546,11 +527,9 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         ],
       ),
     );
-  }
 
   /// Item do resumo de alertas
-  Widget _buildAlertSummaryItem(String label, String count, Color color) {
-    return Column(
+  Widget _buildAlertSummaryItem(String label, String count, Color color) => Column(
       children: [
         Text(
           count,
@@ -563,11 +542,9 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         Text(label),
       ],
     );
-  }
 
   /// Card de alerta
-  Widget _buildAlertCard(Alert alert) {
-    return Card(
+  Widget _buildAlertCard(Alert alert) => AppCard(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
         leading: Icon(
@@ -601,11 +578,9 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         isThreeLine: true,
       ),
     );
-  }
 
   /// Item de alerta na lista
-  Widget _buildAlertListItem(Alert alert) {
-    return Padding(
+  Widget _buildAlertListItem(Alert alert) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
@@ -628,11 +603,9 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         ],
       ),
     );
-  }
 
   /// Tab de logs
-  Widget _buildLogsTab() {
-    return Column(
+  Widget _buildLogsTab() => Column(
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
@@ -664,14 +637,11 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
               ? const Center(child: Text('Nenhum log disponível'))
               : ListView.builder(
                   itemCount: _recentLogs.length,
-                  itemBuilder: (context, index) {
-                    return _buildLogItem(_recentLogs[index]);
-                  },
+                  itemBuilder: (context, index) => _buildLogItem(_recentLogs[index]),
                 ),
         ),
       ],
     );
-  }
 
   /// Item de log
   Widget _buildLogItem(Map<String, dynamic> log) {
@@ -679,7 +649,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
     final timestamp = log['timestamp'] ?? DateTime.now().toIso8601String();
     final message = log['message'] ?? 'Log sem mensagem';
     
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       child: ListTile(
         leading: Icon(
@@ -694,7 +664,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
         subtitle: Text(
           timestamp.substring(0, 19),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.grey,
+            color: AppColors.gray500,
           ),
         ),
         dense: true,
@@ -832,7 +802,7 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
     if (metric is Map && metric.containsKey('value')) {
       return (metric['value'] as num).toDouble();
     }
-    return 0.0;
+    return 0;
   }
 
   /// Obtém ícone do alerta
@@ -851,11 +821,11 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
   Color _getAlertColor(AlertSeverity severity) {
     switch (severity) {
       case AlertSeverity.critical:
-        return Colors.red;
+        return AppColors.error;
       case AlertSeverity.warning:
-        return Colors.orange;
+        return AppColors.warning;
       case AlertSeverity.info:
-        return Colors.blue;
+        return AppColors.info;
     }
   }
 
@@ -880,16 +850,16 @@ class _MonitoringDashboardScreenState extends State<MonitoringDashboardScreen>
   Color _getLogColor(String level) {
     switch (level.toUpperCase()) {
       case 'ERROR':
-        return Colors.red;
+        return AppColors.error;
       case 'WARN':
       case 'WARNING':
-        return Colors.orange;
+        return AppColors.warning;
       case 'INFO':
-        return Colors.blue;
+        return AppColors.info;
       case 'DEBUG':
-        return Colors.grey;
+        return AppColors.gray500;
       default:
-        return Colors.black;
+        return AppColors.black;
     }
   }
 }

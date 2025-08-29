@@ -1,9 +1,17 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/supabase/promo_code.dart';
+
 import '../exceptions/app_exceptions.dart';
+import '../models/supabase/promo_code.dart';
+import '../utils/supabase_helper.dart';
 
 class PromoCodeService {
-  final SupabaseClient _client = Supabase.instance.client;
+  SupabaseClient get _client {
+    final c = SupabaseHelper.client;
+    if (c == null) {
+      throw Exception('Supabase não inicializado');
+    }
+    return c;
+  }
 
   // Buscar todos os códigos promocionais (admin)
   Future<List<PromoCode>> getAllPromoCodes() async {
@@ -80,7 +88,7 @@ class PromoCodeService {
       }
 
       // Verificar se é apenas para primeira viagem
-      if (promoCode.isFirstTripOnly == true && !isFirstTrip) {
+      if (promoCode.isFirstTripOnly ?? false && !isFirstTrip) {
         return false;
       }
 
@@ -205,7 +213,7 @@ class PromoCodeService {
       // Incrementar o contador de uso do código
       await _client.rpc('increment_promo_code_usage', params: {
         'promo_code_id': promoCodeId,
-      });
+      },);
     } on PostgrestException catch (e) {
       throw DatabaseException('Erro ao registrar uso do código: ${e.message}', e.code);
     } catch (e) {
@@ -224,7 +232,7 @@ class PromoCodeService {
       final usages = response as List;
       final totalUsages = usages.length;
       final totalDiscount = usages.fold<double>(
-        0.0,
+        0,
         (sum, usage) => sum + (usage['discount_amount'] as num).toDouble(),
       );
 

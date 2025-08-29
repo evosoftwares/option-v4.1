@@ -15,7 +15,7 @@ class TripRequest {
     this.destinationNeighborhood,
     required this.vehicleCategory,
     required this.needsPet,
-    required this.needsGrocerySpace,
+    required this.needsGrocery,
     required this.isCondoDestination,
     required this.isCondoOrigin,
     required this.needsAc,
@@ -28,12 +28,16 @@ class TripRequest {
     DateTime? updatedAt,
     this.acceptedAt,
     this.acceptedByDriverId,
+    this.targetDriverId,
+    this.expiresAt,
+    this.fallbackDrivers,
+    this.currentFallbackIndex = 0,
+    this.timeoutCount = 0,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
-  factory TripRequest.fromJson(Map<String, dynamic> json) {
-    return TripRequest(
+  factory TripRequest.fromJson(Map<String, dynamic> json) => TripRequest(
       id: json['id'] as String,
       passengerId: json['passenger_id'] as String,
       originAddress: json['origin_address'] as String,
@@ -46,7 +50,7 @@ class TripRequest {
       destinationNeighborhood: json['destination_neighborhood'] as String?,
       vehicleCategory: json['vehicle_category'] as String,
       needsPet: json['needs_pet'] as bool? ?? false,
-      needsGrocerySpace: json['needs_grocery_space'] as bool? ?? false,
+      needsGrocery: json['needs_grocery_space'] as bool? ?? false,
       isCondoDestination: json['is_condo_destination'] as bool? ?? false,
       isCondoOrigin: json['is_condo_origin'] as bool? ?? false,
       needsAc: json['needs_ac'] as bool? ?? false,
@@ -61,8 +65,16 @@ class TripRequest {
           ? DateTime.parse(json['accepted_at'] as String) 
           : null,
       acceptedByDriverId: json['accepted_by_driver_id'] as String?,
+      targetDriverId: json['target_driver_id'] as String?,
+      expiresAt: json['expires_at'] != null 
+          ? DateTime.parse(json['expires_at'] as String) 
+          : null,
+      fallbackDrivers: json['fallback_drivers'] != null 
+          ? List<String>.from(json['fallback_drivers'] as List) 
+          : null,
+      currentFallbackIndex: json['current_fallback_index'] as int? ?? 0,
+      timeoutCount: json['timeout_count'] as int? ?? 0,
     );
-  }
   final String id;
   final String passengerId;
   final String originAddress;
@@ -75,7 +87,7 @@ class TripRequest {
   final String? destinationNeighborhood;
   final String vehicleCategory;
   final bool needsPet;
-  final bool needsGrocerySpace;
+  final bool needsGrocery;
   final bool isCondoDestination;
   final bool isCondoOrigin;
   final bool needsAc;
@@ -88,6 +100,11 @@ class TripRequest {
   final DateTime updatedAt;
   final DateTime? acceptedAt;
   final String? acceptedByDriverId;
+  final String? targetDriverId;
+  final DateTime? expiresAt;
+  final List<String>? fallbackDrivers;
+  final int currentFallbackIndex;
+  final int timeoutCount;
 
   Map<String, dynamic> toJson() => {
       'id': id,
@@ -102,7 +119,7 @@ class TripRequest {
       'destination_neighborhood': destinationNeighborhood,
       'vehicle_category': vehicleCategory,
       'needs_pet': needsPet,
-      'needs_grocery_space': needsGrocerySpace,
+      'needs_grocery_space': needsGrocery,
       'is_condo_destination': isCondoDestination,
       'is_condo_origin': isCondoOrigin,
       'needs_ac': needsAc,
@@ -115,6 +132,11 @@ class TripRequest {
       'updated_at': updatedAt.toIso8601String(),
       'accepted_at': acceptedAt?.toIso8601String(),
       'accepted_by_driver_id': acceptedByDriverId,
+      'target_driver_id': targetDriverId,
+      'expires_at': expiresAt?.toIso8601String(),
+      'fallback_drivers': fallbackDrivers,
+      'current_fallback_index': currentFallbackIndex,
+      'timeout_count': timeoutCount,
     };
 
   TripRequest copyWith({
@@ -130,7 +152,7 @@ class TripRequest {
     String? destinationNeighborhood,
     String? vehicleCategory,
     bool? needsPet,
-    bool? needsGrocerySpace,
+    bool? needsGrocery,
     bool? isCondoDestination,
     bool? isCondoOrigin,
     bool? needsAc,
@@ -143,6 +165,11 @@ class TripRequest {
     DateTime? updatedAt,
     DateTime? acceptedAt,
     String? acceptedByDriverId,
+    String? targetDriverId,
+    DateTime? expiresAt,
+    List<String>? fallbackDrivers,
+    int? currentFallbackIndex,
+    int? timeoutCount,
   }) => TripRequest(
       id: id ?? this.id,
       passengerId: passengerId ?? this.passengerId,
@@ -156,7 +183,7 @@ class TripRequest {
       destinationNeighborhood: destinationNeighborhood ?? this.destinationNeighborhood,
       vehicleCategory: vehicleCategory ?? this.vehicleCategory,
       needsPet: needsPet ?? this.needsPet,
-      needsGrocerySpace: needsGrocerySpace ?? this.needsGrocerySpace,
+      needsGrocery: needsGrocery ?? this.needsGrocery,
       isCondoDestination: isCondoDestination ?? this.isCondoDestination,
       isCondoOrigin: isCondoOrigin ?? this.isCondoOrigin,
       needsAc: needsAc ?? this.needsAc,
@@ -169,6 +196,11 @@ class TripRequest {
       updatedAt: updatedAt ?? this.updatedAt,
       acceptedAt: acceptedAt ?? this.acceptedAt,
       acceptedByDriverId: acceptedByDriverId ?? this.acceptedByDriverId,
+      targetDriverId: targetDriverId ?? this.targetDriverId,
+      expiresAt: expiresAt ?? this.expiresAt,
+      fallbackDrivers: fallbackDrivers ?? this.fallbackDrivers,
+      currentFallbackIndex: currentFallbackIndex ?? this.currentFallbackIndex,
+      timeoutCount: timeoutCount ?? this.timeoutCount,
     );
 
   // Helper methods for status checking
@@ -176,4 +208,21 @@ class TripRequest {
   bool get isAccepted => status == 'accepted';
   bool get isCancelled => status == 'cancelled';
   bool get isExpired => status == 'expired';
+  
+  // Helper methods for targeted requests
+  bool get isTargeted => targetDriverId != null;
+  bool get hasExpired => expiresAt != null && DateTime.now().isAfter(expiresAt!);
+  bool get hasFallbackDrivers => fallbackDrivers != null && fallbackDrivers!.isNotEmpty;
+  
+  // Get next fallback driver
+  String? getNextFallbackDriver() {
+    if (!hasFallbackDrivers) return null;
+    return fallbackDrivers!.first;
+  }
+  
+  // Remove driver from fallback list
+  List<String> removeFromFallback(String driverId) {
+    if (!hasFallbackDrivers) return [];
+    return fallbackDrivers!.where((id) => id != driverId).toList();
+  }
 }

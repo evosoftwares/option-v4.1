@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../models/user.dart' as app_user;
+import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../services/user_service.dart';
-import '../../models/user.dart' as app_user;
+import '../../utils/user_utils.dart';
 
 class DriverMenuScreen extends StatefulWidget {
   const DriverMenuScreen({super.key});
@@ -22,7 +24,6 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
     super.initState();
     _userFuture = UserService.getCurrentUser();
   }
-
 
   Future<void> _logout() async {
     final confirm = await showDialog<bool>(
@@ -43,7 +44,7 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
       ),
     );
 
-    if (confirm == true) {
+    if (confirm ?? false) {
       try {
         await Supabase.instance.client.auth.signOut();
         if (!mounted) return;
@@ -101,10 +102,11 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
             padding: AppSpacing.paddingLg,
             children: [
               _HeaderCard(
-                name: user?.fullName ?? 'Motorista',
+                name: UserUtils.getSafeName(user?.fullName, email: user?.email, fallback: 'Motorista'),
                 email: user?.email ?? '',
                 isOnline: _isOnline,
                 onToggleOnline: (val) => setState(() => _isOnline = val),
+                photoUrl: user?.photoUrl,
               ),
               const SizedBox(height: AppSpacing.sectionSpacing),
 
@@ -176,6 +178,11 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               const SizedBox(height: AppSpacing.sectionSpacing),
               const _SectionTitle(title: 'Geral'),
               _MenuTile(
+                icon: Icons.emergency,
+                label: 'Emergência',
+                onTap: () => Navigator.pushNamed(context, '/emergency'),
+              ),
+              _MenuTile(
                 icon: Icons.notifications_none,
                 label: 'Notificações',
                 onTap: () => Navigator.pushNamed(context, '/notifications'),
@@ -212,11 +219,13 @@ class _HeaderCard extends StatelessWidget {
     required this.email,
     required this.isOnline,
     required this.onToggleOnline,
+    this.photoUrl,
   });
   final String name;
   final String email;
   final bool isOnline;
   final ValueChanged<bool> onToggleOnline;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -237,8 +246,11 @@ class _HeaderCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: AppSpacing.avatarMd / 2,
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, color: cs.onSurface),
+                backgroundColor: cs.surface,
+                backgroundImage: (photoUrl != null && photoUrl!.isNotEmpty) ? NetworkImage(photoUrl!) : null,
+                child: (photoUrl == null || photoUrl!.isEmpty)
+                    ? Icon(Icons.person, color: cs.onSurface)
+                    : null,
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -257,29 +269,26 @@ class _HeaderCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
             decoration: BoxDecoration(
-              color: isOnline ? cs.primaryContainer : cs.secondaryContainer,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              color: isOnline ? Colors.green.withOpacity(0.15) : cs.surface,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              border: Border.all(color: isOnline ? Colors.green : cs.outlineVariant),
             ),
             child: Row(
               children: [
                 Icon(
-                  isOnline ? Icons.check_circle : Icons.do_not_disturb_on_outlined,
-                  color: isOnline ? cs.onPrimaryContainer : cs.onSecondaryContainer,
+                  isOnline ? Icons.toggle_on : Icons.toggle_off,
+                  color: isOnline ? Colors.green : cs.onSurfaceVariant,
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    isOnline ? 'Você está Online' : 'Você está Offline',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: isOnline ? cs.onPrimaryContainer : cs.onSecondaryContainer,
-                    ),
+                    isOnline ? 'Você está online' : 'Você está offline',
+                    style: AppTypography.bodyMedium.copyWith(color: cs.onSurface),
                   ),
                 ),
                 Switch(
                   value: isOnline,
                   onChanged: onToggleOnline,
-                  activeThumbColor: cs.onPrimary,
-                  activeTrackColor: cs.primary,
                 ),
               ],
             ),

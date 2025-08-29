@@ -15,8 +15,7 @@ class Location {
     required this.updatedAt,
   });
 
-  factory Location.fromJson(Map<String, dynamic> json) {
-    return Location(
+  factory Location.fromJson(Map<String, dynamic> json) => Location(
       id: json['id'] as String,
       userId: json['user_id'] as String,
       name: json['name'] as String,
@@ -30,7 +29,6 @@ class Location {
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
-  }
   final String id;
   final String userId;
   final String name;

@@ -1,5 +1,6 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../models/supabase/driver_operation_zone.dart';
 
 class DriverOperationZonesService {
@@ -12,7 +13,7 @@ class DriverOperationZonesService {
     try {
       final response = await _supabase
           .from('driver_operation_zones')
-          .select('*')
+          .select()
           .eq('driver_id', driverId)
           .order('created_at', ascending: false);
 
@@ -29,7 +30,7 @@ class DriverOperationZonesService {
     try {
       final response = await _supabase
           .from('driver_operation_zones')
-          .select('*')
+          .select()
           .eq('driver_id', driverId)
           .eq('is_active', true)
           .order('created_at', ascending: false);
@@ -77,7 +78,7 @@ class DriverOperationZonesService {
             .map((coord) => {
                   'lat': coord.latitude,
                   'lng': coord.longitude,
-                })
+                },)
             .toList(),
         'price_multiplier': priceMultiplier,
         'is_active': isActive,
@@ -89,7 +90,7 @@ class DriverOperationZonesService {
           .select()
           .single();
 
-      return DriverOperationZone.fromJson(response as Map<String, dynamic>);
+      return DriverOperationZone.fromJson(response);
     } catch (e) {
       if (e.toString().contains('Já existe')) {
         rethrow;
@@ -120,7 +121,7 @@ class DriverOperationZonesService {
           .map((coord) => {
                 'lat': coord.latitude,
                 'lng': coord.longitude,
-              })
+              },)
           .toList();
     }
 
@@ -147,7 +148,7 @@ class DriverOperationZonesService {
           .select()
           .single();
 
-      return DriverOperationZone.fromJson(response as Map<String, dynamic>);
+      return DriverOperationZone.fromJson(response);
     } catch (e) {
       throw Exception('Erro ao atualizar área de atuação: $e');
     }
@@ -166,9 +167,7 @@ class DriverOperationZonesService {
   }
 
   /// Ativa ou desativa uma área de atuação
-  Future<DriverOperationZone> toggleZoneStatus(String zoneId, bool isActive) async {
-    return updateOperationZone(zoneId: zoneId, isActive: isActive);
-  }
+  Future<DriverOperationZone> toggleZoneStatus(String zoneId, bool isActive) async => updateOperationZone(zoneId: zoneId, isActive: isActive);
 
   /// Verifica se um ponto está em alguma área ativa do motorista
   Future<DriverOperationZone?> findZoneContainingPoint(
@@ -249,10 +248,10 @@ class DriverOperationZonesService {
       final zones = await getDriverOperationZones(driverId);
       final activeZones = zones.where((z) => z.isActive).toList();
 
-      double totalArea = 0.0;
-      double averageMultiplier = 0.0;
-      double maxMultiplier = 0.0;
-      double minMultiplier = double.infinity;
+      var totalArea = 0.0;
+      var averageMultiplier = 0.0;
+      var maxMultiplier = 0.0;
+      var minMultiplier = double.infinity;
 
       for (final zone in activeZones) {
         totalArea += zone.approximateAreaKm2;
@@ -290,10 +289,10 @@ class DriverOperationZonesService {
   bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
     if (polygon.length < 3) return false;
 
-    bool inside = false;
-    int j = polygon.length - 1;
+    var inside = false;
+    var j = polygon.length - 1;
 
-    for (int i = 0; i < polygon.length; i++) {
+    for (var i = 0; i < polygon.length; i++) {
       final xi = polygon[i].latitude;
       final yi = polygon[i].longitude;
       final xj = polygon[j].latitude;

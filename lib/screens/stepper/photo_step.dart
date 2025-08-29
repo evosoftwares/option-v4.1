@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/stepper_controller.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 
 class PhotoStep extends StatefulWidget {
 
@@ -114,38 +116,38 @@ class _PhotoStepState extends State<PhotoStep> {
     final colors = Theme.of(context).colorScheme;
     return Consumer<StepperController>(
       builder: (context, controller, child) => Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 40),
+              const SizedBox(height: AppSpacing.xl),
               Text(
                 'Adicione uma foto',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: colors.onSurface,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: AppTypography.bold,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'As pessoas gostam de ver quem está dirigindo',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: colors.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: AppSpacing.xl),
               Center(
                 child: GestureDetector(
-                  onTap: () => _showImageSourceDialog(),
+                  onTap: _showImageSourceDialog,
                   child: Container(
-                    width: 150,
-                    height: 150,
+                    width: AppSpacing.avatarXl * 2.34,
+                    height: AppSpacing.avatarXl * 2.34,
                     decoration: BoxDecoration(
-                      color: colors.surfaceVariant,
+                      color: colors.surfaceContainerHighest,
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: colors.outline,
-                        width: 2,
+                        width: AppSpacing.xs / 2,
                       ),
                     ),
                     child: controller.hasProfilePhoto()
@@ -154,13 +156,11 @@ class _PhotoStepState extends State<PhotoStep> {
                                 ? Image.network(
                                     controller.profilePhoto!.path,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(
+                                    errorBuilder: (context, error, stackTrace) => Icon(
                                         Icons.broken_image,
-                                        size: 50,
+                                        size: AppSpacing.iconXl + AppSpacing.xs * 2,
                                         color: colors.onSurfaceVariant,
-                                      );
-                                    },
+                                      ),
                                   )
                                 : Image.file(
                                     controller.profilePhoto!,
@@ -169,14 +169,14 @@ class _PhotoStepState extends State<PhotoStep> {
                           )
                         : Icon(
                             Icons.camera_alt,
-                            size: 50,
+                            size: AppSpacing.iconXl + AppSpacing.xs * 2,
                             color: colors.onSurfaceVariant,
                           ),
                   ),
                 ),
               ),
               if (controller.hasProfilePhoto()) ...[
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 Center(
                   child: TextButton(
                     onPressed: _removePhoto,
@@ -186,7 +186,7 @@ class _PhotoStepState extends State<PhotoStep> {
                     child: const Text(
                       'Remover foto',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: AppSpacing.md,
                       ),
                     ),
                   ),
@@ -195,28 +195,28 @@ class _PhotoStepState extends State<PhotoStep> {
               const Spacer(),
               SizedBox(
                 width: double.infinity,
-                height: 56,
+                height: AppSpacing.buttonHeight,
                 child: FilledButton(
                   onPressed: _isLoading ? null : _submitPhoto,
                   child: _isLoading
                       ? SizedBox(
-                          width: 24,
-                          height: 24,
+                          width: AppSpacing.lg,
+                          height: AppSpacing.lg,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
+                            strokeWidth: AppSpacing.xs / 2,
                             valueColor: AlwaysStoppedAnimation<Color>(colors.onPrimary),
                           ),
                         )
                       : const Text(
                           'Continuar',
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontSize: AppSpacing.md,
+                            fontWeight: AppTypography.semiBold,
                           ),
                         ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.lg),
             ],
           ),
         ),
@@ -229,11 +229,11 @@ class _PhotoStepState extends State<PhotoStep> {
       context: context,
       backgroundColor: colors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.lg)),
       ),
       builder: (context) => SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

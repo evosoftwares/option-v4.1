@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/services/monitoring_service.dart';
-import '../../lib/services/metrics_service.dart';
-import '../../lib/services/alert_service.dart';
-import '../../lib/services/health_check_service.dart';
+import 'package:option/services/alert_service.dart';
+import 'package:option/services/health_check_service.dart';
+import 'package:option/services/metrics_service.dart';
+import 'package:option/services/monitoring_service.dart';
 
 void main() {
   group('MonitoringService Tests', () {
@@ -12,7 +12,7 @@ void main() {
 
     test('should initialize monitoring service successfully', () async {
       // Act & Assert - Should not throw
-      expect(() async => await MonitoringService.initialize(), returnsNormally);
+      expect(() async => MonitoringService.initialize(), returnsNormally);
     });
 
     test('should create monitoring service instance', () {
@@ -44,9 +44,7 @@ void main() {
       await MetricsService.initialize();
     });
 
-    tearDown(() {
-      MetricsService.dispose();
-    });
+    tearDown(MetricsService.dispose);
 
     test('should initialize metrics service successfully', () async {
       // Act
@@ -139,8 +137,8 @@ void main() {
     test('should export metrics in Prometheus format', () {
       // Arrange
       MetricsService.incrementCounter('test_counter', value: 5);
-      MetricsService.setGauge('test_gauge', 42.0);
-      MetricsService.observeHistogram('test_histogram', 100.0);
+      MetricsService.setGauge('test_gauge', 42);
+      MetricsService.observeHistogram('test_histogram', 100);
 
       // Act
       final prometheusMetrics = MetricsService.exportPrometheusFormat();
@@ -174,7 +172,7 @@ void main() {
 
     test('should initialize alert service successfully', () async {
       // Act & Assert - Should not throw
-      expect(() async => await AlertService.initialize(), returnsNormally);
+      expect(() async => AlertService.initialize(), returnsNormally);
     });
 
     test('should get active alerts', () {
@@ -226,7 +224,7 @@ void main() {
 
     test('should cleanup old alerts', () {
       // Act & Assert - Should not throw
-      expect(() => AlertService.cleanupOldAlerts(), returnsNormally);
+      expect(AlertService.cleanupOldAlerts, returnsNormally);
     });
   });
 

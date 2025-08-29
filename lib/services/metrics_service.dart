@@ -185,17 +185,17 @@ class MetricsService {
     incrementCounter('zone_operations_total', labels: {
       'operation': operation,
       'status': status,
-    });
+    },);
     
     observeHistogram('zone_operation_duration_ms', duration.inMilliseconds.toDouble(), labels: {
       'operation': operation,
-    });
+    },);
     
     if (status == 'error') {
       incrementCounter('errors_total', labels: {
         'service': 'zone_service',
         'operation': operation,
-      });
+      },);
     }
   }
 
@@ -204,17 +204,17 @@ class MetricsService {
     incrementCounter('api_requests_total', labels: {
       'endpoint': endpoint,
       'status_code': statusCode.toString(),
-    });
+    },);
     
     observeHistogram('api_response_time_ms', duration.inMilliseconds.toDouble(), labels: {
       'endpoint': endpoint,
-    });
+    },);
     
     if (statusCode >= 400) {
       incrementCounter('errors_total', labels: {
         'service': 'api',
         'endpoint': endpoint,
-      });
+      },);
     }
   }
 
@@ -222,13 +222,13 @@ class MetricsService {
   static void recordDatabaseQuery(String queryType, Duration duration, {bool hasError = false}) {
     observeHistogram('database_query_duration_ms', duration.inMilliseconds.toDouble(), labels: {
       'query_type': queryType,
-    });
+    },);
     
     if (hasError) {
       incrementCounter('errors_total', labels: {
         'service': 'database',
         'query_type': queryType,
-      });
+      },);
     }
   }
 
@@ -237,7 +237,7 @@ class MetricsService {
     incrementCounter('validation_failures_total', labels: {
       'type': validationType,
       'reason': reason,
-    });
+    },);
   }
 
   // =====================================================
@@ -260,7 +260,7 @@ class MetricsService {
       setGauge('active_drivers_count', activeDrivers.toDouble());
       
     } catch (e) {
-      MonitoringService.logError('Failed to collect system metrics', e);
+      MonitoringService.logError('Falha ao coletar métricas do sistema', e);
     }
   }
 
@@ -408,7 +408,7 @@ class MetricsService {
       }
       
     } catch (e) {
-      MonitoringService.logError('Failed to send metrics to backend', e);
+      MonitoringService.logError('Falha ao enviar métricas para o backend', e);
     }
   }
 
@@ -472,7 +472,7 @@ class MetricsService {
 
   /// Calcula percentil
   static double _percentile(List<double> sortedValues, double percentile) {
-    if (sortedValues.isEmpty) return 0.0;
+    if (sortedValues.isEmpty) return 0;
     
     final index = (sortedValues.length - 1) * percentile;
     final lower = index.floor();
@@ -498,8 +498,7 @@ class MetricsService {
   }
 
   /// Obtém resumo das métricas
-  static Map<String, dynamic> getMetricsSummary() {
-    return {
+  static Map<String, dynamic> getMetricsSummary() => {
       'counters_count': _counters.length,
       'gauges_count': _gauges.length,
       'histograms_count': _histograms.length,
@@ -508,10 +507,9 @@ class MetricsService {
           .fold(0, (sum, count) => sum + count),
       'last_collection': _lastUpdated.values
           .fold<DateTime?>(null, (latest, time) => 
-              latest == null || time.isAfter(latest) ? time : latest)
+              latest == null || time.isAfter(latest) ? time : latest,)
           ?.toIso8601String(),
     };
-  }
 }
 
 /// Extensão para facilitar uso de métricas

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../services/driver_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../services/driver_service.dart';
 
 class CustomPricingScreen extends StatefulWidget {
   const CustomPricingScreen({super.key});
@@ -245,7 +246,7 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
       children: [
         Row(
           children: [
-            Expanded(
+            const Expanded(
               child: Text(
                 'Preços Base',
                 style: AppTypography.headlineSmall,
@@ -277,7 +278,7 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
             controller: _pricePerKmController,
             label: 'Preço por Km',
             hint: 'Ex: 1.50',
-            prefix: 'R\$ ',
+            prefix: r'R$ ',
             suffix: ' / km',
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -285,7 +286,7 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
             controller: _pricePerMinuteController,
             label: 'Preço por Minuto',
             hint: 'Ex: 0.20',
-            prefix: 'R\$ ',
+            prefix: r'R$ ',
             suffix: ' / min',
           ),
         ],
@@ -293,11 +294,10 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
     );
   }
 
-  Widget _buildAdditionalFeesSection() {
-    return Column(
+  Widget _buildAdditionalFeesSection() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Taxas Adicionais',
           style: AppTypography.headlineSmall,
         ),
@@ -314,7 +314,7 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
           controller: _petFeeController,
           label: 'Taxa para Pets',
           hint: 'Ex: 5.00',
-          prefix: 'R\$ ',
+          prefix: r'R$ ',
         ),
         const SizedBox(height: AppSpacing.lg),
         
@@ -322,7 +322,7 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
           controller: _groceryFeeController,
           label: 'Taxa para Compras/Delivery',
           hint: 'Ex: 3.00',
-          prefix: 'R\$ ',
+          prefix: r'R$ ',
         ),
         const SizedBox(height: AppSpacing.lg),
         
@@ -330,7 +330,7 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
           controller: _condoFeeController,
           label: 'Taxa para Condomínios',
           hint: 'Ex: 2.00',
-          prefix: 'R\$ ',
+          prefix: r'R$ ',
         ),
         const SizedBox(height: AppSpacing.lg),
         
@@ -338,11 +338,10 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
           controller: _stopFeeController,
           label: 'Taxa por Parada Extra',
           hint: 'Ex: 1.50',
-          prefix: 'R\$ ',
+          prefix: r'R$ ',
         ),
       ],
     );
-  }
 
   Widget _buildPriceField({
     required TextEditingController controller,

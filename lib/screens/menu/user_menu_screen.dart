@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../models/user.dart' as app_user;
+import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../services/user_service.dart';
-import '../../models/user.dart' as app_user;
+import '../../utils/user_utils.dart';
 
 class UserMenuScreen extends StatefulWidget {
   const UserMenuScreen({super.key});
@@ -50,7 +52,7 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
       ),
     );
 
-    if (confirm == true) {
+    if (confirm ?? false) {
       try {
         await Supabase.instance.client.auth.signOut();
         if (!mounted) return;
@@ -108,8 +110,9 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
             padding: AppSpacing.paddingLg,
             children: [
               _HeaderCard(
-                name: user?.fullName ?? 'Passageiro',
+                name: UserUtils.getSafeName(user?.fullName, email: user?.email, fallback: 'Passageiro'),
                 email: user?.email ?? '',
+                photoUrl: user?.photoUrl,
               ),
               const SizedBox(height: AppSpacing.sectionSpacing),
 
@@ -152,6 +155,11 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
               const SizedBox(height: AppSpacing.sectionSpacing),
               const _SectionTitle(title: 'Geral'),
               _MenuTile(
+                icon: Icons.emergency,
+                label: 'Emergência',
+                onTap: () => Navigator.pushNamed(context, '/emergency'),
+              ),
+              _MenuTile(
                 icon: Icons.notifications_none,
                 label: 'Notificações',
                 onTap: () => Navigator.pushNamed(context, '/notifications'),
@@ -186,9 +194,11 @@ class _HeaderCard extends StatelessWidget {
   const _HeaderCard({
     required this.name,
     required this.email,
+    this.photoUrl,
   });
   final String name;
   final String email;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -206,8 +216,11 @@ class _HeaderCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: AppSpacing.avatarMd / 2,
-            backgroundColor: Colors.white,
-            child: Icon(Icons.person, color: cs.onSurface),
+            backgroundColor: cs.surface,
+            backgroundImage: (photoUrl != null && photoUrl!.isNotEmpty) ? NetworkImage(photoUrl!) : null,
+            child: (photoUrl == null || photoUrl!.isEmpty)
+                ? Icon(Icons.person, color: cs.onSurface)
+                : null,
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -248,12 +261,10 @@ class _MenuTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.trailing,
   });
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -282,10 +293,7 @@ class _MenuTile extends StatelessWidget {
                 style: AppTypography.bodyLarge.copyWith(color: cs.onSurface),
               ),
             ),
-            if (trailing != null) ...[
-              trailing!,
-              const SizedBox(width: AppSpacing.sm),
-            ],
+            
             Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
           ],
         ),

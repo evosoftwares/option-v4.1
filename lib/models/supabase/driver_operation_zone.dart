@@ -19,7 +19,7 @@ class DriverOperationZone {
         .map((coord) => LatLng(
               (coord['lat'] as num).toDouble(),
               (coord['lng'] as num).toDouble(),
-            ))
+            ),)
         .toList();
 
     return DriverOperationZone(
@@ -34,8 +34,7 @@ class DriverOperationZone {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'driver_id': driverId,
       'zone_name': zoneName,
@@ -43,29 +42,26 @@ class DriverOperationZone {
           .map((coord) => {
                 'lat': coord.latitude,
                 'lng': coord.longitude,
-              })
+              },)
           .toList(),
       'price_multiplier': priceMultiplier,
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
 
-  Map<String, dynamic> toInsertJson() {
-    return {
+  Map<String, dynamic> toInsertJson() => {
       'driver_id': driverId,
       'zone_name': zoneName,
       'polygon_coordinates': polygonCoordinates
           .map((coord) => {
                 'lat': coord.latitude,
                 'lng': coord.longitude,
-              })
+              },)
           .toList(),
       'price_multiplier': priceMultiplier,
       'is_active': isActive,
     };
-  }
 
   final String id;
   final String driverId;
@@ -88,22 +84,18 @@ class DriverOperationZone {
   }
 
   @override
-  int get hashCode {
-    return Object.hash(
+  int get hashCode => Object.hash(
       id,
       driverId,
       zoneName,
       priceMultiplier,
       isActive,
     );
-  }
 
   @override
-  String toString() {
-    return 'DriverOperationZone(id: $id, driverId: $driverId, zoneName: $zoneName, '
+  String toString() => 'DriverOperationZone(id: $id, driverId: $driverId, zoneName: $zoneName, '
         'priceMultiplier: ${priceMultiplier}x, isActive: $isActive, '
         'coordinates: ${polygonCoordinates.length} points)';
-  }
 
   /// Retorna uma representação legível da zona
   String get displayName => zoneName;
@@ -134,8 +126,7 @@ class DriverOperationZone {
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return DriverOperationZone(
+  }) => DriverOperationZone(
       id: id ?? this.id,
       driverId: driverId ?? this.driverId,
       zoneName: zoneName ?? this.zoneName,
@@ -145,16 +136,15 @@ class DriverOperationZone {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 
   /// Verifica se um ponto está dentro do polígono usando Ray Casting Algorithm
   bool containsPoint(LatLng point) {
     if (polygonCoordinates.length < 3) return false;
 
-    bool inside = false;
-    int j = polygonCoordinates.length - 1;
+    var inside = false;
+    var j = polygonCoordinates.length - 1;
 
-    for (int i = 0; i < polygonCoordinates.length; i++) {
+    for (var i = 0; i < polygonCoordinates.length; i++) {
       final xi = polygonCoordinates[i].latitude;
       final yi = polygonCoordinates[i].longitude;
       final xj = polygonCoordinates[j].latitude;
@@ -172,12 +162,12 @@ class DriverOperationZone {
 
   /// Calcula a área aproximada do polígono em km²
   double get approximateAreaKm2 {
-    if (polygonCoordinates.length < 3) return 0.0;
+    if (polygonCoordinates.length < 3) return 0;
 
-    double area = 0.0;
-    final int n = polygonCoordinates.length;
+    var area = 0.0;
+    final n = polygonCoordinates.length;
 
-    for (int i = 0; i < n; i++) {
+    for (var i = 0; i < n; i++) {
       final j = (i + 1) % n;
       final lat1 = polygonCoordinates[i].latitude;
       final lng1 = polygonCoordinates[i].longitude;
@@ -187,7 +177,7 @@ class DriverOperationZone {
       area += (lng2 - lng1) * (lat2 + lat1);
     }
 
-    area = (area.abs() / 2.0);
+    area = area.abs() / 2.0;
     
     // Conversão aproximada de graus para km² (simplificada)
     // 1 grau de latitude ≈ 111 km
@@ -199,8 +189,8 @@ class DriverOperationZone {
   LatLng get center {
     if (polygonCoordinates.isEmpty) return const LatLng(0, 0);
 
-    double sumLat = 0.0;
-    double sumLng = 0.0;
+    var sumLat = 0.0;
+    var sumLng = 0.0;
 
     for (final coord in polygonCoordinates) {
       sumLat += coord.latitude;

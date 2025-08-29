@@ -14,15 +14,13 @@ class DriverStatus {
     required this.lastStatusChange,
   });
 
-  factory DriverStatus.initial() {
-    return DriverStatus(
+  factory DriverStatus.initial() => DriverStatus(
       status: DriverOnlineStatus.offline,
-      todayEarnings: 0.0,
+      todayEarnings: 0,
       tripsCompleted: 0,
       onlineTime: Duration.zero,
       lastStatusChange: DateTime.now(),
     );
-  }
   final DriverOnlineStatus status;
   final double todayEarnings;
   final int tripsCompleted;

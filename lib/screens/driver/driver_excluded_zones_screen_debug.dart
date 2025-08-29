@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../models/supabase/driver_excluded_zone.dart';
 import '../../services/driver_excluded_zones_service.dart';
 import '../../services/user_service.dart';
-import '../../widgets/logo_branding.dart';
+import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../widgets/app_card.dart';
 
 /// Versão melhorada da tela de zonas excluídas com debug e melhor gerenciamento de estado
 class DriverExcludedZonesScreenDebug extends StatefulWidget {
@@ -28,7 +30,7 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
   bool _isSubmitting = false;
   bool _isRefreshing = false;
   String? _driverId;
-  List<String> _debugLogs = [];
+  final List<String> _debugLogs = [];
   int _refreshCount = 0;
 
   @override
@@ -187,7 +189,7 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
       final wasAdded = _excludedZones.any((z) => 
         z.neighborhoodName == neighborhood && 
         z.city == city && 
-        z.state == state
+        z.state == state,
       );
       
       if (wasAdded) {
@@ -205,7 +207,7 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
         final wasAddedSecondTry = _excludedZones.any((z) => 
           z.neighborhoodName == neighborhood && 
           z.city == city && 
-          z.state == state
+          z.state == state,
         );
         
         if (wasAddedSecondTry) {
@@ -264,7 +266,6 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
       SnackBar(
         content: Text(message),
         backgroundColor: Theme.of(context).colorScheme.error,
-        duration: const Duration(seconds: 4),
       ),
     );
   }
@@ -273,7 +274,7 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.success,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -369,8 +370,7 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
           height: 400,
           child: ListView.builder(
             itemCount: _debugLogs.length,
-            itemBuilder: (context, index) {
-              return Padding(
+            itemBuilder: (context, index) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Text(
                   _debugLogs[index],
@@ -379,16 +379,13 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
                     fontSize: 12,
                   ),
                 ),
-              );
-            },
+              ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () {
-              setState(() {
-                _debugLogs.clear();
-              });
+              setState(_debugLogs.clear);
               Navigator.of(context).pop();
             },
             child: const Text('Limpar'),
@@ -403,8 +400,7 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('Zonas Excluídas (Debug)'),
         actions: [
@@ -434,7 +430,7 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(AppSpacing.sm),
-                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: Text(
                     'Driver: ${_driverId?.substring(0, 8) ?? "N/A"}... | '
                     'Zonas: ${_excludedZones.length} | '
@@ -453,14 +449,14 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
                               Icon(
                                 Icons.location_off,
                                 size: 64,
-                                color: Colors.grey,
+                                color: AppColors.gray600,
                               ),
                               SizedBox(height: AppSpacing.md),
                               Text(
                                 'Nenhuma zona excluída',
                                 style: TextStyle(
                                   fontSize: 18,
-                                  color: Colors.grey,
+                                  color: AppColors.gray600,
                                 ),
                               ),
                               SizedBox(height: AppSpacing.sm),
@@ -468,7 +464,7 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
                                 'Adicione zonas onde você não deseja receber corridas',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: Colors.grey,
+                                  color: AppColors.gray600,
                                 ),
                               ),
                             ],
@@ -479,7 +475,7 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
                           itemCount: _excludedZones.length,
                           itemBuilder: (context, index) {
                             final zone = _excludedZones[index];
-                            return Card(
+                            return AppCard(
                               margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                               child: ListTile(
                                 leading: const Icon(Icons.location_off),
@@ -508,11 +504,10 @@ class _DriverExcludedZonesScreenDebugState extends State<DriverExcludedZonesScre
                 height: 24,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
                 ),
               )
             : const Icon(Icons.add),
       ),
     );
-  }
 }

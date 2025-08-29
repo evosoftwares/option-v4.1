@@ -11,8 +11,7 @@ class PassengerWallet {
     required this.updatedAt,
   });
 
-  factory PassengerWallet.fromMap(Map<String, dynamic> map) {
-    return PassengerWallet(
+  factory PassengerWallet.fromMap(Map<String, dynamic> map) => PassengerWallet(
       id: map['id'] as String,
       passengerId: map['passenger_id'] as String,
       userId: map['user_id'] as String,
@@ -23,7 +22,6 @@ class PassengerWallet {
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
     );
-  }
 
   final String id;
   final String passengerId;
@@ -35,8 +33,7 @@ class PassengerWallet {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  Map<String, dynamic> toMap() {
-    return {
+  Map<String, dynamic> toMap() => {
       'id': id,
       'passenger_id': passengerId,
       'user_id': userId,
@@ -47,7 +44,6 @@ class PassengerWallet {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
 
   PassengerWallet copyWith({
     String? id,
@@ -59,8 +55,7 @@ class PassengerWallet {
     double? totalCashback,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return PassengerWallet(
+  }) => PassengerWallet(
       id: id ?? this.id,
       passengerId: passengerId ?? this.passengerId,
       userId: userId ?? this.userId,
@@ -71,7 +66,6 @@ class PassengerWallet {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 
   @override
   bool operator ==(Object other) {
@@ -90,8 +84,7 @@ class PassengerWallet {
   }
 
   @override
-  int get hashCode {
-    return id.hashCode ^
+  int get hashCode => id.hashCode ^
         passengerId.hashCode ^
         userId.hashCode ^
         availableBalance.hashCode ^
@@ -100,10 +93,7 @@ class PassengerWallet {
         totalCashback.hashCode ^
         createdAt.hashCode ^
         updatedAt.hashCode;
-  }
 
   @override
-  String toString() {
-    return 'PassengerWallet(id: $id, passengerId: $passengerId, userId: $userId, availableBalance: $availableBalance, pendingBalance: $pendingBalance, totalSpent: $totalSpent, totalCashback: $totalCashback, createdAt: $createdAt, updatedAt: $updatedAt)';
-  }
+  String toString() => 'PassengerWallet(id: $id, passengerId: $passengerId, userId: $userId, availableBalance: $availableBalance, pendingBalance: $pendingBalance, totalSpent: $totalSpent, totalCashback: $totalCashback, createdAt: $createdAt, updatedAt: $updatedAt)';
 }

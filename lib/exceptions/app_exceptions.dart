@@ -55,3 +55,9 @@ class UserAlreadyExistsException extends DatabaseException {
   const UserAlreadyExistsException([String? email]) 
       : super('Usuário já existe${email != null ? ': $email' : ''}', 'USER_ALREADY_EXISTS');
 }
+
+/// Exceção para documentação obrigatória não completa
+class DocumentationRequiredException extends ValidationException {
+  const DocumentationRequiredException([String? details]) 
+      : super('Documentação obrigatória não completa${details != null ? ': $details' : ''}', 'DOCUMENTATION_REQUIRED');
+}

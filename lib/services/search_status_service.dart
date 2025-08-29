@@ -11,10 +11,6 @@ enum SearchStatus {
 
 /// Modelo para representar o estado atual da busca
 class SearchState {
-  final SearchStatus status;
-  final String? message;
-  final String? errorDetails;
-  final int? driversFound;
 
   const SearchState({
     required this.status,
@@ -22,20 +18,22 @@ class SearchState {
     this.errorDetails,
     this.driversFound,
   });
+  final SearchStatus status;
+  final String? message;
+  final String? errorDetails;
+  final int? driversFound;
 
   SearchState copyWith({
     SearchStatus? status,
     String? message,
     String? errorDetails,
     int? driversFound,
-  }) {
-    return SearchState(
+  }) => SearchState(
       status: status ?? this.status,
       message: message ?? this.message,
       errorDetails: errorDetails ?? this.errorDetails,
       driversFound: driversFound ?? this.driversFound,
     );
-  }
 
   @override
   bool operator ==(Object other) {
@@ -48,19 +46,17 @@ class SearchState {
   }
 
   @override
-  int get hashCode {
-    return status.hashCode ^
+  int get hashCode => status.hashCode ^
         message.hashCode ^
         errorDetails.hashCode ^
         driversFound.hashCode;
-  }
 }
 
 /// Serviço para gerenciar o estado da busca de motoristas
 class SearchStatusService {
-  static final SearchStatusService _instance = SearchStatusService._internal();
   factory SearchStatusService() => _instance;
   SearchStatusService._internal();
+  static final SearchStatusService _instance = SearchStatusService._internal();
 
   final StreamController<SearchState> _stateController =
       StreamController<SearchState>.broadcast();
@@ -84,7 +80,7 @@ class SearchStatusService {
     updateState(SearchState(
       status: SearchStatus.searching,
       message: message ?? 'Buscando motoristas disponíveis...',
-    ));
+    ),);
   }
 
   /// Marca a busca como bem-sucedida
@@ -93,7 +89,7 @@ class SearchStatusService {
       status: SearchStatus.success,
       driversFound: driversFound,
       message: message ?? _getSuccessMessage(driversFound),
-    ));
+    ),);
   }
 
   /// Marca que nenhum motorista foi encontrado
@@ -101,7 +97,7 @@ class SearchStatusService {
     updateState(SearchState(
       status: SearchStatus.noDriversFound,
       message: message ?? 'Nenhum motorista disponível no momento',
-    ));
+    ),);
   }
 
   /// Marca erro na busca
@@ -110,7 +106,7 @@ class SearchStatusService {
       status: SearchStatus.error,
       message: message,
       errorDetails: errorDetails,
-    ));
+    ),);
   }
 
   /// Reseta o estado para idle

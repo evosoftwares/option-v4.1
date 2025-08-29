@@ -22,6 +22,7 @@ class AdditionalStopScreen extends StatefulWidget {
             name: 'Origem',
             address: 'Selecione a origem',
             type: LocationType.other,
+            userId: '',
           );
 
     final destination = destinationJson.isNotEmpty
@@ -31,6 +32,7 @@ class AdditionalStopScreen extends StatefulWidget {
             name: 'Destino',
             address: 'Selecione o destino',
             type: LocationType.other,
+            userId: '',
           );
 
     return AdditionalStopScreen(
@@ -108,7 +110,7 @@ class _AdditionalStopScreenState extends State<AdditionalStopScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, null),
+                      onPressed: () => Navigator.pop(context),
                       child: const Text('Agora não'),
                     ),
                   ),

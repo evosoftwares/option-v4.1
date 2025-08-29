@@ -1,9 +1,10 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../exceptions/app_exceptions.dart';
-import '../models/user.dart' as app_user;
 import '../models/passenger_wallet.dart';
 import '../models/passenger_wallet_transaction.dart';
 import '../models/payment_method.dart';
+import '../models/user.dart' as app_user;
 import 'asaas_service.dart';
 
 class WalletService {
@@ -419,14 +420,20 @@ class WalletService {
           .maybeSingle();
           
       if (userResponse == null) {
-        // User doesn't exist in app_users table
-        return null;
-      }
-      
-      final userType = userResponse['user_type'] as String?;
-      if (userType?.toLowerCase() != 'passenger') {
-        // Not a passenger-type user, don't create passenger record
-        return null;
+        print('🚨 User $userId not found in app_users table');
+        // User doesn't exist in app_users table, create passenger anyway for flexibility
+        // This allows the wallet to work even if app_users is not properly configured
+      } else {
+        final userType = userResponse['user_type'] as String?;
+        print('🔍 User $userId has type: $userType');
+        
+        // Allow creation for passenger type or if type is null/empty (default to passenger)
+        if (userType != null && 
+            userType.toLowerCase() != 'passenger' && 
+            userType.toLowerCase() != '') {
+          print('❌ User type $userType is not passenger, skipping creation');
+          return null;
+        }
       }
       
       // Create the missing passenger record

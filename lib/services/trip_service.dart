@@ -1,8 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/supabase/trip_request.dart';
-import '../models/supabase/trip.dart';
-import '../models/supabase/location.dart';
+
 import '../exceptions/app_exceptions.dart';
+import '../models/supabase/location.dart';
+import '../models/supabase/trip.dart';
+import '../models/supabase/trip_request.dart';
 
 class TripService {
 
@@ -20,7 +21,7 @@ class TripService {
     required double destinationLongitude,
     required String vehicleCategory,
     required bool needsPet,
-    required bool needsGrocerySpace,
+    required bool needsGrocery,
     required bool isCondoDestination,
     required bool isCondoOrigin,
     required bool needsAc,
@@ -46,7 +47,7 @@ class TripService {
             'destination_neighborhood': destinationNeighborhood,
             'vehicle_category': vehicleCategory,
             'needs_pet': needsPet,
-            'needs_grocery_space': needsGrocerySpace,
+            'needs_grocery_space': needsGrocery,
             'is_condo_destination': isCondoDestination,
             'is_condo_origin': isCondoOrigin,
             'needs_ac': needsAc,
@@ -276,9 +277,9 @@ class TripService {
 
       // Add driver/passenger info based on who is requesting
       if (passengerId != null) {
-        selectQuery += ', drivers!inner(users!inner(full_name, photo_url))';
+        selectQuery += ', drivers!inner(app_users!inner(full_name, photo_url))';
       } else if (driverId != null) {
-        selectQuery += ', passengers!inner(users!inner(full_name, photo_url))';
+        selectQuery += ', passengers!inner(app_users!inner(full_name, photo_url))';
       }
 
       dynamic query = _supabase.from('trips').select(selectQuery);
@@ -526,6 +527,114 @@ class TripService {
         .stream(primaryKey: ['id'])
         .eq('id', tripId)
         .map((data) => data.isEmpty ? null : Trip.fromJson(data.first));
+
+  // Targeted request methods
+  Future<List<TripRequest>> getTargetedRequestsForDriver(String driverId) async {
+    try {
+      final response = await _supabase
+          .from('trip_requests')
+          .select()
+          .eq('target_driver_id', driverId)
+          .eq('status', 'pending')
+          .gte('expires_at', DateTime.now().toIso8601String())
+          .order('created_at', ascending: false);
+
+      return response.map(TripRequest.fromJson).toList();
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao buscar solicitações direcionadas. Tente novamente.',);
+    } catch (e) {
+      throw const DatabaseException(
+          'Erro inesperado ao buscar solicitações. Tente novamente.',);
+    }
+  }
+
+  Stream<List<TripRequest>> subscribeToTargetedRequests(String driverId) => _supabase
+        .from('trip_requests')
+        .stream(primaryKey: ['id'])
+        .map((data) => data
+            .where((json) => 
+                json['target_driver_id'] == driverId &&
+                json['status'] == 'pending' &&
+                DateTime.parse(json['expires_at'] ?? DateTime.now().toIso8601String())
+                    .isAfter(DateTime.now()))
+            .map(TripRequest.fromJson)
+            .toList());
+
+  Future<TripRequest> acceptTripRequest({
+    required String requestId,
+    required String driverId,
+  }) async {
+    try {
+      final response = await _supabase
+          .from('trip_requests')
+          .update({
+            'status': 'accepted',
+            'accepted_by_driver_id': driverId,
+            'accepted_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', requestId)
+          .select()
+          .single();
+
+      return TripRequest.fromJson(response);
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao aceitar solicitação. Tente novamente.',);
+    } catch (e) {
+      throw const DatabaseException(
+          'Erro inesperado ao aceitar solicitação. Tente novamente.',);
+    }
+  }
+
+  Future<TripRequest> declineTripRequest({
+    required String requestId,
+    required String driverId,
+  }) async {
+    try {
+      // Get current request to access fallback drivers
+      final currentRequest = await getTripRequest(requestId);
+      if (currentRequest == null) {
+        throw const DatabaseException('Solicitação não encontrada.');
+      }
+
+      // Remove current driver from fallback list and get next driver
+      final fallbackList = List<String>.from(currentRequest.fallbackDrivers ?? []);
+      fallbackList.remove(driverId);
+      final nextDriverId = fallbackList.isNotEmpty ? fallbackList.first : null;
+
+      final updateData = <String, dynamic>{
+        'fallback_drivers': fallbackList,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      // If there's a next driver, assign to them
+      if (nextDriverId != null) {
+        updateData['target_driver_id'] = nextDriverId;
+        updateData['expires_at'] = DateTime.now().add(const Duration(seconds: 10)).toIso8601String();
+      } else {
+        // No more fallback drivers, mark as expired
+        updateData['status'] = 'expired';
+        updateData['target_driver_id'] = null;
+      }
+
+      final response = await _supabase
+          .from('trip_requests')
+          .update(updateData)
+          .eq('id', requestId)
+          .select()
+          .single();
+
+      return TripRequest.fromJson(response);
+    } on PostgrestException {
+      throw const DatabaseException(
+          'Erro ao recusar solicitação. Tente novamente.',);
+    } catch (e) {
+      throw const DatabaseException(
+          'Erro inesperado ao recusar solicitação. Tente novamente.',);
+    }
+  }
 }
 
 // Model for trip history screen

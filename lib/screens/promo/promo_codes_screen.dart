@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/logo_branding.dart';
-import '../../services/promo_code_service.dart';
-import '../../services/passenger_promo_service.dart';
-import '../../services/user_service.dart';
-import '../../models/supabase/promo_code.dart';
+
 import '../../models/passenger_promo_code.dart';
+import '../../models/supabase/promo_code.dart';
+import '../../services/passenger_promo_service.dart';
+import '../../services/promo_code_service.dart';
+import '../../services/user_service.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/logo_branding.dart';
 
 class PromoCodesScreen extends StatefulWidget {
   const PromoCodesScreen({super.key});
@@ -46,6 +48,8 @@ class _PromoCodesScreenState extends State<PromoCodesScreen>
   }
 
   Future<void> _loadPromoCodes() async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = true;
       _error = null;
@@ -60,40 +64,47 @@ class _PromoCodesScreenState extends State<PromoCodesScreen>
       // Carregar códigos promocionais gerais disponíveis
       final availableCodes = await _promoCodeService.getAvailablePromoCodesForUser(
         userId: user.id,
-        tripValue: 50.0, // Valor padrão para verificação
-        isFirstTrip: false, // TODO: Verificar se é primeira viagem
+        tripValue: 50, // Valor padrão para verificação
       );
 
       // Carregar códigos promocionais específicos do passageiro
       final passengerCodes = await _passengerPromoService.getAvailablePromoCodes(user.id);
 
-      setState(() {
-        _availablePromoCodes = availableCodes;
-        _passengerPromoCodes = passengerCodes;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _availablePromoCodes = availableCodes;
+          _passengerPromoCodes = passengerCodes;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _validatePromoCode() async {
     final code = _codeController.text.trim();
     if (code.isEmpty) {
-      setState(() {
-        _validationMessage = 'Digite um código promocional';
-        _isValidationSuccess = false;
-      });
+      if (mounted) {
+        setState(() {
+          _validationMessage = 'Digite um código promocional';
+          _isValidationSuccess = false;
+        });
+      }
       return;
     }
 
-    setState(() {
-      _isValidating = true;
-      _validationMessage = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isValidating = true;
+        _validationMessage = null;
+      });
+    }
 
     try {
       final user = await UserService.getCurrentUser();
@@ -105,13 +116,12 @@ class _PromoCodesScreenState extends State<PromoCodesScreen>
       final isValidGeneral = await _promoCodeService.validatePromoCodeForTrip(
         code: code,
         userId: user.id,
-        tripValue: 50.0, // Valor padrão para validação
-        isFirstTrip: false,
+        tripValue: 50, // Valor padrão para validação
       );
 
       if (isValidGeneral) {
         final promoCode = await _promoCodeService.getPromoCodeByCode(code);
-        if (promoCode != null) {
+        if (promoCode != null && mounted) {
           setState(() {
             _validationMessage = 'Código válido! ${promoCode.displayDescription}';
             _isValidationSuccess = true;
@@ -125,27 +135,35 @@ class _PromoCodesScreenState extends State<PromoCodesScreen>
       // Se não for código geral, tentar validar como código de passageiro
       final passengerPromo = await _passengerPromoService.validatePromoCode(code, user.id);
       if (passengerPromo != null) {
-        setState(() {
-          _validationMessage = 'Código válido e adicionado à sua conta!';
-          _isValidationSuccess = true;
-        });
-        _codeController.clear();
-        await _loadPromoCodes(); // Recarregar lista
+        if (mounted) {
+          setState(() {
+            _validationMessage = 'Código válido e adicionado à sua conta!';
+            _isValidationSuccess = true;
+          });
+          _codeController.clear();
+          await _loadPromoCodes(); // Recarregar lista
+        }
       } else {
+        if (mounted) {
+          setState(() {
+            _validationMessage = 'Código inválido ou expirado';
+            _isValidationSuccess = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() {
-          _validationMessage = 'Código inválido ou expirado';
+          _validationMessage = 'Erro ao validar código: ${e.toString()}';
           _isValidationSuccess = false;
         });
       }
-    } catch (e) {
-      setState(() {
-        _validationMessage = 'Erro ao validar código: ${e.toString()}';
-        _isValidationSuccess = false;
-      });
     } finally {
-      setState(() {
-        _isValidating = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isValidating = false;
+        });
+      }
     }
   }
 
@@ -167,7 +185,6 @@ class _PromoCodesScreenState extends State<PromoCodesScreen>
               border: Border(
                 bottom: BorderSide(
                   color: colorScheme.outlineVariant,
-                  width: 1,
                 ),
               ),
             ),
@@ -294,13 +311,13 @@ class _PromoCodesScreenState extends State<PromoCodesScreen>
 }
 
 class _AvailablePromoCodesTab extends StatelessWidget {
-  final List<PromoCode> promoCodes;
-  final VoidCallback onRefresh;
 
   const _AvailablePromoCodesTab({
     required this.promoCodes,
     required this.onRefresh,
   });
+  final List<PromoCode> promoCodes;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -371,13 +388,13 @@ class _AvailablePromoCodesTab extends StatelessWidget {
 }
 
 class _PassengerPromoCodesTab extends StatelessWidget {
-  final List<PassengerPromoCode> promoCodes;
-  final VoidCallback onRefresh;
 
   const _PassengerPromoCodesTab({
     required this.promoCodes,
     required this.onRefresh,
   });
+  final List<PassengerPromoCode> promoCodes;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -449,12 +466,6 @@ class _PassengerPromoCodesTab extends StatelessWidget {
 }
 
 class _PromoCodeCard extends StatelessWidget {
-  final String title;
-  final String description;
-  final String discount;
-  final DateTime validUntil;
-  final String? usageInfo;
-  final VoidCallback onTap;
 
   const _PromoCodeCard({
     required this.title,
@@ -464,6 +475,12 @@ class _PromoCodeCard extends StatelessWidget {
     this.usageInfo,
     required this.onTap,
   });
+  final String title;
+  final String description;
+  final String discount;
+  final DateTime validUntil;
+  final String? usageInfo;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -471,7 +488,7 @@ class _PromoCodeCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final isExpired = DateTime.now().isAfter(validUntil);
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       child: InkWell(
         onTap: isExpired ? null : onTap,
@@ -572,19 +589,17 @@ class _PromoCodeCard extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-  }
+  String _formatDate(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
 class _ErrorState extends StatelessWidget {
-  final String error;
-  final VoidCallback onRetry;
 
   const _ErrorState({
     required this.error,
     required this.onRetry,
   });
+  final String error;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {

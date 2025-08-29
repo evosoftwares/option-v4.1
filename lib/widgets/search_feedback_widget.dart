@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/search_status_service.dart';
+import '../theme/app_colors.dart';
 
 /// Widget para exibir feedback visual durante a busca de motoristas
 class SearchFeedbackWidget extends StatefulWidget {
@@ -51,7 +52,7 @@ class _SearchFeedbackWidgetState extends State<SearchFeedbackWidget>
     ).animate(CurvedAnimation(
       parent: _pulseController,
       curve: Curves.easeInOut,
-    ));
+    ),);
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, -1),
@@ -59,7 +60,7 @@ class _SearchFeedbackWidgetState extends State<SearchFeedbackWidget>
     ).animate(CurvedAnimation(
       parent: _slideController,
       curve: Curves.easeOutBack,
-    ));
+    ),);
   }
 
   @override
@@ -95,8 +96,7 @@ class _SearchFeedbackWidgetState extends State<SearchFeedbackWidget>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<SearchState>(
+  Widget build(BuildContext context) => StreamBuilder<SearchState>(
       stream: _searchService.stateStream,
       initialData: _searchService.currentState,
       builder: (context, snapshot) {
@@ -115,7 +115,6 @@ class _SearchFeedbackWidgetState extends State<SearchFeedbackWidget>
         );
       },
     );
-  }
 
   Widget _buildFeedbackCard(BuildContext context, SearchState state) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -133,7 +132,7 @@ class _SearchFeedbackWidgetState extends State<SearchFeedbackWidget>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: AppColors.black.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -180,7 +179,7 @@ class _SearchFeedbackWidgetState extends State<SearchFeedbackWidget>
                           .withOpacity(0.8),
                     ),
                   ),
-                ]
+                ],
               ],
             ),
           ),
@@ -197,8 +196,7 @@ class _SearchFeedbackWidgetState extends State<SearchFeedbackWidget>
       case SearchStatus.searching:
         return AnimatedBuilder(
           animation: _pulseAnimation,
-          builder: (context, child) {
-            return Transform.scale(
+          builder: (context, child) => Transform.scale(
               scale: _pulseAnimation.value,
               child: SizedBox(
                 width: iconSize,
@@ -208,8 +206,7 @@ class _SearchFeedbackWidgetState extends State<SearchFeedbackWidget>
                   valueColor: AlwaysStoppedAnimation<Color>(iconColor),
                 ),
               ),
-            );
-          },
+            ),
         );
       case SearchStatus.success:
         return Icon(
@@ -247,7 +244,7 @@ class _SearchFeedbackWidgetState extends State<SearchFeedbackWidget>
       case SearchStatus.error:
         return colorScheme.errorContainer;
       case SearchStatus.noDriversFound:
-        return colorScheme.surfaceVariant;
+        return colorScheme.surfaceContainerHighest;
       case SearchStatus.idle:
         return colorScheme.surface;
     }

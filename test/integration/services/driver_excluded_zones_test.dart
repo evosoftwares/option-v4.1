@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase/supabase.dart';
 import 'package:option/services/driver_excluded_zones_service.dart';
-import 'package:option/models/supabase/driver_excluded_zone.dart';
+import 'package:supabase/supabase.dart';
+
 import '../../helpers/supabase_test_helper.dart';
 
 void main() {
@@ -83,7 +83,7 @@ void main() {
       final zone = excludedZones.firstWhere(
         (z) => z.neighborhoodName == neighborhood && z.city == city && z.state == state,
       );
-      expect(zone.driverId, equals(testDriverId!));
+      expect(zone.driverId, equals(testDriverId));
       expect(zone.neighborhoodName, equals(neighborhood));
       expect(zone.city, equals(city));
       expect(zone.state, equals(state));

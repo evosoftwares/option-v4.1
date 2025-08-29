@@ -288,11 +288,10 @@ class _WorkingHoursScreenState extends State<WorkingHoursScreen> {
     );
   }
 
-  Widget _buildQuickActions() {
-    return Column(
+  Widget _buildQuickActions() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Ações Rápidas',
           style: AppTypography.headlineSmall,
         ),
@@ -318,22 +317,19 @@ class _WorkingHoursScreenState extends State<WorkingHoursScreen> {
         ),
       ],
     );
-  }
 
-  Widget _buildScheduleForm() {
-    return Column(
+  Widget _buildScheduleForm() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Horários por Dia da Semana',
           style: AppTypography.headlineSmall,
         ),
         const SizedBox(height: AppSpacing.lg),
         
-        ..._enabledDays.keys.map((dayKey) => _buildDayCard(dayKey)),
+        ..._enabledDays.keys.map(_buildDayCard),
       ],
     );
-  }
 
   Widget _buildDayCard(String dayKey) {
     final cs = Theme.of(context).colorScheme;

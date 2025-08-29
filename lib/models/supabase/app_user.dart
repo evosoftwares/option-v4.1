@@ -2,69 +2,107 @@ class AppUser {
 
   AppUser({
     required this.id,
-    required this.userId,
-    this.phone,
+    required this.email,
+    required this.fullName,
+    required this.phone,
+    this.photoUrl,
     required this.userType,
-    required this.isActive,
-    required this.isVerified,
+    required this.status,
     required this.createdAt,
     required this.updatedAt,
+    this.userId,
+    this.fcmToken,
+    this.deviceId,
+    this.devicePlatform,
+    this.lastActiveAt,
   });
 
-  factory AppUser.fromJson(Map<String, dynamic> json) {
-    return AppUser(
+  factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
       id: json['id'] as String,
-      userId: json['user_id'] as String,
-      phone: json['phone'] as String?,
+      email: json['email'] as String,
+      fullName: json['full_name'] as String,
+      phone: json['phone'] as String,
+      photoUrl: json['photo_url'] as String?,
       userType: json['user_type'] as String,
-      isActive: json['is_active'] as bool? ?? true,
-      isVerified: json['is_verified'] as bool? ?? false,
+      status: json['status'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      userId: json['user_id'] as String?,
+      fcmToken: json['fcm_token'] as String?,
+      deviceId: json['device_id'] as String?,
+      devicePlatform: json['device_platform'] as String?,
+      lastActiveAt: json['last_active_at'] != null 
+          ? DateTime.parse(json['last_active_at'] as String) 
+          : null,
     );
-  }
   final String id;
-  final String userId;
-  final String? phone;
+  final String email;
+  final String fullName;
+  final String phone;
+  final String? photoUrl;
   final String userType;
-  final bool isActive;
-  final bool isVerified;
+  final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? userId;
+  final String? fcmToken;
+  final String? deviceId;
+  final String? devicePlatform;
+  final DateTime? lastActiveAt;
 
   Map<String, dynamic> toJson() => {
       'id': id,
-      'user_id': userId,
+      'email': email,
+      'full_name': fullName,
       'phone': phone,
+      'photo_url': photoUrl,
       'user_type': userType,
-      'is_active': isActive,
-      'is_verified': isVerified,
+      'status': status,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'user_id': userId,
+      'fcm_token': fcmToken,
+      'device_id': deviceId,
+      'device_platform': devicePlatform,
+      'last_active_at': lastActiveAt?.toIso8601String(),
     };
 
   AppUser copyWith({
     String? id,
-    String? userId,
+    String? email,
+    String? fullName,
     String? phone,
+    String? photoUrl,
     String? userType,
-    bool? isActive,
-    bool? isVerified,
+    String? status,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? userId,
+    String? fcmToken,
+    String? deviceId,
+    String? devicePlatform,
+    DateTime? lastActiveAt,
   }) => AppUser(
       id: id ?? this.id,
-      userId: userId ?? this.userId,
+      email: email ?? this.email,
+      fullName: fullName ?? this.fullName,
       phone: phone ?? this.phone,
+      photoUrl: photoUrl ?? this.photoUrl,
       userType: userType ?? this.userType,
-      isActive: isActive ?? this.isActive,
-      isVerified: isVerified ?? this.isVerified,
+      status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      userId: userId ?? this.userId,
+      fcmToken: fcmToken ?? this.fcmToken,
+      deviceId: deviceId ?? this.deviceId,
+      devicePlatform: devicePlatform ?? this.devicePlatform,
+      lastActiveAt: lastActiveAt ?? this.lastActiveAt,
     );
 
   // Helper methods
   bool get isPassenger => userType == 'passenger';
   bool get isDriver => userType == 'driver';
+  bool get isActive => status == 'active';
+  bool get isVerified => status == 'active' || status == 'verified';
   bool get canUseApp => isActive && isVerified;
 }

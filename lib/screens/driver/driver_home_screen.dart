@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -7,14 +8,19 @@ import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../config/app_config.dart';
+import '../../theme/app_spacing.dart';
 import '../../controllers/driver_status_controller.dart';
 import '../../models/driver_status.dart';
 import '../../models/supabase/trip.dart';
 import '../../services/driver_service.dart';
+import '../../services/fcm_service.dart';
 import '../../services/location_service.dart';
 import '../../services/map_style_service.dart';
 import '../../services/user_service.dart';
 import '../../services/wallet_service.dart';
+import '../../widgets/emergency_button.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 
 /// Production-ready main driver screen with enhanced UI and Uber-like design
 class DriverHomeScreen extends StatefulWidget {
@@ -84,7 +90,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     ).animate(CurvedAnimation(
       parent: _pulseController,
       curve: Curves.easeInOut,
-    ));
+    ),);
 
     _buttonScaleAnimation = Tween<double>(
       begin: 1,
@@ -92,13 +98,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     ).animate(CurvedAnimation(
       parent: _buttonController,
       curve: Curves.easeInOut,
-    ));
+    ),);
   }
 
   void _initServices() {
     _locationService = LocationService(
       apiKey: AppConfig.googleMapsApiKey,
     );
+    
+    // Inicializar FCM Service para notificações push
+    FCMService().initialize().catchError((e) {
+      debugPrint('Erro ao inicializar FCMService: $e');
+    });
   }
 
   @override
@@ -124,7 +135,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       );
       await controller.animateCamera(CameraUpdate.newCameraPosition(
         CameraPosition(target: latLng, zoom: 15),
-      ));
+      ),);
       _restartPositionStream();
     }
   }
@@ -146,11 +157,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
         if (trips.isEmpty) {
           _currentTripId = null;
           _clearRoute();
-          setState(() {
-            _markers.removeWhere((m) =>
-                m.markerId.value == 'origin' ||
-                m.markerId.value == 'destination');
-          });
+          if (mounted) {
+            setState(() {
+              _markers.removeWhere((m) =>
+                  m.markerId.value == 'origin' ||
+                  m.markerId.value == 'destination',);
+            });
+          }
           _restartPositionStream();
           return;
         }
@@ -204,22 +217,23 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       distanceFilter: distanceFilter,
       intervalSeconds: intervalSeconds,
       enableWakeLock: enableWakeLock,
-      accuracy: LocationAccuracy.best,
     )
         .listen((pos) async {
       final controller = await _ensureController();
       final here = LatLng(pos.latitude, pos.longitude);
       if (!mounted) return;
 
-      setState(() {
-        _markers.removeWhere((m) => m.markerId.value == 'driver_location');
-        _markers.add(Marker(
-          markerId: const MarkerId('driver_location'),
-          position: here,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          infoWindow: const InfoWindow(title: 'Sua localização'),
-        ));
-      });
+      if (mounted) {
+        setState(() {
+          _markers.removeWhere((m) => m.markerId.value == 'driver_location');
+          _markers.add(Marker(
+            markerId: const MarkerId('driver_location'),
+            position: here,
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            infoWindow: const InfoWindow(title: 'Sua localização'),
+          ),);
+        });
+      }
 
       if (_statusController.isOnline) {
         controller.animateCamera(CameraUpdate.newLatLng(here));
@@ -231,7 +245,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
         final lastAt = _lastLocationSentAt;
         final lastPoint = _lastSentLatLng;
 
-        bool shouldSend = false;
+        var shouldSend = false;
         if (lastAt == null ||
             now.difference(lastAt) >= const Duration(seconds: 5)) {
           shouldSend = true;
@@ -268,40 +282,55 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   }
 
   Future<void> _onStatusChanged() async {
-    await _ensureDriverId();
+    if (!mounted) return;
+    
+    // Use post frame callback to avoid setState during build
+    SchedulerBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      
+      await _ensureDriverId();
 
-    if (_statusController.isOnline) {
-      final ok =
-          await _locationService.ensureLocationPermissions(background: true);
-      if (!ok) {
-        if (!_revertingOnlineDueToPermission) {
-          _revertingOnlineDueToPermission = true;
-          if (mounted) {
-            await _showLocationPermissionDialog();
+      if (_statusController.isOnline) {
+        final ok =
+            await _locationService.ensureLocationPermissions(background: true);
+        if (!ok) {
+          if (!_revertingOnlineDueToPermission) {
+            _revertingOnlineDueToPermission = true;
+            if (mounted) {
+              await _showLocationPermissionDialog();
+            }
+            if (mounted) {
+              _statusController.toggleOnlineStatus();
+            }
+            await Future.delayed(const Duration(milliseconds: 200));
+            _revertingOnlineDueToPermission = false;
           }
-          _statusController.toggleOnlineStatus();
-          await Future.delayed(const Duration(milliseconds: 200));
-          _revertingOnlineDueToPermission = false;
+          return;
         }
-        return;
+
+        // Start pulse animation when online
+        if (mounted) {
+          _pulseController.repeat(reverse: true);
+        }
+      } else {
+        // Stop pulse animation when offline
+        if (mounted) {
+          _pulseController.stop();
+          _pulseController.reset();
+        }
       }
 
-      // Start pulse animation when online
-      _pulseController.repeat(reverse: true);
-    } else {
-      // Stop pulse animation when offline
-      _pulseController.stop();
-      _pulseController.reset();
-    }
+      if (_driverId != null && mounted) {
+        try {
+          await DriverService(Supabase.instance.client)
+              .updateAvailability(_driverId!, _statusController.isOnline);
+        } catch (_) {}
+      }
 
-    if (_driverId != null) {
-      try {
-        await DriverService(Supabase.instance.client)
-            .updateAvailability(_driverId!, _statusController.isOnline);
-      } catch (_) {}
-    }
-
-    _restartPositionStream();
+      if (mounted) {
+        _restartPositionStream();
+      }
+    });
   }
 
   Future<void> _showLocationPermissionDialog() async {
@@ -369,9 +398,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     if (dLat == 0.0 && dLng == 0.0) return;
 
     _setMarker('origin', oLat, oLng, BitmapDescriptor.hueGreen,
-        title: 'Origem');
+        title: 'Origem',);
     _setMarker('destination', dLat, dLng, BitmapDescriptor.hueRed,
-        title: 'Destino');
+        title: 'Destino',);
 
     _clearRoute();
 
@@ -385,42 +414,46 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
 
     final colorScheme = Theme.of(context).colorScheme;
 
-    setState(() {
-      _polylines.add(Polyline(
-        polylineId: const PolylineId('route_base'),
-        points: route.points,
-        color: colorScheme.primary,
-        width: 6,
-        startCap: Cap.roundCap,
-        endCap: Cap.roundCap,
-        jointType: JointType.round,
-      ));
-    });
+    if (mounted) {
+      setState(() {
+        _polylines.add(Polyline(
+          polylineId: const PolylineId('route_base'),
+          points: route.points,
+          color: colorScheme.primary,
+          width: 6,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          jointType: JointType.round,
+        ),);
+      });
+    }
 
     await _fitRouteBounds(route.points);
   }
 
   void _setMarker(String id, double lat, double lng, double hue,
-      {String? title}) {
+      {String? title,}) {
     final pos = LatLng(lat, lng);
-    setState(() {
-      _markers.removeWhere((m) => m.markerId.value == id);
-      _markers.add(Marker(
-        markerId: MarkerId(id),
-        position: pos,
-        icon: BitmapDescriptor.defaultMarkerWithHue(hue),
-        infoWindow:
-            title != null ? InfoWindow(title: title) : InfoWindow.noText,
-      ));
-    });
+    if (mounted) {
+      setState(() {
+        _markers.removeWhere((m) => m.markerId.value == id);
+        _markers.add(Marker(
+          markerId: MarkerId(id),
+          position: pos,
+          icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+          infoWindow:
+              title != null ? InfoWindow(title: title) : InfoWindow.noText,
+        ),);
+      });
+    }
   }
 
   Future<void> _fitRouteBounds(List<LatLng> points) async {
     if (points.isEmpty) return;
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
+    var minLat = points.first.latitude;
+    var maxLat = points.first.latitude;
+    var minLng = points.first.longitude;
+    var maxLng = points.first.longitude;
 
     for (final p in points) {
       if (p.latitude < minLat) minLat = p.latitude;
@@ -434,13 +467,15 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       northeast: LatLng(maxLat, maxLng),
     );
     final controller = await _ensureController();
-    controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 64));
+    controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, AppSpacing.headerHeight));
   }
 
   void _clearRoute() {
-    setState(() {
-      _polylines.removeWhere((p) => p.polylineId.value.startsWith('route'));
-    });
+    if (mounted) {
+      setState(() {
+        _polylines.removeWhere((p) => p.polylineId.value.startsWith('route'));
+      });
+    }
   }
 
   Future<void> _onGoButtonPressed() async {
@@ -488,7 +523,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
         boxShadow: [
           BoxShadow(
             color: buttonColor.withOpacity(0.3),
-            blurRadius: 12,
+            blurRadius: AppSpacing.xs * 3,
             spreadRadius: 3,
           ),
         ],
@@ -496,8 +531,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       child: status.isTransitioning
           ? Center(
               child: SizedBox(
-                width: 24,
-                height: 24,
+                width: AppSpacing.lg,
+                height: AppSpacing.lg,
                 child: CircularProgressIndicator(
                   color: textColor,
                   strokeWidth: 3,
@@ -511,15 +546,15 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                   Icon(
                     icon,
                     color: textColor,
-                    size: 24,
+                    size: AppSpacing.lg,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                 ],
                 Text(
                   buttonText,
                   style: textTheme.titleLarge?.copyWith(
                     color: textColor,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: AppTypography.bold,
                   ),
                 ),
               ],
@@ -579,9 +614,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
 
           // Top overlay with earnings
           Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            left: 16,
-            right: 16,
+            top: MediaQuery.of(context).padding.top + AppSpacing.md,
+            left: AppSpacing.md,
+            right: AppSpacing.md,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -590,13 +625,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                   listenable: _statusController,
                   builder: (context, _) => Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                        horizontal: AppSpacing.md, vertical: AppSpacing.xs * 3,),
                     decoration: BoxDecoration(
                       color: colorScheme.surface.withOpacity(0.95),
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(AppSpacing.lg * 1.5),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: AppColors.black.withOpacity(0.1),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -608,14 +643,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                         Icon(
                           Icons.account_balance_wallet,
                           color: colorScheme.primary,
-                          size: 20,
+                          size: AppSpacing.iconSm,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.sm),
                         Text(
                           _statusController.status.earningsDisplayText,
                           style: textTheme.titleMedium?.copyWith(
                             color: colorScheme.onSurface,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: AppTypography.bold,
                           ),
                         ),
                       ],
@@ -623,26 +658,46 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                   ),
                 ),
 
-                // Menu button
-                Container(
-                  decoration: BoxDecoration(
-                    color: colorScheme.surface.withOpacity(0.95),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                // Emergency and Menu buttons
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(AppSpacing.lg + AppSpacing.xs),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.black.withOpacity(0.1),
+                            blurRadius: AppSpacing.sm,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: IconButton(
-                    onPressed: _navigateToDriverMenu,
-                    icon: Icon(
-                      Icons.menu,
-                      color: colorScheme.onSurface,
+                      child: const CompactEmergencyButton(),
                     ),
-                  ),
+                    const SizedBox(width: AppSpacing.sm),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface.withOpacity(0.95),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.black.withOpacity(0.1),
+                            blurRadius: AppSpacing.sm,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        onPressed: _navigateToDriverMenu,
+                        icon: Icon(
+                          Icons.menu,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -650,7 +705,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
 
           // Bottom "IR" button
           Positioned(
-            bottom: 32,
+            bottom: AppSpacing.xl,
             left: 0,
             right: 0,
             child: Center(

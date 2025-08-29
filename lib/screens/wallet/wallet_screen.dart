@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_typography.dart';
-import '../../theme/app_spacing.dart';
-import '../../services/user_service.dart';
-import '../../services/wallet_service.dart';
-import '../../services/passenger_payment_service.dart';
-import '../../models/user.dart' as app_user;
+
 import '../../models/passenger_wallet.dart';
 import '../../models/passenger_wallet_transaction.dart';
 import '../../models/payment_method.dart';
+import '../../models/user.dart' as app_user;
+import '../../services/passenger_payment_service.dart';
+import '../../services/user_service.dart';
+import '../../services/wallet_service.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 import '../../widgets/logo_branding.dart';
 
 class WalletScreen extends StatefulWidget {
@@ -79,21 +80,24 @@ class _PassengerWalletContentState extends State<_PassengerWalletContent> {
     _paymentService = PassengerPaymentService(walletService: widget.walletService);
     _passengerIdFuture = widget.walletService.getPassengerIdForUser(widget.user.id);
     _passengerIdFuture!.then((passengerId) {
-      if (passengerId != null) {
+      if (passengerId != null && mounted) {
         setState(() {
           _walletFuture = _getOrCreateWallet(passengerId);
           _transactionsFuture = widget.walletService.getPassengerWalletTransactions(passengerId);
           _paymentMethodsFuture = widget.walletService.getPaymentMethods(widget.user.id);
         });
       }
+    }).catchError((error) {
+      if (mounted) {
+        // Handle error silently or show error state
+        debugPrint('Error loading passenger data: $error');
+      }
     });
   }
 
   Future<PassengerWallet?> _getOrCreateWallet(String passengerId) async {
     var wallet = await widget.walletService.getPassengerWallet(passengerId);
-    if (wallet == null) {
-      wallet = await widget.walletService.createPassengerWallet(passengerId, widget.user.id);
-    }
+    wallet ??= await widget.walletService.createPassengerWallet(passengerId, widget.user.id);
     return wallet;
   }
 
@@ -108,7 +112,7 @@ class _PassengerWalletContentState extends State<_PassengerWalletContent> {
         }
         final passengerId = snap.data;
         if (passengerId == null) {
-          return const _ErrorState(message: 'Não encontramos seu perfil de passageiro.');
+          return const _ErrorState(message: 'Perfil de passageiro não encontrado. Tente fazer logout e login novamente.');
         }
         return RefreshIndicator(
           onRefresh: () => _refreshData(passengerId),
@@ -128,7 +132,7 @@ class _PassengerWalletContentState extends State<_PassengerWalletContent> {
                     totalSpent: wallet?.totalSpent ?? 0.0,
                     totalCashback: wallet?.totalCashback ?? 0.0,
                     onAddCredit: () => _onAddCredit(passengerId),
-                    onViewPaymentMethods: () => _onViewPaymentMethods(),
+                    onViewPaymentMethods: _onViewPaymentMethods,
                   );
                 },
               ),
@@ -190,7 +194,7 @@ class _PassengerWalletContentState extends State<_PassengerWalletContent> {
       ),
     );
 
-    if (result == true) {
+    if (result ?? false) {
       await _refreshData(passengerId);
     }
   }
@@ -304,7 +308,7 @@ class _DriverWalletContentState extends State<_DriverWalletContent> {
           content: TextField(
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Valor (R\$)'),
+            decoration: const InputDecoration(labelText: r'Valor (R$)'),
           ),
           actions: [
             TextButton(
@@ -814,9 +818,9 @@ class _AddCreditBottomSheetState extends State<_AddCreditBottomSheet> {
             controller: _amountController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
-              labelText: 'Valor (R\$)',
+              labelText: r'Valor (R$)',
               hintText: '0,00',
-              prefixText: 'R\$ ',
+              prefixText: r'R$ ',
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -915,6 +919,7 @@ class _PaymentMethodSelector extends StatelessWidget {
           title: 'PIX',
           subtitle: 'Transferência instantânea',
           cs: cs,
+          isEnabled: true,
         ),
         // Cartão de crédito removido - não suportado pela estratégia de pagamentos digitais
       ],
@@ -931,7 +936,7 @@ class _PaymentMethodTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.cs,
-    this.isEnabled = true,
+    required this.isEnabled,
   });
 
   final PaymentMethodType type;
@@ -944,8 +949,7 @@ class _PaymentMethodTile extends StatelessWidget {
   final bool isEnabled;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: isEnabled ? onTap : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -990,7 +994,6 @@ class _PaymentMethodTile extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _PixPaymentDialog extends StatelessWidget {
@@ -1106,7 +1109,7 @@ class _TransactionsLoadingSkeleton extends StatelessWidget {
             Container(height: 16, width: 80, color: cs.onSurfaceVariant.withOpacity(0.3)),
           ],
         ),
-      )),
+      ),),
     );
   }
 }

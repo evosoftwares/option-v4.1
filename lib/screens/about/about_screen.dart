@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
+import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../widgets/app_card.dart';
 import '../../widgets/logo_branding.dart';
 
 class AboutScreen extends StatelessWidget {
@@ -25,7 +28,7 @@ class AboutScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.white,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Image.asset(
@@ -130,7 +133,7 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl),
 
             // Informações legais
-            Card(
+            AppCard(
               child: Padding(
                 padding: AppSpacing.paddingLg,
                 child: Column(
@@ -218,7 +221,7 @@ class AboutScreen extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.white,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: colorScheme.outlineVariant),
             ),

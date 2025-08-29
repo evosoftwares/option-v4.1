@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/stepper_controller.dart';
-import 'step1_phone_screen.dart';
-import 'step2_photo_screen.dart';
+import '../../widgets/stepper_progress_indicator.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
+import 'phone_step.dart';
+import 'photo_step.dart';
 
 class StepperMainScreen extends StatefulWidget {
   const StepperMainScreen({super.key});
@@ -42,16 +45,21 @@ class _StepperMainScreenState extends State<StepperMainScreen> {
 
           return Column(
             children: [
-              // Barra de progresso
-              _buildProgressBar(controller, colors, textTheme),
+              // Indicador de progresso melhorado
+              LinearStepperProgressIndicator(
+                currentStep: controller.currentStep,
+                totalSteps: 2,
+                showLabels: true,
+                stepLabels: const ['Telefone', 'Foto'],
+              ),
               // Conteúdo das etapas
               Expanded(
                 child: PageView(
                   controller: _pageController,
                   physics: const NeverScrollableScrollPhysics(),
-                  children: const [
-                    Step1PhoneScreen(),
-                    Step2PhotoScreen(),
+                  children: [
+                    PhoneStep(onNext: () {}),
+                    PhotoStep(onNext: () {}),
                   ],
                 ),
               ),
@@ -67,7 +75,7 @@ class _StepperMainScreenState extends State<StepperMainScreen> {
     ColorScheme colors,
     TextTheme textTheme,
   ) => Container(
-      padding: const EdgeInsets.fromLTRB(16, 50, 16, 16),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xxxl + AppSpacing.xs, AppSpacing.md, AppSpacing.md),
       child: Column(
         children: [
           Row(
@@ -76,7 +84,7 @@ class _StepperMainScreenState extends State<StepperMainScreen> {
                 'Complete seu cadastro',
                 style: textTheme.titleLarge?.copyWith(
                   color: colors.onSurface,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: AppTypography.bold,
                 ),
               ),
               const Spacer(),
@@ -88,13 +96,13 @@ class _StepperMainScreenState extends State<StepperMainScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd - AppSpacing.xs),
             child: LinearProgressIndicator(
               value: (controller.currentStep + 1) / 2,
-              minHeight: 6,
-              backgroundColor: colors.surfaceVariant,
+              minHeight: AppSpacing.xs + 2,
+              backgroundColor: colors.surfaceContainerHighest,
               valueColor: AlwaysStoppedAnimation<Color>(
                 colors.primary,
               ),

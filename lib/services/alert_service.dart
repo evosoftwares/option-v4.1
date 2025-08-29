@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'monitoring_service.dart';
+
 import 'metrics_service.dart';
+import 'monitoring_service.dart';
 
 /// Tipos de severidade de alertas
 enum AlertSeverity {
@@ -26,16 +27,6 @@ enum AlertType {
 
 /// Modelo de alerta
 class Alert {
-  final String id;
-  final AlertType type;
-  final AlertSeverity severity;
-  final String title;
-  final String description;
-  final Map<String, dynamic> metadata;
-  final DateTime timestamp;
-  final bool isResolved;
-  final String? resolvedBy;
-  final DateTime? resolvedAt;
 
   Alert({
     required this.id,
@@ -50,19 +41,6 @@ class Alert {
     this.resolvedAt,
   });
 
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'type': type.name,
-    'severity': severity.name,
-    'title': title,
-    'description': description,
-    'metadata': metadata,
-    'timestamp': timestamp.toIso8601String(),
-    'is_resolved': isResolved,
-    'resolved_by': resolvedBy,
-    'resolved_at': resolvedAt?.toIso8601String(),
-  };
-
   factory Alert.fromJson(Map<String, dynamic> json) => Alert(
     id: json['id'],
     type: AlertType.values.firstWhere((e) => e.name == json['type']),
@@ -75,17 +53,33 @@ class Alert {
     resolvedBy: json['resolved_by'],
     resolvedAt: json['resolved_at'] != null ? DateTime.parse(json['resolved_at']) : null,
   );
+  final String id;
+  final AlertType type;
+  final AlertSeverity severity;
+  final String title;
+  final String description;
+  final Map<String, dynamic> metadata;
+  final DateTime timestamp;
+  final bool isResolved;
+  final String? resolvedBy;
+  final DateTime? resolvedAt;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'type': type.name,
+    'severity': severity.name,
+    'title': title,
+    'description': description,
+    'metadata': metadata,
+    'timestamp': timestamp.toIso8601String(),
+    'is_resolved': isResolved,
+    'resolved_by': resolvedBy,
+    'resolved_at': resolvedAt?.toIso8601String(),
+  };
 }
 
 /// Configuração de regras de alerta
 class AlertRule {
-  final AlertType type;
-  final AlertSeverity severity;
-  final String condition;
-  final double threshold;
-  final Duration evaluationWindow;
-  final bool isEnabled;
-  final List<String> notificationChannels;
 
   AlertRule({
     required this.type,
@@ -96,6 +90,13 @@ class AlertRule {
     this.isEnabled = true,
     this.notificationChannels = const [],
   });
+  final AlertType type;
+  final AlertSeverity severity;
+  final String condition;
+  final double threshold;
+  final Duration evaluationWindow;
+  final bool isEnabled;
+  final List<String> notificationChannels;
 }
 
 /// Serviço de alertas e notificações
@@ -217,7 +218,7 @@ class AlertService {
       try {
         await _evaluateRule(rule);
       } catch (e) {
-        MonitoringService.logError('Failed to evaluate alert rule: ${rule.type}', e);
+        MonitoringService.logError('Falha ao avaliar regra de alerta: ${rule.type}', e);
       }
     }
   }
@@ -450,7 +451,7 @@ class AlertService {
             break;
         }
       } catch (e) {
-        MonitoringService.logError('Failed to send notification via $channel', e);
+        MonitoringService.logError('Falha ao enviar notificação via $channel', e);
       }
     }
   }
@@ -494,7 +495,7 @@ class AlertService {
           .from('system_alerts')
           .insert(alert.toJson());
     } catch (e) {
-      MonitoringService.logError('Failed to save alert to backend', e);
+      MonitoringService.logError('Falha ao salvar alerta no backend', e);
     }
   }
 
@@ -529,7 +530,7 @@ class AlertService {
             })
             .eq('id', alertId);
       } catch (e) {
-        MonitoringService.logError('Failed to update alert resolution in backend', e);
+        MonitoringService.logError('Falha ao atualizar resolução do alerta no backend', e);
       }
       
       MonitoringService.logInfo('Alert resolved: $alertId by $resolvedBy');
@@ -537,19 +538,13 @@ class AlertService {
   }
 
   /// Obtém alertas ativos
-  static List<Alert> getActiveAlerts() {
-    return _activeAlerts.where((alert) => !alert.isResolved).toList();
-  }
+  static List<Alert> getActiveAlerts() => _activeAlerts.where((alert) => !alert.isResolved).toList();
 
   /// Obtém todos os alertas
-  static List<Alert> getAllAlerts() {
-    return List.from(_activeAlerts);
-  }
+  static List<Alert> getAllAlerts() => List.from(_activeAlerts);
 
   /// Obtém alertas por severidade
-  static List<Alert> getAlertsBySeverity(AlertSeverity severity) {
-    return _activeAlerts.where((alert) => alert.severity == severity && !alert.isResolved).toList();
-  }
+  static List<Alert> getAlertsBySeverity(AlertSeverity severity) => _activeAlerts.where((alert) => alert.severity == severity && !alert.isResolved).toList();
 
   /// Obtém estatísticas de alertas
   static Map<String, dynamic> getAlertStatistics() {
@@ -583,9 +578,7 @@ class AlertService {
   }
 
   /// Obtém regras de alerta
-  static List<AlertRule> getAlertRules() {
-    return List.from(_alertRules);
-  }
+  static List<AlertRule> getAlertRules() => List.from(_alertRules);
 
   /// Limpa alertas resolvidos antigos
   static void cleanupOldAlerts({Duration? olderThan}) {
@@ -594,7 +587,7 @@ class AlertService {
     _activeAlerts.removeWhere((alert) => 
         alert.isResolved && 
         alert.resolvedAt != null && 
-        alert.resolvedAt!.isBefore(cutoff)
+        alert.resolvedAt!.isBefore(cutoff),
     );
     
     MonitoringService.logInfo('Old resolved alerts cleaned up');

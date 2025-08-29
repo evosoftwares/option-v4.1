@@ -57,13 +57,6 @@ enum VehicleCategory {
 /// Dados detalhados de uma categoria de veículo
 /// Inclui informações de preços e disponibilidade
 class VehicleCategoryData {
-  final VehicleCategory category;
-  final double basePricePerKm;
-  final double basePricePerMinute;
-  final double surgeMultiplier;
-  final int availableDrivers;
-  final String estimatedArrival;
-  final bool isAvailable;
 
   const VehicleCategoryData({
     required this.category,
@@ -71,15 +64,8 @@ class VehicleCategoryData {
     required this.basePricePerMinute,
     this.surgeMultiplier = 1.0,
     this.availableDrivers = 0,
-    this.estimatedArrival = '5-10 min',
     this.isAvailable = true,
   });
-
-  /// Calcula o preço estimado para uma distância e tempo
-  double calculateEstimatedPrice(double distanceKm, int durationMinutes) {
-    final basePrice = (basePricePerKm * distanceKm) + (basePricePerMinute * durationMinutes);
-    return basePrice * surgeMultiplier;
-  }
 
   /// Cria uma instância com dados padrão para desenvolvimento
   factory VehicleCategoryData.defaultForCategory(VehicleCategory category) {
@@ -90,7 +76,6 @@ class VehicleCategoryData {
           basePricePerKm: 1.2,
           basePricePerMinute: 0.15,
           availableDrivers: 12,
-          estimatedArrival: '3-8 min',
         );
       case VehicleCategory.standard:
         return VehicleCategoryData(
@@ -98,7 +83,6 @@ class VehicleCategoryData {
           basePricePerKm: 1.5,
           basePricePerMinute: 0.20,
           availableDrivers: 8,
-          estimatedArrival: '5-10 min',
         );
       case VehicleCategory.premium:
         return VehicleCategoryData(
@@ -106,7 +90,6 @@ class VehicleCategoryData {
           basePricePerKm: 2.2,
           basePricePerMinute: 0.35,
           availableDrivers: 3,
-          estimatedArrival: '8-15 min',
         );
       case VehicleCategory.suv:
         return VehicleCategoryData(
@@ -114,7 +97,6 @@ class VehicleCategoryData {
           basePricePerKm: 1.8,
           basePricePerMinute: 0.25,
           availableDrivers: 5,
-          estimatedArrival: '6-12 min',
         );
       case VehicleCategory.executivo:
         return VehicleCategoryData(
@@ -122,17 +104,27 @@ class VehicleCategoryData {
           basePricePerKm: 2.8,
           basePricePerMinute: 0.45,
           availableDrivers: 2,
-          estimatedArrival: '10-20 min',
         );
       case VehicleCategory.van:
         return VehicleCategoryData(
           category: category,
-          basePricePerKm: 2.0,
+          basePricePerKm: 2,
           basePricePerMinute: 0.30,
           availableDrivers: 1,
-          estimatedArrival: '15-25 min',
         );
     }
+  }
+  final VehicleCategory category;
+  final double basePricePerKm;
+  final double basePricePerMinute;
+  final double surgeMultiplier;
+  final int availableDrivers;
+  final bool isAvailable;
+
+  /// Calcula o preço estimado para uma distância e tempo
+  double calculateEstimatedPrice(double distanceKm, int durationMinutes) {
+    final basePrice = (basePricePerKm * distanceKm) + (basePricePerMinute * durationMinutes);
+    return basePrice * surgeMultiplier;
   }
 
   /// Cria uma cópia com novos valores
@@ -142,19 +134,15 @@ class VehicleCategoryData {
     double? basePricePerMinute,
     double? surgeMultiplier,
     int? availableDrivers,
-    String? estimatedArrival,
     bool? isAvailable,
-  }) {
-    return VehicleCategoryData(
+  }) => VehicleCategoryData(
       category: category ?? this.category,
       basePricePerKm: basePricePerKm ?? this.basePricePerKm,
       basePricePerMinute: basePricePerMinute ?? this.basePricePerMinute,
       surgeMultiplier: surgeMultiplier ?? this.surgeMultiplier,
       availableDrivers: availableDrivers ?? this.availableDrivers,
-      estimatedArrival: estimatedArrival ?? this.estimatedArrival,
       isAvailable: isAvailable ?? this.isAvailable,
     );
-  }
 
   @override
   String toString() => 'VehicleCategoryData(${category.displayName}, drivers: $availableDrivers)';

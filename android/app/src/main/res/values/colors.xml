@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cor padrão para notificações -->
+    <color name="notification_color">#FF6B35</color>
+    
+    <!-- Cores do tema da aplicação -->
+    <color name="primary_color">#FF6B35</color>
+    <color name="primary_dark">#E55A2B</color>
+    <color name="accent_color">#FFA726</color>
+    
+    <!-- Cores para diferentes tipos de notificação -->
+    <color name="ride_request_color">#4CAF50</color>
+    <color name="ride_update_color">#2196F3</color>
+    <color name="chat_message_color">#9C27B0</color>
+    <color name="system_notification_color">#FF9800</color>
+    <color name="emergency_color">#F44336</color>
+</resources>

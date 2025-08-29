@@ -1,12 +1,27 @@
 import 'dart:math' as math;
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../exceptions/app_exceptions.dart';
 import '../models/supabase/driver.dart';
 import '../models/supabase/driver_offer.dart';
 import '../models/supabase/trip.dart';
 import '../models/vehicle_category.dart';
-import '../exceptions/app_exceptions.dart';
+import '../validators/database_constraints_validator.dart';
 import 'driver_excluded_zones_service.dart';
+import 'driver_document_service.dart';
+
+/// Classe auxiliar para armazenar motorista com sua distância calculada
+class DriverWithDistance {
+  const DriverWithDistance({
+    required this.driver,
+    required this.distanceKm,
+  });
+
+  final Driver driver;
+  final double distanceKm;
+}
 
 class DriverService {
 
@@ -20,6 +35,34 @@ class DriverService {
           await _supabase.from('drivers').select().eq('id', driverId).single();
 
       return Driver.fromJson(response);
+    } on PostgrestException catch (e) {
+      if (e.code == 'PGRST116') {
+        return null;
+      }
+      throw const DatabaseException(
+          'Erro ao buscar motorista. Por favor, tente novamente mais tarde.',);
+    } catch (e) {
+      throw const DatabaseException(
+          'Erro inesperado ao buscar motorista. Por favor, tente novamente mais tarde.',);
+    }
+  }
+
+  // Get driver profile with user data (name and photo)
+  Future<Map<String, dynamic>?> getDriverWithUserData(String driverId) async {
+    try {
+      final response = await _supabase
+          .from('drivers')
+          .select('''
+            *,
+            app_users!inner(
+              full_name,
+              photo_url
+            )
+          ''')
+          .eq('id', driverId)
+          .single();
+
+      return response;
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') {
         return null;
@@ -90,6 +133,9 @@ class DriverService {
         'consecutive_cancellations': 0,
       };
 
+      // Validar dados antes da inserção
+      DatabaseConstraintsValidator.validateDriver(insertData);
+
       final response =
           await _supabase.from('drivers').insert(insertData).select().single();
 
@@ -151,6 +197,36 @@ class DriverService {
       if (crlvPhotoUrl != null) updates['crlv_photo_url'] = crlvPhotoUrl;
 
       if (approvalStatus != null) updates['approval_status'] = approvalStatus;
+      
+      // Validação obrigatória: verificar documentos antes de ficar online
+      if (isOnline ?? false) {
+        final documentationStatus = await DriverDocumentService.getDocumentationStatus(driverId);
+        
+        if (!documentationStatus['isComplete']) {
+          final missingDocs = documentationStatus['missingDocuments'] as List;
+          final rejectedDocs = documentationStatus['rejectedDocuments'] as List;
+          final pendingDocs = documentationStatus['pendingDocuments'] as List;
+          final expiredDocs = documentationStatus['expiredDocuments'] as List;
+          
+          var errorMessage = 'Não é possível ficar online. ';
+          
+          if (missingDocs.isNotEmpty) {
+            errorMessage += 'Documentos não enviados: ${missingDocs.join(', ')}. ';
+          }
+          if (rejectedDocs.isNotEmpty) {
+            errorMessage += 'Documentos rejeitados: ${rejectedDocs.join(', ')}. ';
+          }
+          if (pendingDocs.isNotEmpty) {
+            errorMessage += 'Documentos aguardando aprovação: ${pendingDocs.join(', ')}. ';
+          }
+          if (expiredDocs.isNotEmpty) {
+            errorMessage += 'Documentos expirados: ${expiredDocs.join(', ')}. ';
+          }
+          
+          throw DocumentationRequiredException(errorMessage.trim());
+        }
+      }
+      
       if (isOnline != null) updates['is_online'] = isOnline;
 
       if (acceptsPet != null) updates['accepts_pet'] = acceptsPet;
@@ -173,6 +249,11 @@ class DriverService {
       }
       if (currentLongitude != null) {
         updates['current_longitude'] = currentLongitude;
+      }
+
+      // Validar dados antes da atualização
+      if (updates.isNotEmpty) {
+        DatabaseConstraintsValidator.validateDriver(updates);
       }
 
       final response = await _supabase
@@ -357,7 +438,7 @@ class DriverService {
   Future<void> updateLocation(
       String driverId, double latitude, double longitude,) async {
     const retries = 3;
-    const delays = [Duration(milliseconds: 0), Duration(milliseconds: 500), Duration(milliseconds: 1500)];
+    const delays = [Duration(), Duration(milliseconds: 500), Duration(milliseconds: 1500)];
     for (var attempt = 0; attempt < retries; attempt++) {
       try {
         await _supabase.from('drivers').update({
@@ -409,11 +490,9 @@ class DriverService {
         .stream(primaryKey: ['id'])
         .eq('driver_id', driverId)
         .map((data) => data
-            .where((trip) {
-              return ['accepted', 'in_progress'].contains(trip['status']);
-            })
-            .map((trip) => Trip.fromJson(trip))
-            .toList());
+            .where((trip) => ['accepted', 'in_progress'].contains(trip['status']))
+            .map(Trip.fromJson)
+            .toList(),);
 
   // Busca motoristas disponíveis próximos com filtros de categoria e preferências
   Future<List<Driver>> getAvailableDriversNearby({
@@ -429,25 +508,54 @@ class DriverService {
     String? destinationState,
     int? limit,
   }) async {
+    print('🔍 [${DateTime.now()}] Iniciando getAvailableDriversNearby...');
+    print('📍 Parâmetros de busca:');
+    print('  - latitude: $latitude');
+    print('  - longitude: $longitude');
+    print('  - radiusKm: $radiusKm');
+    print('  - category: $category');
+    print('  - needsPet: $needsPet');
+    print('  - needsGrocery: $needsGrocery');
+    print('  - needsCondo: $needsCondo');
+    print('  - limit: $limit');
+    
     try {
       // Aproximação de raio usando bounding box
       final latDelta = radiusKm / 111.0; // ~111km por grau
       final lngDelta = radiusKm / (111.0 * math.cos(latitude * math.pi / 180.0)).abs().clamp(0.0001, double.infinity);
+      
+      print('📐 [${DateTime.now()}] Calculando bounding box:');
+      print('  - latDelta: $latDelta');
+      print('  - lngDelta: $lngDelta');
+      print('  - lat range: ${latitude - latDelta} to ${latitude + latDelta}');
+      print('  - lng range: ${longitude - lngDelta} to ${longitude + lngDelta}');
 
       dynamic query = _supabase.from('drivers').select().eq('is_online', true);
+      print('🔧 [${DateTime.now()}] Query inicial criada: drivers online');
 
       // Somente aprovados (se existir esse status)
       query = query.or('approval_status.eq.approved,approval_status.is.null');
+      print('✅ [${DateTime.now()}] Filtro de aprovação aplicado');
 
       // Filtro de categoria
       if (category != null && category.isNotEmpty) {
         query = query.eq('vehicle_category', category);
+        print('🚗 [${DateTime.now()}] Filtro de categoria aplicado: $category');
       }
 
       // Preferências
-      if (needsPet ?? false) query = query.eq('accepts_pet', true);
-      if (needsGrocery ?? false) query = query.eq('accepts_grocery', true);
-      if (needsCondo ?? false) query = query.eq('accepts_condo', true);
+      if (needsPet ?? false) {
+        query = query.eq('accepts_pet', true);
+        print('🐕 [${DateTime.now()}] Filtro pet aplicado');
+      }
+      if (needsGrocery ?? false) {
+        query = query.eq('accepts_grocery', true);
+        print('🛒 [${DateTime.now()}] Filtro grocery aplicado');
+      }
+      if (needsCondo ?? false) {
+        query = query.eq('accepts_condo', true);
+        print('🏢 [${DateTime.now()}] Filtro condo aplicado');
+      }
 
       // Bounding box
       query = query
@@ -456,15 +564,19 @@ class DriverService {
           .gte('current_longitude', longitude - lngDelta)
           .lte('current_longitude', longitude + lngDelta)
           .order('average_rating', ascending: false);
+      print('📍 [${DateTime.now()}] Filtro de localização aplicado');
 
       if (limit != null && limit > 0) {
         query = query.limit(limit);
+        print('🔢 [${DateTime.now()}] Limite aplicado: $limit');
       }
 
       // Execute query with fallback in case of missing column (e.g., average_rating not present yet)
       dynamic response;
       try {
+        print('🚀 [${DateTime.now()}] Executando query no Supabase...');
         response = await query;
+        print('📊 [${DateTime.now()}] Query executada com sucesso. Registros retornados: ${(response as List).length}');
       } on PostgrestException catch (e) {
         // 42703: undefined_column in Postgres
         final msg = (e.message ?? '').toLowerCase();
@@ -501,24 +613,182 @@ class DriverService {
         }
       }
 
-      List<Driver> drivers = (response as List)
+      print('🔄 [${DateTime.now()}] Processando dados dos motoristas...');
+      var drivers = (response as List)
           .map((json) => Driver.fromJson(json as Map<String, dynamic>))
           .toList();
+      print('✅ [${DateTime.now()}] ${drivers.length} motoristas processados com sucesso');
 
       // Filtrar motoristas que excluíram a zona de destino
       if (destinationNeighborhood != null && destinationCity != null && destinationState != null) {
+        print('🚫 [${DateTime.now()}] Aplicando filtro de zonas excluídas...');
+        final originalCount = drivers.length;
         drivers = await _filterDriversByExcludedZones(
           drivers,
           destinationNeighborhood,
           destinationCity,
           destinationState,
         );
+        print('📉 [${DateTime.now()}] Filtro de zonas aplicado: $originalCount -> ${drivers.length} motoristas');
       }
 
-      return drivers;
+      // Calcular distância real para cada motorista e ordenar por proximidade
+      print('📏 [${DateTime.now()}] Calculando distâncias reais...');
+      final driversWithDistance = <DriverWithDistance>[];
+      
+      for (final driver in drivers) {
+        if (driver.currentLatitude != null && driver.currentLongitude != null) {
+          final distance = _calculateHaversineDistance(
+            latitude,
+            longitude,
+            driver.currentLatitude!,
+            driver.currentLongitude!,
+          );
+          
+          // Filtrar apenas motoristas dentro do raio especificado
+          if (distance <= radiusKm) {
+            driversWithDistance.add(DriverWithDistance(
+              driver: driver,
+              distanceKm: distance,
+            ));
+          }
+        }
+      }
+      
+      // Ordenar por distância (mais próximos primeiro)
+      driversWithDistance.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+      
+      // Limitar aos 10 motoristas mais próximos
+      final limitedDrivers = driversWithDistance
+          .take(10)
+          .map((dwd) => dwd.driver)
+          .toList();
+      
+      print('🎯 [${DateTime.now()}] Busca finalizada com ${limitedDrivers.length} motoristas mais próximos');
+      if (driversWithDistance.isNotEmpty) {
+        print('📊 Distâncias: ${driversWithDistance.take(5).map((d) => '${d.distanceKm.toStringAsFixed(2)}km').join(', ')}');
+      }
+      
+      return limitedDrivers;
     } on PostgrestException catch (e) {
+      print('❌ [${DateTime.now()}] PostgrestException em getAvailableDriversNearby:');
+      print('  - Código: ${e.code}');
+      print('  - Mensagem: ${e.message}');
+      print('  - Detalhes: ${e.details}');
+      throw DatabaseException('Erro ao buscar motoristas disponíveis: ${e.message}', e.code);
+    } catch (e, stackTrace) {
+      print('❌ [${DateTime.now()}] Erro inesperado em getAvailableDriversNearby:');
+      print('  - Tipo: ${e.runtimeType}');
+      print('  - Mensagem: $e');
+      print('  - Stack trace: $stackTrace');
+      throw const DatabaseException('Erro inesperado ao buscar motoristas disponíveis.');
+    }
+  }
+
+  // Get available drivers nearby with user data (name and photo)
+  Future<List<Map<String, dynamic>>> getAvailableDriversNearbyWithUserData({
+    required double latitude,
+    required double longitude,
+    double radiusKm = 5.0,
+    String? category,
+    bool? needsPet,
+    bool? needsGrocery,
+    bool? needsCondo,
+    String? destinationNeighborhood,
+    String? destinationCity,
+    String? destinationState,
+    int? limit,
+  }) async {
+    print('🔍 [${DateTime.now()}] Iniciando getAvailableDriversNearbyWithUserData...');
+    
+    try {
+      // Aproximação de raio usando bounding box
+      final latDelta = radiusKm / 111.0; // ~111km por grau
+      final lngDelta = radiusKm / (111.0 * math.cos(latitude * math.pi / 180.0)).abs().clamp(0.0001, double.infinity);
+      
+      dynamic query = _supabase.from('drivers').select('''
+        *,
+        app_users!inner(
+          full_name,
+          photo_url
+        )
+      ''').eq('is_online', true);
+      
+      // Somente aprovados
+      query = query.or('approval_status.eq.approved,approval_status.is.null');
+      
+      // Filtro de categoria
+      if (category != null && category.isNotEmpty) {
+        query = query.eq('vehicle_category', category);
+      }
+      
+      // Preferências
+      if (needsPet ?? false) {
+        query = query.eq('accepts_pet', true);
+      }
+      if (needsGrocery ?? false) {
+        query = query.eq('accepts_grocery', true);
+      }
+      if (needsCondo ?? false) {
+        query = query.eq('accepts_condo', true);
+      }
+      
+      // Bounding box
+      query = query
+          .gte('current_latitude', latitude - latDelta)
+          .lte('current_latitude', latitude + latDelta)
+          .gte('current_longitude', longitude - lngDelta)
+          .lte('current_longitude', longitude + lngDelta);
+      
+      if (limit != null && limit > 0) {
+        query = query.limit(limit);
+      }
+      
+      final response = await query;
+      
+      final driversData = response as List<Map<String, dynamic>>;
+      
+      // Calcular distância real e filtrar
+      final driversWithDistance = <Map<String, dynamic>>[];
+      
+      for (final driverData in driversData) {
+        final currentLat = driverData['current_latitude'] as double?;
+        final currentLng = driverData['current_longitude'] as double?;
+        
+        if (currentLat != null && currentLng != null) {
+          final distance = _calculateHaversineDistance(
+            latitude,
+            longitude,
+            currentLat,
+            currentLng,
+          );
+          
+          if (distance <= radiusKm) {
+            driverData['distance_km'] = distance;
+            driversWithDistance.add(driverData);
+          }
+        }
+      }
+      
+      // Ordenar por distância
+      driversWithDistance.sort((a, b) => 
+        (a['distance_km'] as double).compareTo(b['distance_km'] as double));
+      
+      // Limitar aos 10 motoristas mais próximos
+      final limitedDriversData = driversWithDistance.take(10).toList();
+      
+      print('🎯 [${DateTime.now()}] Busca finalizada com ${limitedDriversData.length} motoristas com dados de usuário');
+      
+      return limitedDriversData;
+    } on PostgrestException catch (e) {
+      print('❌ [${DateTime.now()}] PostgrestException em getAvailableDriversNearbyWithUserData:');
+      print('  - Código: ${e.code}');
+      print('  - Mensagem: ${e.message}');
       throw DatabaseException('Erro ao buscar motoristas disponíveis: ${e.message}', e.code);
     } catch (e) {
+      print('❌ [${DateTime.now()}] Erro inesperado em getAvailableDriversNearbyWithUserData:');
+      print('  - Tipo: ${e.runtimeType}');
+      print('  - Mensagem: $e');
       throw const DatabaseException('Erro inesperado ao buscar motoristas disponíveis.');
     }
   }
@@ -568,12 +838,12 @@ class DriverService {
         'lat': latitude,
         'lng': longitude,
         'radius_km': radiusKm,
-      });
+      },);
 
       if (response == null || response.isEmpty) {
         // Fallback: retorna categorias padrão se não houver dados reais
         return VehicleCategory.popularCategories
-            .map((cat) => VehicleCategoryData.defaultForCategory(cat))
+            .map(VehicleCategoryData.defaultForCategory)
             .toList();
       }
 
@@ -586,7 +856,6 @@ class DriverService {
           basePricePerKm: (stat['avg_price_per_km'] as num?)?.toDouble() ?? 1.5,
           basePricePerMinute: (stat['avg_price_per_minute'] as num?)?.toDouble() ?? 0.20,
           availableDrivers: stat['driver_count'] as int? ?? 0,
-          estimatedArrival: _calculateEstimatedArrival(stat['avg_distance_km'] as double?),
           isAvailable: (stat['driver_count'] as int? ?? 0) > 0,
         );
       }).toList();
@@ -594,14 +863,14 @@ class DriverService {
       // Se a função RPC não existir, retorna dados padrão
       if (e.code == '42883') {
         return VehicleCategory.popularCategories
-            .map((cat) => VehicleCategoryData.defaultForCategory(cat))
+            .map(VehicleCategoryData.defaultForCategory)
             .toList();
       }
       throw DatabaseException('Erro ao buscar categorias disponíveis: ${e.message}');
     } catch (e) {
       // Fallback para dados padrão em caso de erro
       return VehicleCategory.popularCategories
-          .map((cat) => VehicleCategoryData.defaultForCategory(cat))
+          .map(VehicleCategoryData.defaultForCategory)
           .toList();
     }
   }
@@ -628,8 +897,8 @@ class DriverService {
       }
 
       // Calcula preços médios dos motoristas disponíveis
-      double avgPricePerKm = 1.5;
-      double avgPricePerMinute = 0.20;
+      var avgPricePerKm = 1.5;
+      var avgPricePerMinute = 0.20;
       
       final pricesPerKm = drivers
           .where((d) => d.customPricePerKm != null && d.customPricePerKm! > 0)
@@ -654,8 +923,6 @@ class DriverService {
         basePricePerKm: avgPricePerKm,
         basePricePerMinute: avgPricePerMinute,
         availableDrivers: drivers.length,
-        estimatedArrival: _calculateEstimatedArrival(null),
-        isAvailable: true,
       );
     } catch (e) {
       return VehicleCategoryData.defaultForCategory(category);
@@ -673,5 +940,28 @@ class DriverService {
     if (minutes <= 15) return '10-15 min';
     if (minutes <= 20) return '15-20 min';
     return '20+ min';
+  }
+
+  /// Calcula a distância entre dois pontos usando a fórmula de Haversine
+  double _calculateHaversineDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const double earthRadius = 6371; // Raio da Terra em km
+    
+    final dLat = (lat2 - lat1) * math.pi / 180;
+    final dLon = (lon2 - lon1) * math.pi / 180;
+    
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180) *
+            math.cos(lat2 * math.pi / 180) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    
+    return earthRadius * c;
   }
 }

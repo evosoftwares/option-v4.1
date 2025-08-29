@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../config/app_config.dart';
 import '../../models/favorite_location.dart';
 import '../../models/vehicle_category.dart';
 import '../../services/driver_service.dart';
+import '../../services/location_service.dart';
 import '../../services/passenger_promo_service.dart';
 import '../../services/promo_code_service.dart';
-import '../../services/user_service.dart';
 import '../../services/search_status_service.dart';
+import '../../services/user_service.dart';
 import '../../widgets/logo_branding.dart';
 import '../../widgets/search_feedback_widget.dart';
 import 'driver_selection_screen.dart';
-import 'additional_stop_screen.dart';
-import '../../config/app_config.dart';
-import '../../services/location_service.dart';
 
 class TripOptionsScreen extends StatefulWidget {
 
@@ -59,7 +59,7 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
   // Promo code state
   final TextEditingController _promoController = TextEditingController();
   String? _appliedPromoCode;
-  double _promoDiscount = 0.0;
+  double _promoDiscount = 0;
   bool _isValidatingPromo = false;
   bool _isNavigating = false;
 
@@ -78,12 +78,12 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
     );
     
     _buttonScaleAnimation = Tween<double>(
-      begin: 1.0,
+      begin: 1,
       end: 0.95,
     ).animate(CurvedAnimation(
       parent: _buttonController,
       curve: Curves.easeInOut,
-    ));
+    ),);
     
     _loadCategoryData();
   }
@@ -100,8 +100,8 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
       setState(() => _isLoading = true);
       
       // Garante coordenadas válidas para a origem
-      double? lat = widget.origin.latitude;
-      double? lng = widget.origin.longitude;
+      var lat = widget.origin.latitude;
+      var lng = widget.origin.longitude;
 
       if ((lat == null || lng == null) && widget.origin.placeId != null) {
         final details = await _locationService.getPlaceDetails(widget.origin.placeId!);
@@ -120,7 +120,7 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
         if (mounted) {
           setState(() {
             _categoryData = VehicleCategory.popularCategories
-                .map((cat) => VehicleCategoryData.defaultForCategory(cat))
+                .map(VehicleCategoryData.defaultForCategory)
                 .toList();
             _isLoading = false;
           });
@@ -132,7 +132,7 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
       final categories = await _driverService.getAvailableCategoriesInRegion(
         latitude: lat,
         longitude: lng,
-        radiusKm: 15.0,
+        radiusKm: 15,
       );
       
       if (mounted) {
@@ -141,12 +141,12 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
           _isLoading = false;
         });
       }
-    } on Exception catch (e) {
+    } on Exception {
       // Em caso de erro, usa dados padrão
       if (mounted) {
         setState(() {
           _categoryData = VehicleCategory.popularCategories
-              .map((cat) => VehicleCategoryData.defaultForCategory(cat))
+              .map(VehicleCategoryData.defaultForCategory)
               .toList();
           _isLoading = false;
         });
@@ -219,7 +219,7 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
               _promoCodeSection(),
               const Spacer(),
               // Widget de feedback visual para busca
-              SearchFeedbackWidget(
+              const SearchFeedbackWidget(
                 showOnlyWhenActive: true,
                 compact: true,
               ),
@@ -327,19 +327,6 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-            if (data.estimatedArrival != null) ...[
-              const SizedBox(height: 1),
-              Text(
-                data.estimatedArrival!,
-                style: textTheme.bodySmall?.copyWith(
-                  color: selected ? colorScheme.onPrimaryContainer.withValues(alpha: 0.7) : colorScheme.onSurfaceVariant,
-                  fontSize: 10,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
           ],
         ),
       ),
@@ -357,7 +344,7 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
       title: Text(title),
       value: value,
       onChanged: onChanged,
-      activeColor: colorScheme.primary,
+      activeThumbColor: colorScheme.primary,
     );
   }
 
@@ -446,7 +433,7 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
       debugPrint('❌ General error validating promo: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Erro ao validar código. Tente novamente.'),
             backgroundColor: Colors.red,
           ),

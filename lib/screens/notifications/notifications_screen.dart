@@ -1,11 +1,23 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../theme/app_spacing.dart';
-import '../../theme/app_typography.dart';
+
 import '../../services/notification_service.dart';
 import '../../services/user_service.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 import '../../widgets/logo_branding.dart';
+
+enum NotificationScreenState {
+  initial,
+  loading,
+  loaded,
+  empty,
+  error,
+  refreshing,
+}
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -18,8 +30,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final NotificationService _notificationService = NotificationService(Supabase.instance.client);
   List<NotificationModel> _notifications = [];
   StreamSubscription<List<NotificationModel>>? _notificationsSubscription;
-  bool _isLoading = true;
+  NotificationScreenState _screenState = NotificationScreenState.initial;
   String? _userId;
+  String? _errorMessage;
+  DateTime? _lastRefresh;
+  Timer? _debounceTimer;
+  
+  static const Duration _cacheValidDuration = Duration(minutes: 5);
+  static const Duration _debounceDelay = Duration(milliseconds: 300);
 
   @override
   void initState() {
@@ -30,6 +48,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void dispose() {
     _notificationsSubscription?.cancel();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -67,20 +86,39 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _loadNotifications() async {
     if (_userId == null) return;
     
+    // Verificar se precisa recarregar baseado no cache
+    if (!_shouldRefresh() && _notifications.isNotEmpty) {
+      return;
+    }
+    
+    setState(() {
+      _screenState = _notifications.isEmpty 
+          ? NotificationScreenState.loading 
+          : NotificationScreenState.refreshing;
+      _errorMessage = null;
+    });
+    
     try {
       final notifications = await _notificationService.getUserNotifications(_userId!);
-      setState(() {
-        _notifications = notifications;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao carregar notificações: $e')),
-        );
+        setState(() {
+          _notifications = notifications;
+          _screenState = notifications.isEmpty 
+              ? NotificationScreenState.empty 
+              : NotificationScreenState.loaded;
+          _lastRefresh = DateTime.now();
+        });
+        
+        // Salvar no cache
+        await _saveNotificationsToCache(notifications);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _screenState = NotificationScreenState.error;
+          _errorMessage = e.toString();
+        });
       }
     }
   }
@@ -91,10 +129,49 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _notificationsSubscription = _notificationService
         .streamUserNotifications(_userId!)
         .listen((notifications) {
-      setState(() {
-        _notifications = notifications;
+      // Implementar debounce para evitar múltiplas atualizações
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(_debounceDelay, () {
+        if (mounted) {
+          setState(() {
+            _notifications = notifications;
+            _screenState = notifications.isEmpty 
+                ? NotificationScreenState.empty 
+                : NotificationScreenState.loaded;
+          });
+        }
       });
     });
+  }
+  
+  bool _shouldRefresh() {
+    if (_lastRefresh == null) return true;
+    return DateTime.now().difference(_lastRefresh!) > _cacheValidDuration;
+  }
+  
+  Future<void> _saveNotificationsToCache(List<NotificationModel> notifications) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final notificationsJson = notifications.map((n) => n.toJson()).toList();
+      await prefs.setString('cached_notifications_$_userId', 
+          notifications.map((n) => n.toJson()).toString());
+    } catch (e) {
+      // Falha silenciosa no cache
+      debugPrint('Erro ao salvar cache de notificações: $e');
+    }
+  }
+  
+  Future<void> _loadNotificationsFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedData = prefs.getString('cached_notifications_$_userId');
+      if (cachedData != null && cachedData.isNotEmpty) {
+        // Implementar deserialização se necessário
+        // Por simplicidade, vamos apenas verificar se existe cache
+      }
+    } catch (e) {
+      debugPrint('Erro ao carregar cache de notificações: $e');
+    }
   }
 
   Future<void> _markAsRead(NotificationModel notification) async {
@@ -197,57 +274,184 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _notifications.isEmpty
-              ? _buildEmptyState(colorScheme)
-              : RefreshIndicator(
-                  onRefresh: _loadNotifications,
-                  child: ListView.builder(
-                    padding: AppSpacing.paddingLg,
-                    itemCount: _notifications.length,
-                    itemBuilder: (context, index) {
-                      final notification = _notifications[index];
-                      return _NotificationTile(
-                        notification: notification,
-                        onTap: () => _markAsRead(notification),
-                        formatTime: _formatNotificationTime,
-                        getIcon: _getNotificationIcon,
-                        getColor: _getNotificationColor,
-                      );
-                    },
-                  ),
-                ),
+      body: _buildBody(colorScheme),
     );
   }
 
+  Widget _buildBody(ColorScheme colorScheme) {
+    switch (_screenState) {
+      case NotificationScreenState.initial:
+      case NotificationScreenState.loading:
+        return _buildLoadingSkeleton();
+      case NotificationScreenState.loaded:
+      case NotificationScreenState.refreshing:
+        return _buildNotificationsList();
+      case NotificationScreenState.empty:
+        return _buildEmptyState(colorScheme);
+      case NotificationScreenState.error:
+        return _buildErrorState(colorScheme);
+    }
+  }
+  
+  Widget _buildLoadingSkeleton() => ListView.builder(
+      padding: AppSpacing.paddingLg,
+      itemCount: 6,
+      itemBuilder: (context, index) => _NotificationSkeleton(),
+    );
+  
+  Widget _buildNotificationsList() => RefreshIndicator(
+      onRefresh: () async {
+        await _loadNotifications();
+      },
+      child: ListView.builder(
+        padding: AppSpacing.paddingLg,
+        itemCount: _notifications.length,
+        itemBuilder: (context, index) {
+          final notification = _notifications[index];
+          return _NotificationTile(
+            notification: notification,
+            onTap: () => _markAsRead(notification),
+            formatTime: _formatNotificationTime,
+            getIcon: _getNotificationIcon,
+            getColor: _getNotificationColor,
+          );
+        },
+      ),
+    );
+  
   Widget _buildEmptyState(ColorScheme colorScheme) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.notifications_none,
-            size: AppSpacing.iconXxl,
+            size: 64,
             color: colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             'Nenhuma notificação',
-            style: AppTypography.titleLarge.copyWith(
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Você receberá notificações sobre\ncorridas, mensagens e atualizações aqui.',
-            textAlign: TextAlign.center,
-            style: AppTypography.bodyMedium.copyWith(
+            'Você não possui notificações no momento',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton.icon(
+            onPressed: _loadNotifications,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Atualizar'),
           ),
         ],
       ),
     );
+  
+  Widget _buildErrorState(ColorScheme colorScheme) => Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: colorScheme.error,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Erro ao carregar',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: colorScheme.error,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _errorMessage ?? 'Ocorreu um erro inesperado',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton.icon(
+            onPressed: _loadNotifications,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Tentar novamente'),
+          ),
+        ],
+      ),
+    );
+}
+
+class _NotificationSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: AppSpacing.paddingMd,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 16,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Container(
+                    height: 14,
+                    width: AppSpacing.avatarXl * 1.67,
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Container(
+                    height: AppSpacing.xs * 3,
+                    width: 80,
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _NotificationTile extends StatelessWidget {
@@ -323,8 +527,8 @@ class _NotificationTile extends StatelessWidget {
                         ),
                         if (isUnread)
                           Container(
-                            width: 8,
-                            height: 8,
+                            width: AppSpacing.sm,
+                            height: AppSpacing.sm,
                             decoration: BoxDecoration(
                               color: colorScheme.primary,
                               shape: BoxShape.circle,

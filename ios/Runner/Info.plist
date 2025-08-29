@@ -56,10 +56,70 @@
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Precisamos enviar notificações para informar sobre novas corridas e atualizações de status</string>
 
-	<!-- Habilita localização em segundo plano -->
+	<!-- Habilita localização e notificações em segundo plano -->
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
+		<string>remote-notification</string>
+		<string>background-fetch</string>
+		<string>background-processing</string>
+	</array>
+	
+	<!-- Firebase Cloud Messaging -->
+	<key>FirebaseMessagingAutoInitEnabled</key>
+	<true/>
+	<key>FirebaseAnalyticsCollectionEnabled</key>
+	<true/>
+	
+	<!-- Push Notifications -->
+	<key>aps-environment</key>
+	<string>development</string>
+	
+	<!-- Notification Categories -->
+	<key>UNNotificationCategories</key>
+	<array>
+		<dict>
+			<key>identifier</key>
+			<string>RIDE_REQUEST</string>
+			<key>actions</key>
+			<array>
+				<dict>
+					<key>identifier</key>
+					<string>ACCEPT_RIDE</string>
+					<key>title</key>
+					<string>Aceitar</string>
+					<key>options</key>
+					<integer>4</integer>
+				</dict>
+				<dict>
+					<key>identifier</key>
+					<string>DECLINE_RIDE</string>
+					<key>title</key>
+					<string>Recusar</string>
+					<key>options</key>
+					<integer>2</integer>
+				</dict>
+			</array>
+		</dict>
+		<dict>
+			<key>identifier</key>
+			<string>CHAT_MESSAGE</string>
+			<key>actions</key>
+			<array>
+				<dict>
+					<key>identifier</key>
+					<string>REPLY_MESSAGE</string>
+					<key>title</key>
+					<string>Responder</string>
+					<key>options</key>
+					<integer>4</integer>
+					<key>textInputButtonTitle</key>
+					<string>Enviar</string>
+					<key>textInputPlaceholder</key>
+					<string>Digite sua mensagem...</string>
+				</dict>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

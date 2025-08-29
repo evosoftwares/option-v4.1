@@ -22,9 +22,7 @@ class RateLimitedDriverExcludedZonesService {
   final Map<String, List<DateTime>> _bulkOperationTimestamps = {};
 
   /// Gets driver excluded zones (read operations are not rate limited)
-  Future<List<DriverExcludedZone>> getDriverExcludedZones(String driverId) {
-    return _cachedService.getDriverExcludedZones(driverId);
-  }
+  Future<List<DriverExcludedZone>> getDriverExcludedZones(String driverId) => _cachedService.getDriverExcludedZones(driverId);
 
   /// Adds excluded zone with rate limiting
   Future<DriverExcludedZone> addExcludedZone({
@@ -90,37 +88,29 @@ class RateLimitedDriverExcludedZonesService {
     required String neighborhoodName,
     required String city,
     required String state,
-  }) {
-    return _cachedService.isZoneExcluded(
+  }) => _cachedService.isZoneExcluded(
       driverId: driverId,
       neighborhoodName: neighborhoodName,
       city: city,
       state: state,
     );
-  }
 
   /// Gets excluded zones by city (read operations are not rate limited)
   Future<List<DriverExcludedZone>> getExcludedZonesByCity({
     required String driverId,
     required String city,
     required String state,
-  }) {
-    return _cachedService.getExcludedZonesByCity(
+  }) => _cachedService.getExcludedZonesByCity(
       driverId: driverId,
       city: city,
       state: state,
     );
-  }
 
   /// Gets excluded zones count (read operations are not rate limited)
-  Future<int> getExcludedZonesCount(String driverId) {
-    return _cachedService.getExcludedZonesCount(driverId);
-  }
+  Future<int> getExcludedZonesCount(String driverId) => _cachedService.getExcludedZonesCount(driverId);
 
   /// Gets driver zone statistics (read operations are not rate limited)
-  Future<Map<String, dynamic>> getDriverZoneStats(String driverId) {
-    return _cachedService.getDriverZoneStats(driverId);
-  }
+  Future<Map<String, dynamic>> getDriverZoneStats(String driverId) => _cachedService.getDriverZoneStats(driverId);
 
   /// Checks rate limits for a driver
   Future<void> _checkRateLimit(
@@ -145,7 +135,7 @@ class RateLimitedDriverExcludedZonesService {
     
     // Remove old timestamps outside the rate limit window
     timestamps.removeWhere((timestamp) => 
-        now.difference(timestamp) > _rateLimitWindow);
+        now.difference(timestamp) > _rateLimitWindow,);
 
     if (timestamps.length >= _maxOperationsPerWindow) {
       final oldestTimestamp = timestamps.first;
@@ -164,7 +154,7 @@ class RateLimitedDriverExcludedZonesService {
     
     // Remove old timestamps outside the rate limit window
     timestamps.removeWhere((timestamp) => 
-        now.difference(timestamp) > _rateLimitWindow);
+        now.difference(timestamp) > _rateLimitWindow,);
 
     if (timestamps.length >= _maxBulkOperationsPerWindow) {
       final oldestTimestamp = timestamps.first;

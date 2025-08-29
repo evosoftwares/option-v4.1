@@ -1,11 +1,18 @@
 import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../exceptions/app_exceptions.dart';
+import '../utils/supabase_helper.dart';
 import 'transaction_service.dart';
 
 /// Serviço para gerenciar limites de zonas de exclusão por motorista
 class ZoneLimitService {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  SupabaseClient get _supabase {
+    final c = SupabaseHelper.client;
+    if (c == null) {
+      throw Exception('Supabase não inicializado');
+    }
+    return c;
+  }
   
   // Configurações padrão
   static const int _defaultMaxZonesPerDriver = 50;
@@ -45,11 +52,11 @@ class ZoneLimitService {
   /// Define um limite personalizado para um motorista
   Future<void> setCustomZoneLimit(String driverId, int limit) async {
     if (limit < 0) {
-      throw ValidationException('Limite não pode ser negativo');
+      throw const ValidationException('Limite não pode ser negativo');
     }
     
     if (limit > 200) {
-      throw ValidationException('Limite máximo permitido é 200 zonas');
+      throw const ValidationException('Limite máximo permitido é 200 zonas');
     }
     
     await TransactionService.executeWithRetry(
@@ -232,11 +239,6 @@ class ZoneLimitService {
 
 /// Resultado da verificação de limite de zonas
 class ZoneLimitCheckResult {
-  final bool canAdd;
-  final int currentCount;
-  final int maxLimit;
-  final int availableSlots;
-  final int requestedToAdd;
   
   const ZoneLimitCheckResult({
     required this.canAdd,
@@ -245,23 +247,19 @@ class ZoneLimitCheckResult {
     required this.availableSlots,
     required this.requestedToAdd,
   });
+  final bool canAdd;
+  final int currentCount;
+  final int maxLimit;
+  final int availableSlots;
+  final int requestedToAdd;
   
   @override
-  String toString() {
-    return 'ZoneLimitCheckResult(canAdd: $canAdd, current: $currentCount/$maxLimit, '
+  String toString() => 'ZoneLimitCheckResult(canAdd: $canAdd, current: $currentCount/$maxLimit, '
            'available: $availableSlots, requested: $requestedToAdd)';
-  }
 }
 
 /// Estatísticas de uso de zonas
 class ZoneUsageStats {
-  final String driverId;
-  final int currentCount;
-  final int maxLimit;
-  final int availableSlots;
-  final int usagePercentage;
-  final bool isNearLimit;
-  final bool isAtLimit;
   
   const ZoneUsageStats({
     required this.driverId,
@@ -272,9 +270,15 @@ class ZoneUsageStats {
     required this.isNearLimit,
     required this.isAtLimit,
   });
+  final String driverId;
+  final int currentCount;
+  final int maxLimit;
+  final int availableSlots;
+  final int usagePercentage;
+  final bool isNearLimit;
+  final bool isAtLimit;
   
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'driver_id': driverId,
       'current_count': currentCount,
       'max_limit': maxLimit,
@@ -283,15 +287,10 @@ class ZoneUsageStats {
       'is_near_limit': isNearLimit,
       'is_at_limit': isAtLimit,
     };
-  }
 }
 
 /// Modelo para limite personalizado de motorista
 class DriverZoneLimit {
-  final String driverId;
-  final int maxZones;
-  final DateTime createdAt;
-  final DateTime updatedAt;
   
   const DriverZoneLimit({
     required this.driverId,
@@ -300,21 +299,21 @@ class DriverZoneLimit {
     required this.updatedAt,
   });
   
-  factory DriverZoneLimit.fromJson(Map<String, dynamic> json) {
-    return DriverZoneLimit(
+  factory DriverZoneLimit.fromJson(Map<String, dynamic> json) => DriverZoneLimit(
       driverId: json['driver_id'] as String,
       maxZones: json['max_zones'] as int,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
-  }
+  final String driverId;
+  final int maxZones;
+  final DateTime createdAt;
+  final DateTime updatedAt;
   
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'driver_id': driverId,
       'max_zones': maxZones,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
 }

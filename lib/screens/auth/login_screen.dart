@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../widgets/logo_branding.dart';
+
 import '../../services/user_service.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/logo_branding.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_text_field.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isObscure = true;
+  final bool _isObscure = true;
   bool _isSubmitting = false;
 
   @override
@@ -48,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
       if (!exists) {
-        // Redirecionar obrigatoriamente para seleção de tipo de usuário
+        // App_users não existe - redirecionar para completar o cadastro
         Navigator.of(context).pushReplacementNamed(
           '/select_user_type',
           arguments: {
@@ -58,6 +62,10 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         // Buscar dados completos do usuário para verificar o tipo
         final currentUser = await UserService.getCurrentUser();
+        
+        // Dados do usuário validados - prosseguir normalmente
+        
+        if (!mounted) return;
         if (currentUser != null && currentUser.userType == 'driver') {
           Navigator.of(context).pushReplacementNamed('/driver_home');
         } else {
@@ -79,6 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -88,14 +97,14 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Center(child: VerticalBrandLogo()),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
                    Text(
                      'Bem-vindo(a)',
                      style: textTheme.headlineSmall?.copyWith(
@@ -103,63 +112,43 @@ class _LoginScreenState extends State<LoginScreen> {
                        fontWeight: FontWeight.w700,
                      ),
                    ),
-                   const SizedBox(height: 8),
+                   const SizedBox(height: AppSpacing.sm),
                    Text(
                      'Acesse sua conta para continuar',
                      style: textTheme.bodyMedium?.copyWith(
                        color: colorScheme.onSurfaceVariant,
                      ),
                    ),
-                   const SizedBox(height: 24),
-                   Card(
-                     child: Padding(
-                       padding: const EdgeInsets.all(16),
-                       child: Form(
-                         key: _formKey,
-                         child: Column(
-                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                           children: [
-                             TextFormField(
-                               controller: _emailController,
-                               keyboardType: TextInputType.emailAddress,
-                               textInputAction: TextInputAction.next,
-                               decoration: const InputDecoration(
-                                 labelText: 'E-mail',
-                                 prefixIcon: Icon(Icons.email_outlined),
-                               ),
-                               validator: (value) {
-                                 final v = value?.trim() ?? '';
-                                 if (v.isEmpty) return 'Informe seu e-mail';
-                                 final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-                                 if (!emailRegex.hasMatch(v)) return 'E-mail inválido';
-                                 return null;
-                               },
-                             ),
-                             const SizedBox(height: 16),
-                             TextFormField(
-                               controller: _passwordController,
-                               obscureText: _isObscure,
-                               textInputAction: TextInputAction.done,
-                               onFieldSubmitted: (_) => _onSubmit(),
-                               decoration: InputDecoration(
-                                 labelText: 'Senha',
-                                 prefixIcon: const Icon(Icons.lock_outline),
-                                 suffixIcon: IconButton(
-                                   onPressed: () => setState(() => _isObscure = !_isObscure),
-                                   icon: Icon(
-                                     _isObscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                                     color: colorScheme.onSurfaceVariant,
-                                   ),
-                                 ),
-                               ),
-                               validator: (value) {
-                                 final v = value ?? '';
-                                 if (v.isEmpty) return 'Informe sua senha';
-                                 if (v.length < 6) return 'A senha deve ter ao menos 6 caracteres';
-                                 return null;
-                               },
-                             ),
-                             const SizedBox(height: 8),
+                   const SizedBox(height: AppSpacing.lg),
+                   AppCard(
+                     padding: AppSpacing.paddingMd,
+                     child: Form(
+                       key: _formKey,
+                       child: Column(
+                         crossAxisAlignment: CrossAxisAlignment.stretch,
+                         children: [
+                           AppEmailField(
+                              controller: _emailController,
+                              validator: (value) {
+                                final v = value?.trim() ?? '';
+                                if (v.isEmpty) return 'Informe seu e-mail';
+                                final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+                                if (!emailRegex.hasMatch(v)) return 'E-mail inválido';
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            AppPasswordField(
+                              controller: _passwordController,
+                              onSubmitted: (_) => _onSubmit(),
+                              validator: (value) {
+                                final v = value ?? '';
+                                if (v.isEmpty) return 'Informe sua senha';
+                                if (v.length < 6) return 'A senha deve ter ao menos 6 caracteres';
+                                return null;
+                              },
+                            ),
+                             const SizedBox(height: AppSpacing.sm),
                              Align(
                               alignment: Alignment.centerRight,
                               child: TextButton(
@@ -173,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                             ),
-                             const SizedBox(height: 16),
+                             const SizedBox(height: AppSpacing.md),
                              SizedBox(
                                width: double.infinity,
                                height: 56,
@@ -191,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                      : const Text('Entrar'),
                                ),
                              ),
-                             const SizedBox(height: 12),
+                             const SizedBox(height: AppSpacing.xs * 3),
                              SizedBox(
                                width: double.infinity,
                                height: 56,
@@ -208,8 +197,26 @@ class _LoginScreenState extends State<LoginScreen> {
                                  ),
                                ),
                              ),
+                             const SizedBox(height: AppSpacing.sm),
+                             // Botão temporário para debug do Supabase
+                             SizedBox(
+                               width: double.infinity,
+                               height: 40,
+                               child: OutlinedButton(
+                                 onPressed: () => Navigator.of(context).pushNamed('/debug_supabase'),
+                                 style: OutlinedButton.styleFrom(
+                                   foregroundColor: colorScheme.secondary,
+                                   side: BorderSide(color: colorScheme.secondary),
+                                 ),
+                                 child: Text(
+                                   '🔧 Debug Supabase',
+                                   style: textTheme.labelSmall?.copyWith(
+                                     color: colorScheme.secondary,
+                                   ),
+                                 ),
+                               ),
+                             ),
                            ],
-                         ),
                        ),
                      ),
                    ),

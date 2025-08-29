@@ -1,9 +1,17 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/payment_method.dart';
+
 import '../exceptions/app_exceptions.dart';
+import '../models/payment_method.dart';
+import '../utils/supabase_helper.dart';
 
 class PaymentService {
-  static final _supabase = Supabase.instance.client;
+  static SupabaseClient get _supabase {
+    final client = SupabaseHelper.client;
+    if (client == null) {
+      throw const AuthException('Supabase não inicializado');
+    }
+    return client;
+  }
 
   /// Get all payment methods for the current user
   static Future<List<PaymentMethod>> getPaymentMethods() async {

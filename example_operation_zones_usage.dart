@@ -4,8 +4,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'lib/services/driver_operation_zones_service.dart';
-import 'lib/models/supabase/driver_operation_zone.dart';
 
 void main() async {
   // Exemplo de uso das áreas de atuação
@@ -60,7 +60,7 @@ Future<void> demonstrateOperationZones() async {
       driverId: driverId,
       zoneName: 'Zona Sul Premium',
       polygonCoordinates: zonaSulPolygon,
-      priceMultiplier: 2.0,
+      priceMultiplier: 2,
     );
 
     print('   ✅ Área criada: ${zonaSulZone.zoneName}');
@@ -70,7 +70,7 @@ Future<void> demonstrateOperationZones() async {
     print('3. 📋 Listando todas as áreas do motorista...');
     final allZones = await service.getDriverOperationZones(driverId);
     
-    for (int i = 0; i < allZones.length; i++) {
+    for (var i = 0; i < allZones.length; i++) {
       final zone = allZones[i];
       print('   ${i + 1}. ${zone.zoneName}');
       print('      - Multiplicador: ${zone.formattedMultiplier}');
@@ -154,9 +154,9 @@ SupabaseClient _createMockClient() {
 
 // Exemplo de como integrar no cálculo de preços
 class PriceCalculator {
-  final DriverOperationZonesService _zonesService;
   
   PriceCalculator(this._zonesService);
+  final DriverOperationZonesService _zonesService;
 
   Future<double> calculateTripPrice({
     required String driverId,
