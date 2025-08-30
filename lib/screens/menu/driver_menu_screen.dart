@@ -177,11 +177,12 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
 
               const SizedBox(height: AppSpacing.sectionSpacing),
               const _SectionTitle(title: 'Geral'),
-              _MenuTile(
-                icon: Icons.emergency,
-                label: 'Emergência',
-                onTap: () => Navigator.pushNamed(context, '/emergency'),
-              ),
+              // Botão Emergência ocultado
+              // _MenuTile(
+              //   icon: Icons.emergency,
+              //   label: 'Emergência',
+              //   onTap: () => Navigator.pushNamed(context, '/emergency'),
+              // ),
               _MenuTile(
                 icon: Icons.notifications_none,
                 label: 'Notificações',

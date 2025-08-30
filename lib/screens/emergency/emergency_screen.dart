@@ -343,7 +343,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                       ),
                       child: Column(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.history,
                             size: 48,
                             color: AppColors.gray400,
@@ -387,7 +387,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (emergency.description?.isNotEmpty == true)
+                                if (emergency.description?.isNotEmpty ?? false)
                                   Text(
                                     emergency.description!,
                                     style: AppTypography.bodyMedium,

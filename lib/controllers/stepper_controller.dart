@@ -49,24 +49,34 @@ class StepperController extends ChangeNotifier {
   }
 
   void setPhone(String phone) {
-    _phone = phone;
+    _phone = _sanitizeStringValue(phone);
     notifyListeners();
     // Auto-save do estado crítico
     _saveState();
   }
 
   void setFullName(String name) {
-    _fullName = name;
+    _fullName = _sanitizeStringValue(name);
     notifyListeners();
     // Auto-save do estado crítico
     _saveState();
   }
 
   void setEmail(String email) {
-    _email = email;
+    _email = _sanitizeStringValue(email);
     notifyListeners();
     // Auto-save do estado crítico
     _saveState();
+  }
+
+  /// Limpa dados persistidos corrompidos (strings "null")
+  Future<void> clearCorruptedPersistedData() async {
+    try {
+      await StepperPersistenceService.clearStepperState();
+      AppLogger.persistence('Dados persistidos corrompidos limpos');
+    } catch (e) {
+      AppLogger.error('Erro ao limpar dados persistidos corrompidos', error: e);
+    }
   }
 
   void setProfilePhoto(File? photo) {
@@ -290,7 +300,7 @@ class StepperController extends ChangeNotifier {
         throw RequiredFieldsException('telefone');
       }
 
-      // Upload photo if one is selected
+      // Upload da foto de perfil se selecionada
       var photoUrl = _uploadedPhotoUrl;
       if (hasProfilePhoto() && photoUrl == null) {
         print('📸 Fazendo upload da foto de perfil...');
@@ -301,7 +311,8 @@ class StepperController extends ChangeNotifier {
           print('❌ Erro ao fazer upload da foto (continuando sem foto): $e');
           // Log the error but continue without photo
           AppLogger.error('Erro no upload da foto de perfil', error: e);
-          throw PhotoUploadException(e.toString());
+          // Continue registration without photo instead of throwing exception
+          photoUrl = null;
         }
       }
 
@@ -395,15 +406,28 @@ class StepperController extends ChangeNotifier {
       if (hasState) {
         final state = await StepperPersistenceService.loadStepperState();
         
-        _userType = state['userType'];
-        _phone = state['phone'];
-        _fullName = state['fullName'];
-        _email = state['email'];
+        // Só carrega dados persistidos se os valores atuais estão vazios
+        // Isso evita sobrescrever dados corretos vindos do user_type_screen
+        if (_userType == null) {
+          _userType = _sanitizeStringValue(state['userType']);
+        }
+        if (_phone == null) {
+          _phone = _sanitizeStringValue(state['phone']);
+        }
+        if (_fullName == null) {
+          _fullName = _sanitizeStringValue(state['fullName']);
+        }
+        if (_email == null) {
+          _email = _sanitizeStringValue(state['email']);
+        }
+        
         _currentStep = state['currentStep'] ?? 0;
         // Favorite locations removed from registration flow
-        _uploadedPhotoUrl = state['uploadedPhotoUrl'];
+        if (_uploadedPhotoUrl == null) {
+          _uploadedPhotoUrl = _sanitizeStringValue(state['uploadedPhotoUrl']);
+        }
         
-        AppLogger.persistence('Estado do stepper recuperado da persistência');
+        AppLogger.persistence('Estado do stepper recuperado da persistência (apenas campos vazios)');
       }
     } catch (e) {
       AppLogger.error('Erro ao carregar dados persistidos', error: e);
@@ -431,5 +455,20 @@ class StepperController extends ChangeNotifier {
     print('📸 Photo URL atualizada: $photoUrl');
     _uploadedPhotoUrl = photoUrl;
     notifyListeners();
+  }
+
+  /// Sanitiza valores string, convertendo "null" para null
+  String? _sanitizeStringValue(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is String) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty || trimmed.toLowerCase() == 'null') {
+        return null;
+      }
+      return trimmed;
+    }
+    return value?.toString();
   }
 }

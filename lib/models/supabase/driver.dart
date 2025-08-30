@@ -31,9 +31,11 @@ class Driver {
     required this.cancellations,
     required this.createdAt,
     required this.updatedAt,
-    this.fcmToken,
+    this.onesignalPlayerId,
+    this.pushToken,
+    this.deviceId,
     this.devicePlatform,
-    this.lastNotificationAt,
+    this.lastActiveAt,
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
@@ -76,10 +78,12 @@ class Driver {
       cancellations: toIntOrZero(json['consecutive_cancellations']),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
-      fcmToken: json['fcm_token'] as String?,
+      onesignalPlayerId: json['onesignal_player_id'] as String?,
+      pushToken: json['push_token'] as String?,
+      deviceId: json['device_id'] as String?,
       devicePlatform: json['device_platform'] as String?,
-      lastNotificationAt: json['last_notification_at'] != null 
-          ? DateTime.parse(json['last_notification_at'] as String) 
+      lastActiveAt: json['last_active_at'] != null 
+          ? DateTime.parse(json['last_active_at'] as String) 
           : null,
     );
   }
@@ -113,9 +117,11 @@ class Driver {
   final int cancellations;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final String? fcmToken;
+  final String? onesignalPlayerId;
+  final String? pushToken;
+  final String? deviceId;
   final String? devicePlatform;
-  final DateTime? lastNotificationAt;
+  final DateTime? lastActiveAt;
 
   Map<String, dynamic> toJson() => {
       'id': id,
@@ -148,9 +154,11 @@ class Driver {
       'consecutive_cancellations': cancellations,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
-      'fcm_token': fcmToken,
+      'onesignal_player_id': onesignalPlayerId,
+      'push_token': pushToken,
+      'device_id': deviceId,
       'device_platform': devicePlatform,
-      'last_notification_at': lastNotificationAt?.toIso8601String(),
+      'last_active_at': lastActiveAt?.toIso8601String(),
     };
 
   Driver copyWith({
@@ -184,9 +192,11 @@ class Driver {
     int? cancellations,
     DateTime? createdAt,
     DateTime? updatedAt,
-    String? fcmToken,
+    String? onesignalPlayerId,
+    String? pushToken,
+    String? deviceId,
     String? devicePlatform,
-    DateTime? lastNotificationAt,
+    DateTime? lastActiveAt,
   }) => Driver(
       id: id ?? this.id,
       userId: userId ?? this.userId,
@@ -218,8 +228,10 @@ class Driver {
       cancellations: cancellations ?? this.cancellations,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      fcmToken: fcmToken ?? this.fcmToken,
+      onesignalPlayerId: onesignalPlayerId ?? this.onesignalPlayerId,
+      pushToken: pushToken ?? this.pushToken,
+      deviceId: deviceId ?? this.deviceId,
       devicePlatform: devicePlatform ?? this.devicePlatform,
-      lastNotificationAt: lastNotificationAt ?? this.lastNotificationAt,
+      lastActiveAt: lastActiveAt ?? this.lastActiveAt,
     );
 }

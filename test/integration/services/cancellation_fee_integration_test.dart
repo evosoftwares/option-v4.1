@@ -1,10 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import 'package:option/models/supabase/driver.dart';
 import 'package:option/models/supabase/trip_request.dart';
 import 'package:option/services/cancellation_fee_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../helpers/supabase_test_helper.dart';
 
 void main() {

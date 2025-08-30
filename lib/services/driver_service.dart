@@ -9,8 +9,8 @@ import '../models/supabase/driver_offer.dart';
 import '../models/supabase/trip.dart';
 import '../models/vehicle_category.dart';
 import '../validators/database_constraints_validator.dart';
-import 'driver_excluded_zones_service.dart';
 import 'driver_document_service.dart';
+import 'driver_excluded_zones_service.dart';
 
 /// Classe auxiliar para armazenar motorista com sua distância calculada
 class DriverWithDistance {
@@ -47,9 +47,56 @@ class DriverService {
     }
   }
 
-  // Get driver profile with user data (name and photo)
+  // Get driver profile with user data (name and photo) usando view otimizada quando possível
   Future<Map<String, dynamic>?> getDriverWithUserData(String driverId) async {
     try {
+      // Tentar usar a view otimizada primeiro
+      try {
+        final response = await _supabase
+            .from('available_drivers_view')
+            .select()
+            .eq('driver_id', driverId)
+            .single();
+        
+        if (response != null) {
+          // Reformatar resposta para manter compatibilidade
+          return {
+            'id': response['driver_id'],
+            'user_id': response['user_id'],
+            'vehicle_brand': response['vehicle_brand'],
+            'vehicle_model': response['vehicle_model'],
+            'vehicle_year': response['vehicle_year'],
+            'vehicle_color': response['vehicle_color'],
+            'vehicle_category': response['vehicle_category'],
+            'is_online': response['is_online'],
+            'accepts_pet': response['accepts_pet'],
+            'accepts_grocery': response['accepts_grocery'],
+            'accepts_condo': response['accepts_condo'],
+            'ac_policy': response['ac_policy'],
+            'custom_price_per_km': response['custom_price_per_km'],
+            'custom_price_per_minute': response['custom_price_per_minute'],
+            'pet_fee': response['pet_fee'],
+            'grocery_fee': response['grocery_fee'],
+            'condo_fee': response['condo_fee'],
+            'stop_fee': response['stop_fee'],
+            'total_trips': response['total_trips'],
+            'average_rating': response['average_rating'],
+            'current_latitude': response['current_latitude'],
+            'current_longitude': response['current_longitude'],
+            'last_location_update': response['last_location_update'],
+            'user_name': response['full_name'], // Campo compatível
+            'user_photo_url': response['photo_url'], // Campo compatível
+            'app_users': { // Para manter compatibilidade com código existente
+              'full_name': response['full_name'],
+              'photo_url': response['photo_url'],
+            },
+          };
+        }
+      } catch (e) {
+        print('⚠️ View otimizada não disponível para getDriverWithUserData, usando fallback: $e');
+      }
+
+      // Fallback para query com join manual
       final response = await _supabase
           .from('drivers')
           .select('''
@@ -494,7 +541,7 @@ class DriverService {
             .map(Trip.fromJson)
             .toList(),);
 
-  // Busca motoristas disponíveis próximos com filtros de categoria e preferências
+  // Busca motoristas disponíveis próximos usando a view otimizada available_drivers_view
   Future<List<Driver>> getAvailableDriversNearby({
     required double latitude,
     required double longitude,
@@ -530,93 +577,187 @@ class DriverService {
       print('  - lat range: ${latitude - latDelta} to ${latitude + latDelta}');
       print('  - lng range: ${longitude - lngDelta} to ${longitude + lngDelta}');
 
-      dynamic query = _supabase.from('drivers').select().eq('is_online', true);
-      print('🔧 [${DateTime.now()}] Query inicial criada: drivers online');
-
-      // Somente aprovados (se existir esse status)
-      query = query.or('approval_status.eq.approved,approval_status.is.null');
-      print('✅ [${DateTime.now()}] Filtro de aprovação aplicado');
-
-      // Filtro de categoria
-      if (category != null && category.isNotEmpty) {
-        query = query.eq('vehicle_category', category);
-        print('🚗 [${DateTime.now()}] Filtro de categoria aplicado: $category');
-      }
-
-      // Preferências
-      if (needsPet ?? false) {
-        query = query.eq('accepts_pet', true);
-        print('🐕 [${DateTime.now()}] Filtro pet aplicado');
-      }
-      if (needsGrocery ?? false) {
-        query = query.eq('accepts_grocery', true);
-        print('🛒 [${DateTime.now()}] Filtro grocery aplicado');
-      }
-      if (needsCondo ?? false) {
-        query = query.eq('accepts_condo', true);
-        print('🏢 [${DateTime.now()}] Filtro condo aplicado');
-      }
-
-      // Bounding box
-      query = query
-          .gte('current_latitude', latitude - latDelta)
-          .lte('current_latitude', latitude + latDelta)
-          .gte('current_longitude', longitude - lngDelta)
-          .lte('current_longitude', longitude + lngDelta)
-          .order('average_rating', ascending: false);
-      print('📍 [${DateTime.now()}] Filtro de localização aplicado');
-
-      if (limit != null && limit > 0) {
-        query = query.limit(limit);
-        print('🔢 [${DateTime.now()}] Limite aplicado: $limit');
-      }
-
-      // Execute query with fallback in case of missing column (e.g., average_rating not present yet)
+      // Tentar usar a view available_drivers_view otimizada primeiro
       dynamic response;
+      bool usedOptimizedView = false;
+      
       try {
-        print('🚀 [${DateTime.now()}] Executando query no Supabase...');
-        response = await query;
-        print('📊 [${DateTime.now()}] Query executada com sucesso. Registros retornados: ${(response as List).length}');
-      } on PostgrestException catch (e) {
-        // 42703: undefined_column in Postgres
-        final msg = (e.message ?? '').toLowerCase();
-        final isMissingAverageRating = e.code == '42703' || msg.contains('average_rating') || msg.contains('column');
-        if (isMissingAverageRating) {
-          // Fallback: re-run the same query without the ordering clause
-          // (Some environments may not have the average_rating column yet.)
-          // Note: keep filters identical to preserve result correctness
-          // Diagnostic log only in debug mode; does not expose secrets
-          if (kDebugMode) {
-            debugPrint('getAvailableDriversNearby: coluna average_rating ausente. Aplicando fallback sem ordenação. (${e.code})');
-          }
+        print('🚀 [${DateTime.now()}] Tentando usar available_drivers_view otimizada...');
+        
+        dynamic query = _supabase.from('available_drivers_view').select().eq('is_online', true);
+        print('🔧 [${DateTime.now()}] Query inicial criada: available_drivers_view online');
 
-          dynamic fb = _supabase.from('drivers').select().eq('is_online', true);
-          fb = fb.or('approval_status.eq.approved,approval_status.is.null');
-          if (category != null && category.isNotEmpty) fb = fb.eq('vehicle_category', category);
-          if (needsPet ?? false) fb = fb.eq('accepts_pet', true);
-          if (needsGrocery ?? false) fb = fb.eq('accepts_grocery', true);
-          if (needsCondo ?? false) fb = fb.eq('accepts_condo', true);
-          fb = fb
-              .gte('current_latitude', latitude - latDelta)
-              .lte('current_latitude', latitude + latDelta)
-              .gte('current_longitude', longitude - lngDelta)
-              .lte('current_longitude', longitude + lngDelta);
-          if (limit != null && limit > 0) fb = fb.limit(limit);
-
-          response = await fb;
-        } else {
-          // Log in debug mode and rethrow to upper handler
-          if (kDebugMode) {
-            debugPrint('getAvailableDriversNearby PostgrestException: code=${e.code}, message=${e.message}');
-          }
-          rethrow;
+        // Filtro de categoria
+        if (category != null && category.isNotEmpty) {
+          query = query.eq('vehicle_category', category);
+          print('🚗 [${DateTime.now()}] Filtro de categoria aplicado: $category');
         }
+
+        // Preferências
+        if (needsPet ?? false) {
+          query = query.eq('accepts_pet', true);
+          print('🐕 [${DateTime.now()}] Filtro pet aplicado');
+        }
+        if (needsGrocery ?? false) {
+          query = query.eq('accepts_grocery', true);
+          print('🛒 [${DateTime.now()}] Filtro grocery aplicado');
+        }
+        if (needsCondo ?? false) {
+          query = query.eq('accepts_condo', true);
+          print('🏢 [${DateTime.now()}] Filtro condo aplicado');
+        }
+
+        // Bounding box
+        query = query
+            .gte('current_latitude', latitude - latDelta)
+            .lte('current_latitude', latitude + latDelta)
+            .gte('current_longitude', longitude - lngDelta)
+            .lte('current_longitude', longitude + lngDelta)
+            .order('average_rating', ascending: false);
+        print('📍 [${DateTime.now()}] Filtro de localização aplicado');
+
+        if (limit != null && limit > 0) {
+          query = query.limit(limit);
+          print('🔢 [${DateTime.now()}] Limite aplicado: $limit');
+        }
+
+        response = await query;
+        usedOptimizedView = true;
+        print('✅ [${DateTime.now()}] View otimizada utilizada com sucesso! Registros retornados: ${(response as List).length}');
+      } catch (e) {
+        print('⚠️ [${DateTime.now()}] View otimizada não disponível, usando fallback para tabela drivers: $e');
+        
+        // Fallback para a tabela drivers original
+        dynamic query = _supabase.from('drivers').select().eq('is_online', true);
+        print('🔧 [${DateTime.now()}] Query fallback criada: drivers online');
+
+        // Somente aprovados
+        query = query.or('approval_status.eq.approved,approval_status.is.null');
+        print('✅ [${DateTime.now()}] Filtro de aprovação aplicado');
+
+        // Filtro de categoria
+        if (category != null && category.isNotEmpty) {
+          query = query.eq('vehicle_category', category);
+          print('🚗 [${DateTime.now()}] Filtro de categoria aplicado: $category');
+        }
+
+        // Preferências
+        if (needsPet ?? false) {
+          query = query.eq('accepts_pet', true);
+          print('🐕 [${DateTime.now()}] Filtro pet aplicado');
+        }
+        if (needsGrocery ?? false) {
+          query = query.eq('accepts_grocery', true);
+          print('🛒 [${DateTime.now()}] Filtro grocery aplicado');
+        }
+        if (needsCondo ?? false) {
+          query = query.eq('accepts_condo', true);
+          print('🏢 [${DateTime.now()}] Filtro condo aplicado');
+        }
+
+        // Bounding box
+        query = query
+            .gte('current_latitude', latitude - latDelta)
+            .lte('current_latitude', latitude + latDelta)
+            .gte('current_longitude', longitude - lngDelta)
+            .lte('current_longitude', longitude + lngDelta);
+        print('📍 [${DateTime.now()}] Filtro de localização aplicado');
+
+        if (limit != null && limit > 0) {
+          query = query.limit(limit);
+          print('🔢 [${DateTime.now()}] Limite aplicado: $limit');
+        }
+
+        try {
+          query = query.order('average_rating', ascending: false);
+          response = await query;
+        } on PostgrestException catch (e2) {
+          // Fallback sem ordenação por average_rating se a coluna não existir
+          final msg = (e2.message ?? '').toLowerCase();
+          final isMissingAverageRating = e2.code == '42703' || msg.contains('average_rating') || msg.contains('column');
+          if (isMissingAverageRating) {
+            if (kDebugMode) {
+              debugPrint('getAvailableDriversNearby: coluna average_rating ausente. Aplicando fallback sem ordenação. (${e2.code})');
+            }
+            // Recriar query sem ordenação
+            dynamic fb = _supabase.from('drivers').select().eq('is_online', true);
+            fb = fb.or('approval_status.eq.approved,approval_status.is.null');
+            if (category != null && category.isNotEmpty) fb = fb.eq('vehicle_category', category);
+            if (needsPet ?? false) fb = fb.eq('accepts_pet', true);
+            if (needsGrocery ?? false) fb = fb.eq('accepts_grocery', true);
+            if (needsCondo ?? false) fb = fb.eq('accepts_condo', true);
+            fb = fb
+                .gte('current_latitude', latitude - latDelta)
+                .lte('current_latitude', latitude + latDelta)
+                .gte('current_longitude', longitude - lngDelta)
+                .lte('current_longitude', longitude + lngDelta);
+            if (limit != null && limit > 0) fb = fb.limit(limit);
+            response = await fb;
+          } else {
+            rethrow;
+          }
+        }
+        
+        print('📊 [${DateTime.now()}] Query fallback executada com sucesso. Registros retornados: ${(response as List).length}');
       }
 
       print('🔄 [${DateTime.now()}] Processando dados dos motoristas...');
-      var drivers = (response as List)
-          .map((json) => Driver.fromJson(json as Map<String, dynamic>))
-          .toList();
+      var drivers = <Driver>[];
+      
+      if (usedOptimizedView) {
+        // Converter dados da view para objetos Driver
+        for (final json in response as List) {
+          final driverData = json as Map<String, dynamic>;
+          // Mapear campos da view para campos esperados pelo modelo Driver
+          final mappedData = {
+            'id': driverData['driver_id'],
+            'user_id': driverData['user_id'],
+            'vehicle_brand': driverData['vehicle_brand'],
+            'vehicle_model': driverData['vehicle_model'],
+            'vehicle_year': driverData['vehicle_year'],
+            'vehicle_color': driverData['vehicle_color'],
+            'vehicle_category': driverData['vehicle_category'],
+            'vehicle_plate': driverData['vehicle_plate'] ?? '', // Assumindo que pode não existir na view
+            'cnh_number': '', // Dados não expostos na view por privacidade
+            'cnh_expiry_date': null,
+            'cnh_photo_url': null,
+            'crlv_photo_url': null,
+            'approval_status': 'approved', // Só motoristas aprovados aparecem na view
+            'is_online': driverData['is_online'],
+            'accepts_pet': driverData['accepts_pet'],
+            'accepts_grocery': driverData['accepts_grocery'], 
+            'accepts_condo': driverData['accepts_condo'],
+            'ac_policy': driverData['ac_policy'],
+            'custom_price_per_km': driverData['custom_price_per_km'],
+            'custom_price_per_minute': driverData['custom_price_per_minute'],
+            'pet_fee': driverData['pet_fee'],
+            'grocery_fee': driverData['grocery_fee'],
+            'condo_fee': driverData['condo_fee'],
+            'stop_fee': driverData['stop_fee'],
+            'consecutive_cancellations': 0, // Assumir 0 para motoristas na view
+            'total_trips': driverData['total_trips'] ?? 0,
+            'average_rating': driverData['average_rating'] ?? 0.0,
+            'current_latitude': driverData['current_latitude'],
+            'current_longitude': driverData['current_longitude'],
+            'last_location_update': driverData['last_location_update'],
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          };
+          
+          try {
+            drivers.add(Driver.fromJson(mappedData));
+          } catch (e) {
+            print('⚠️ Erro ao mapear motorista da view: $e');
+            // Continuar com outros motoristas
+          }
+        }
+      } else {
+        // Dados já no formato esperado da tabela drivers
+        drivers = (response as List)
+            .map((json) => Driver.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+      
       print('✅ [${DateTime.now()}] ${drivers.length} motoristas processados com sucesso');
 
       // Filtrar motoristas que excluíram a zona de destino

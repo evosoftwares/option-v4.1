@@ -212,8 +212,8 @@ class CancellationFeeService {
         return 0.5; // 50% como fallback
       }
 
-      final factor = math.min(1, distanceTraveled / totalDistance);
-      return math.max(0.1, factor); // Mínimo 10%, máximo 100%
+      final factor = math.min(1.0, distanceTraveled / totalDistance);
+      return math.max(0.1, factor as double); // Mínimo 10%, máximo 100%
     } catch (e) {
       print('⚠️ Erro ao calcular fator de deslocamento: $e');
       return 0.5; // 50% como fallback seguro

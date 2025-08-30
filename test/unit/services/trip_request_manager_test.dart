@@ -1,8 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:option/models/supabase/driver.dart';
-import 'package:option/models/trip_request_data.dart';
-import 'package:option/services/trip_request_manager.dart';
 import 'package:option/config/feature_flags.dart';
+import 'package:option/models/trip_request_data.dart';
 
 void main() {
   group('TripRequestManager Timeout Tests', () {

@@ -11,7 +11,7 @@
 -- 1. Criar a tabela saved_places
 CREATE TABLE IF NOT EXISTS saved_places (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    passenger_id UUID NOT NULL REFERENCES passengers(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     label VARCHAR(255) NOT NULL,
     address TEXT NOT NULL,
     latitude DECIMAL(10, 8) NOT NULL,
@@ -29,12 +29,12 @@ CREATE TABLE IF NOT EXISTS saved_places (
         'cafe', 'favorite', 'other'
     )),
     
-    -- Evitar locais duplicados para o mesmo passageiro
-    CONSTRAINT unique_passenger_label UNIQUE (passenger_id, label)
+    -- Evitar locais duplicados para o mesmo usuário
+    CONSTRAINT unique_user_label UNIQUE (user_id, label)
 );
 
 -- 2. Criar índices para melhor performance
-CREATE INDEX IF NOT EXISTS idx_saved_places_passenger_id ON saved_places(passenger_id);
+CREATE INDEX IF NOT EXISTS idx_saved_places_user_id ON saved_places(user_id);
 CREATE INDEX IF NOT EXISTS idx_saved_places_category ON saved_places(category);
 CREATE INDEX IF NOT EXISTS idx_saved_places_created_at ON saved_places(created_at);
 
@@ -47,6 +47,8 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- Remover trigger existente se houver e criar novamente
+DROP TRIGGER IF EXISTS update_saved_places_updated_at ON saved_places;
 CREATE TRIGGER update_saved_places_updated_at BEFORE UPDATE ON saved_places 
     FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
@@ -61,8 +63,8 @@ FROM information_schema.columns
 WHERE table_name = 'saved_places' 
 ORDER BY ordinal_position;
 
--- 5. Verificar se há passengers para testar
-SELECT COUNT(*) as total_passengers FROM passengers;
+-- 5. Verificar se há usuários para testar
+SELECT COUNT(*) as total_users FROM auth.users;
 
 -- ===================================================
 -- INSTRUÇÕES:

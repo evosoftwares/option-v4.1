@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../services/fcm_service.dart';
+// import '../../services/fcm_service.dart'; // Removido - usando OneSignal
 import '../../services/token_management_service.dart';
 import '../../widgets/app_card.dart';
 
@@ -20,7 +20,7 @@ class NotificationAdminPanel extends StatefulWidget {
 class _NotificationAdminPanelState extends State<NotificationAdminPanel>
     with TickerProviderStateMixin {
   final Logger _logger = Logger();
-  final FCMService _fcmService = FCMService();
+  // final FCMService _fcmService = FCMService(); // Removido - usando OneSignal
   final TokenManagementService _tokenService = TokenManagementService();
   
   late TabController _tabController;

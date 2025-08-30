@@ -3,9 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
-import '../../widgets/logo_branding.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_text_field.dart';
+import '../../widgets/logo_branding.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

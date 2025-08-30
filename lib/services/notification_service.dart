@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../exceptions/app_exceptions.dart';
-import 'fcm_service.dart';
 import 'local_notification_service.dart';
+import 'onesignal_service.dart';
 
 class NotificationService {
 
@@ -113,7 +113,7 @@ class NotificationService {
         .from('notifications')
         .stream(primaryKey: ['id'])
         .eq('user_id', userId)
-        .order('created_at')
+        .order('sent_at') // Corrigido: usar 'sent_at' do banco
         .map((data) => data.map(NotificationModel.fromJson).toList());
 
   // Stream unread count
@@ -182,17 +182,17 @@ class NotificationService {
   /// Send driver notification for targeted trip requests
   Future<void> sendDriverNotification(String driverId, String requestId) async {
     try {
-      // 1. Buscar FCM token do motorista
+      // 1. Buscar OneSignal Player ID do motorista
       final driverData = await _supabase
           .from('drivers')
-          .select('fcm_token, app_users(full_name)')
+          .select('onesignal_player_id, app_users(full_name)')
           .eq('id', driverId)
           .single();
       
-      final fcmToken = driverData['fcm_token'] as String?;
-      if (fcmToken == null) {
-        print('❌ Motorista $driverId não tem FCM token');
-        // Continue sem FCM, apenas salvar notificação no database
+      final playerId = driverData['onesignal_player_id'] as String?;
+      if (playerId == null) {
+        print('❌ Motorista $driverId não tem OneSignal Player ID');
+        // Continue sem push remoto, apenas salvar notificação no database
       }
       
       // 2. Buscar dados do request para payload
@@ -219,9 +219,9 @@ class NotificationService {
         }
       };
       
-      // 4. Enviar via FCM se token disponível
-      if (fcmToken != null) {
-        await _sendFCMNotification(fcmToken, payload);
+      // 4. Enviar via OneSignal se Player ID disponível
+      if (playerId != null) {
+        await _sendOneSignalNotification(playerId, payload);
       }
       
       // 5. Salvar no database também
@@ -248,25 +248,25 @@ class NotificationService {
     }
   }
   
-  /// Send FCM notification using HTTP API
-  Future<void> _sendFCMNotification(String fcmToken, Map<String, dynamic> payload) async {
+  /// Send OneSignal notification using HTTP API
+  Future<void> _sendOneSignalNotification(String playerId, Map<String, dynamic> payload) async {
     try {
-      // Use FCMService que já tem a implementação completa
-       final success = await FCMService().sendNotificationToToken(
-        token: fcmToken,
+      // Use OneSignalService que já tem a implementação completa
+       final success = await OneSignalService().sendNotificationToPlayerId(
+        playerId: playerId,
         title: payload['title'] ?? '',
         body: payload['body'] ?? '',
         data: payload['data'] as Map<String, dynamic>? ?? {},
       );
       
       if (success) {
-        print('🔔 FCM Notification sent successfully to ${fcmToken.substring(0, 20)}...');
+        print('🔔 OneSignal Notification sent successfully to ${playerId.substring(0, 20)}...');
       } else {
-        print('❌ Failed to send FCM notification to ${fcmToken.substring(0, 20)}...');
+        print('❌ Failed to send OneSignal notification to ${playerId.substring(0, 20)}...');
       }
       
     } catch (e) {
-      print('❌ Error sending FCM notification: $e');
+      print('❌ Error sending OneSignal notification: $e');
       // Log error but don't throw to avoid breaking the flow
     }
   }
@@ -311,7 +311,7 @@ class NotificationModel {
       priority: json['priority'],
       isRead: json['is_read'] ?? false,
       readAt: json['read_at'] != null ? DateTime.parse(json['read_at']) : null,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      createdAt: json['sent_at'] != null ? DateTime.parse(json['sent_at']) : DateTime.now(), // Corrigido: usar 'sent_at' do banco
     );
   }
   final String id;
@@ -337,6 +337,6 @@ class NotificationModel {
       'priority': priority,
       'is_read': isRead,
       'read_at': readAt?.toIso8601String(),
-      'created_at': createdAt.toIso8601String(),
+      'sent_at': createdAt.toIso8601String(), // Corrigido: usar 'sent_at' do banco
     };
 }

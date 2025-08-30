@@ -224,7 +224,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.info_outline,
                             color: AppColors.info,
                             size: 20,
@@ -258,7 +258,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.contact_emergency,
                                 size: 64,
                                 color: AppColors.gray400,
@@ -295,7 +295,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                               child: ListTile(
                                 leading: CircleAvatar(
                                   backgroundColor: AppColors.blue.withOpacity(0.1),
-                                  child: Icon(
+                                  child: const Icon(
                                     Icons.person,
                                     color: AppColors.blue,
                                   ),
@@ -323,7 +323,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                                   ],
                                 ),
                                 trailing: IconButton(
-                                  icon: Icon(
+                                  icon: const Icon(
                                     Icons.delete_outline,
                                     color: AppColors.error,
                                   ),

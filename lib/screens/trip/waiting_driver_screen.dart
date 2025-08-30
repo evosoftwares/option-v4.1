@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:developer' as developer;
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -6,13 +8,13 @@ import '../../models/supabase/driver.dart';
 import '../../models/supabase/trip_request.dart';
 import '../../services/cancellation_fee_service.dart';
 import '../../services/driver_service.dart';
-import '../../services/trip_service.dart';
 import '../../services/trip_request_manager.dart';
+import '../../services/trip_service.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 import '../../widgets/logo_branding.dart';
 import '../passenger/passenger_trip_screen.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_typography.dart';
-import '../../theme/app_spacing.dart';
 
 class WaitingDriverScreen extends StatefulWidget {
 
@@ -67,9 +69,21 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
   @override
   void initState() {
     super.initState();
+    developer.log(
+      'WaitingDriverScreen: Inicializando tela para tripRequestId: ${widget.tripRequestId}',
+      name: 'WaitingDriverScreen',
+      level: 800,
+    );
+    
     _tripService = TripService(_supabase);
     _tripRequestManager = TripRequestManager(_supabase);
     _searchStartTime = DateTime.now();
+    
+    developer.log(
+      'WaitingDriverScreen: Serviços inicializados, iniciando busca às ${_searchStartTime?.toIso8601String()}',
+      name: 'WaitingDriverScreen',
+      level: 800,
+    );
     
     _setupAnimations();
     _loadTripRequest();
@@ -118,12 +132,24 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
   }
   
   void _updateFallbackProgress(TripRequest request) {
+    developer.log(
+      'WaitingDriverScreen: Atualizando progresso - Status: ${request.status}, TargetDriver: ${request.targetDriverId}',
+      name: 'WaitingDriverScreen',
+      level: 800,
+    );
+    
     setState(() {
       _tripRequest = request;
       
       // Atualizar dados do fallback
       _currentTargetDriverId = request.targetDriverId;
       _fallbackDrivers = request.fallbackDrivers ?? [];
+      
+      developer.log(
+        'WaitingDriverScreen: Fallback drivers: ${_fallbackDrivers.length}, Current index: $_currentFallbackIndex',
+        name: 'WaitingDriverScreen',
+        level: 800,
+      );
       
       // Calcular índice atual do fallback baseado no motorista alvo
       if (_currentTargetDriverId != null && _fallbackDrivers.isNotEmpty) {
@@ -148,8 +174,20 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
         if (_currentTargetDriverId != null) {
           if (_currentFallbackIndex == 0) {
             _currentStatus = 'contacting';
+            developer.log(
+              'WaitingDriverScreen: Status alterado para CONTACTING - '
+              'Driver: $_currentTargetDriverId, Fallback: $_currentFallbackIndex',
+              name: 'WaitingDriverScreen',
+              level: 800,
+            );
           } else {
             _currentStatus = 'fallback';
+            developer.log(
+              'WaitingDriverScreen: Status alterado para FALLBACK - '
+              'Driver: $_currentTargetDriverId, Fallback: $_currentFallbackIndex/$_totalDrivers',
+              name: 'WaitingDriverScreen',
+              level: 800,
+            );
           }
           
           // Calcular tempo restante para timeout
@@ -165,11 +203,44 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
           }
         } else {
           _currentStatus = 'searching';
+          developer.log(
+            'WaitingDriverScreen: Status alterado para SEARCHING - Aguardando drivers',
+            name: 'WaitingDriverScreen',
+            level: 800,
+          );
         }
       } else if (request.status == 'accepted') {
         _currentStatus = 'accepted';
+        developer.log(
+          'WaitingDriverScreen: Status alterado para ACCEPTED - Driver: $_currentTargetDriverId',
+          name: 'WaitingDriverScreen',
+          level: 800,
+        );
       } else if (request.status == 'expired') {
         _currentStatus = 'expired';
+        
+        final searchDuration = _searchStartTime != null 
+            ? DateTime.now().difference(_searchStartTime!)
+            : Duration.zero;
+            
+        developer.log(
+          'WaitingDriverScreen: STATUS EXPIRED DETECTADO! '
+          'Duração da busca: ${searchDuration.inMinutes}min ${searchDuration.inSeconds % 60}s, '
+          'Drivers contatados: $_contactedDrivers/$_totalDrivers, '
+          'Fallback index: $_currentFallbackIndex',
+          name: 'WaitingDriverScreen',
+          level: 1000, // Nível alto para status crítico
+        );
+        
+        // Exibir diálogo de nenhum motorista encontrado
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          developer.log(
+            'WaitingDriverScreen: Exibindo diálogo de motorista não encontrado',
+            name: 'WaitingDriverScreen',
+            level: 900,
+          );
+          _handleRequestExpired();
+        });
       }
     });
   }
@@ -266,10 +337,30 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
   }
 
   Future<void> _cancelTrip() async {
+    developer.log(
+      'WaitingDriverScreen: Iniciando cancelamento da viagem - '
+      'TripRequest: ${widget.tripRequestId}, Status atual: $_currentStatus',
+      name: 'WaitingDriverScreen',
+      level: 900,
+    );
+    
     try {
       // Mostrar confirmação de cancelamento
       final shouldCancel = await _showCancellationConfirmation();
-      if (!shouldCancel) return;
+      if (!shouldCancel) {
+        developer.log(
+          'WaitingDriverScreen: Cancelamento abortado pelo usuário',
+          name: 'WaitingDriverScreen',
+          level: 800,
+        );
+        return;
+      }
+
+      developer.log(
+        'WaitingDriverScreen: Usuário confirmou cancelamento, processando...',
+        name: 'WaitingDriverScreen',
+        level: 900,
+      );
 
       // Cancela o monitoramento da solicitação direcionada
       _tripRequestManager.cancelMonitoring(widget.tripRequestId);
@@ -277,10 +368,22 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
       // Processar cancelamento com possível taxa
       await _processCancellationWithFee();
       
+      developer.log(
+        'WaitingDriverScreen: Cancelamento processado com sucesso, navegando de volta',
+        name: 'WaitingDriverScreen',
+        level: 900,
+      );
+      
       if (mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
+      developer.log(
+        'WaitingDriverScreen: Erro durante cancelamento: $e',
+        name: 'WaitingDriverScreen',
+        level: 1000,
+      );
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -369,6 +472,56 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
     await cancellationService.processCancellation(cancellationContext);
   }
 
+  /// Exibe diálogo quando nenhum motorista é encontrado
+  void _handleRequestExpired() {
+    if (!mounted) {
+      developer.log(
+        'WaitingDriverScreen: _handleRequestExpired chamado mas widget não está montado',
+        name: 'WaitingDriverScreen',
+        level: 900,
+      );
+      return;
+    }
+    
+    developer.log(
+      'WaitingDriverScreen: Exibindo diálogo de expired - TripRequest: ${widget.tripRequestId}',
+      name: 'WaitingDriverScreen',
+      level: 900,
+    );
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Nenhum motorista encontrado'),
+        content: const Text(
+          'Não conseguimos encontrar um motorista disponível no momento. '
+          'Tente novamente em alguns minutos.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              developer.log(
+                'WaitingDriverScreen: Usuário pressionou OK no diálogo de expired',
+                name: 'WaitingDriverScreen',
+                level: 800,
+              );
+              Navigator.of(context).pop(); // Fechar dialog
+              Navigator.of(context).pop(); // Voltar para tela anterior
+              
+              developer.log(
+                'WaitingDriverScreen: Navegação de volta concluída após expired',
+                name: 'WaitingDriverScreen',
+                level: 800,
+              );
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -430,6 +583,8 @@ class _WaitingContent extends StatelessWidget {
         return 'Procurando outro motorista';
       case 'expanding_search':
         return 'Expandindo busca';
+      case 'expired':
+        return 'Nenhum motorista encontrado';
       default:
         return 'Procurando motorista';
     }
@@ -447,6 +602,8 @@ class _WaitingContent extends StatelessWidget {
         return 'Buscando alternativas para você...';
       case 'expanding_search':
         return 'Procurando em uma área maior...';
+      case 'expired':
+        return 'Não conseguimos encontrar um motorista disponível no momento';
       default:
         return 'Estamos encontrando o melhor motorista para você';
     }
@@ -464,6 +621,8 @@ class _WaitingContent extends StatelessWidget {
         return AppColors.warning;
       case 'expanding_search':
         return AppColors.blue;
+      case 'expired':
+        return AppColors.error;
       default:
         return AppColors.blue;
     }
@@ -608,6 +767,8 @@ class _AnimatedStatusIndicator extends StatelessWidget {
         return Icons.refresh;
       case 'expanding_search':
         return Icons.zoom_out_map;
+      case 'expired':
+        return Icons.error_outline;
       default:
         return Icons.directions_car;
     }

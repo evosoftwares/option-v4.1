@@ -2,13 +2,14 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../config/app_config.dart';
 import '../../models/favorite_location.dart';
 import '../../models/user.dart' as app_user;
-import '../../services/fcm_service.dart';
+// import '../../services/fcm_service.dart'; // Removido - usando OneSignal
 import '../../services/location_service.dart';
 import '../../services/map_style_service.dart';
 import '../../services/recent_destinations_service.dart';
@@ -16,7 +17,6 @@ import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/app_card.dart';
-import '../../widgets/emergency_button.dart';
 import '../../widgets/logo_branding.dart';
 import '../../widgets/notification_icon_widget.dart';
 import '../place_picker_screen.dart';
@@ -49,6 +49,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
   
   final DraggableScrollableController _bottomSheetController = DraggableScrollableController();
   final bool _isBottomSheetExpanded = false;
+  bool _isNavigating = false;
 
   static const CameraPosition _initialPos = CameraPosition(
     target: LatLng(-23.5505, -46.6333),
@@ -67,24 +68,19 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
     _loadRecentDestinations();
     
     // Inicializar FCM Service para notificações push
-    FCMService().initialize().catchError((e) {
-      debugPrint('Erro ao inicializar FCMService: $e');
-    });
+    // FCMService().initialize().catchError((e) => {
+      //   debugPrint('Erro ao inicializar FCMService: $e');
+      // }); // Removido - usando OneSignal
   }
 
   Future<void> _loadCustomMarkers() async {
     try {
-      _originIcon = await BitmapDescriptor.asset(
-        const ImageConfiguration(size: Size(96, 96)),
-        'assets/images/origin_marker.png',
-      );
-      _destinationIcon = await BitmapDescriptor.asset(
-        const ImageConfiguration(size: Size(80, 100)),
-        'assets/images/destination_marker.png',
-      );
-      debugPrint('✅ Custom markers loaded successfully');
+      // Usando ícones padrão pretos para origem e destino
+      _originIcon = BitmapDescriptor.defaultMarkerWithHue(0.0);
+    _destinationIcon = BitmapDescriptor.defaultMarkerWithHue(0.0);
+      debugPrint('✅ Standard black markers loaded successfully');
     } catch (e) {
-      debugPrint('❌ Custom markers failed to load, using defaults: $e');
+      debugPrint('❌ Markers failed to load, using defaults: $e');
     }
   }
 
@@ -142,7 +138,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
     );
     if (result is FavoriteLocation) {
       setState(() => _origin = result);
-      _setMarker('origin', result.latitude, result.longitude, _originIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen));
+      _setMarker('origin', result.latitude, result.longitude, _originIcon ?? BitmapDescriptor.defaultMarkerWithHue(0.0));
       await _fitBounds();
       await _tryBuildRoute();
     }
@@ -155,7 +151,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
     );
     if (result is FavoriteLocation) {
       setState(() => _destination = result);
-      _setMarker('destination', result.latitude, result.longitude, _destinationIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed));
+      _setMarker('destination', result.latitude, result.longitude, _destinationIcon ?? BitmapDescriptor.defaultMarkerWithHue(0.0));
       await RecentDestinationsService.instance.addRecentDestination(result);
       await _loadRecentDestinations();
       await _fitBounds();
@@ -165,7 +161,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
 
   Future<void> _selectRecentDestination(FavoriteLocation destination) async {
     setState(() => _destination = destination);
-    _setMarker('destination', destination.latitude, destination.longitude, _destinationIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed));
+    _setMarker('destination', destination.latitude, destination.longitude, _destinationIcon ?? BitmapDescriptor.defaultMarkerWithHue(0.0));
     await RecentDestinationsService.instance.addRecentDestination(destination);
     await _loadRecentDestinations();
     await _fitBounds();
@@ -439,7 +435,8 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
       appBar: LogoAppBar(
         actions: [
           const NotificationIconWidget(),
-          const CompactEmergencyButton(),
+          // Botão Emergência ocultado
+          // const CompactEmergencyButton(),
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.menu),
@@ -610,33 +607,66 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
                               width: double.infinity,
                               height: 56,
                               child: ElevatedButton(
-                                onPressed: (_origin != null && _destination != null) ? () {
+                                onPressed: (_origin != null && _destination != null && !_isNavigating) ? () async {
+                                  print('🚀 NAVEGAÇÃO: Botão Vamos clicado');
+                                  print('🚀 ORIGEM: $_origin');
+                                  print('🚀 DESTINO: $_destination');
+                                  
+                                  // Feedback tátil
+                                  HapticFeedback.mediumImpact();
+                                  
+                                  // Estado de loading
+                                  setState(() {
+                                    _isNavigating = true;
+                                  });
+                                  
                                   final o = _origin!;
                                   final d = _destination!;
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/trip_options',
-                                    arguments: {
-                                      'origin': {
-                                        'id': o.id,
-                                        'name': o.name,
-                                        'address': o.address,
-                                        'type': o.type.toString(),
-                                        'latitude': o.latitude,
-                                        'longitude': o.longitude,
-                                        'placeId': o.placeId,
+                                  
+                                  try {
+                                    print('🚀 NAVEGANDO para /trip_options');
+                                    await Navigator.pushNamed(
+                                      context,
+                                      '/trip_options',
+                                      arguments: {
+                                        'origin': {
+                                          'id': o.id,
+                                          'name': o.name,
+                                          'address': o.address,
+                                          'type': o.type.toString(),
+                                          'latitude': o.latitude,
+                                          'longitude': o.longitude,
+                                          'placeId': o.placeId,
+                                        },
+                                        'destination': {
+                                          'id': d.id,
+                                          'name': d.name,
+                                          'address': d.address,
+                                          'type': d.type.toString(),
+                                          'latitude': d.latitude,
+                                          'longitude': d.longitude,
+                                          'placeId': d.placeId,
+                                        },
                                       },
-                                      'destination': {
-                                        'id': d.id,
-                                        'name': d.name,
-                                        'address': d.address,
-                                        'type': d.type.toString(),
-                                        'latitude': d.latitude,
-                                        'longitude': d.longitude,
-                                        'placeId': d.placeId,
-                                      },
-                                    },
-                                  );
+                                    );
+                                    print('🚀 NAVEGAÇÃO: Chamada concluída');
+                                  } catch (e) {
+                                    print('❌ ERRO NAVEGAÇÃO: $e');
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Erro ao navegar: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isNavigating = false;
+                                      });
+                                    }
+                                  }
                                 } : null,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: (_origin != null && _destination != null) 
@@ -652,22 +682,31 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.directions_car),
-                                    const SizedBox(width: AppSpacing.sm),
-                                    Text(
-                                      'Vamos',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        color: (_origin != null && _destination != null) 
-                                            ? colorScheme.onPrimary 
-                                            : colorScheme.onSurfaceVariant,
-                                        fontWeight: FontWeight.w600,
+                                child: _isNavigating 
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                       ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.directions_car),
+                                        const SizedBox(width: AppSpacing.sm),
+                                        Text(
+                                          'Vamos',
+                                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            color: (_origin != null && _destination != null) 
+                                                ? colorScheme.onPrimary 
+                                                : colorScheme.onSurfaceVariant,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
                               ),
                             ),
                           ),

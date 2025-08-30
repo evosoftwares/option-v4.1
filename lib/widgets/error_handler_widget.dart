@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../services/real_saved_places_service.dart';
+
 import '../services/app_logger.dart';
-import '../theme/app_spacing.dart';
+import '../services/real_saved_places_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 
 /// Widget para exibir mensagens de erro de forma amigável ao usuário

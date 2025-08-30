@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../controllers/stepper_controller.dart';
-import '../../utils/phone_mask.dart';
-import '../../utils/phone_validator.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../utils/phone_mask.dart';
+import '../../utils/phone_validator.dart';
 
 class PhoneStep extends StatefulWidget {
 

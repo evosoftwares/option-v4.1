@@ -1,5 +1,12 @@
 /// Preferências da viagem para cálculo de preços e matching
 class TripPreferences {
+  const TripPreferences({
+    this.needsPet = false,
+    this.needsGrocery = false,
+    this.needsCondo = false,
+    this.needsAC = false,
+    this.numberOfStops = 0,
+  });
 
   factory TripPreferences.fromJson(Map<String, dynamic> json) =>
       TripPreferences(
@@ -9,13 +16,6 @@ class TripPreferences {
         needsAC: json['needs_ac'] as bool? ?? false,
         numberOfStops: json['number_of_stops'] as int? ?? 0,
       );
-  const TripPreferences({
-    this.needsPet = false,
-    this.needsGrocery = false,
-    this.needsCondo = false,
-    this.needsAC = false,
-    this.numberOfStops = 0,
-  });
 
   final bool needsPet;
   final bool needsGrocery;

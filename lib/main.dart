@@ -37,6 +37,7 @@ import 'screens/trip/trip_options_screen.dart';
 import 'screens/trip/waiting_driver_screen.dart';
 import 'screens/trips/trip_history_screen.dart';
 import 'screens/wallet/wallet_screen.dart';
+import 'services/onesignal_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/supabase_helper.dart';
 
@@ -61,6 +62,14 @@ Future<void> main() async {
   } else {
     print('⚠️ Supabase não inicializado - variáveis de ambiente ausentes');
     print('📋 Certifique-se de que SUPABASE_URL e SUPABASE_ANON_KEY estão configuradas');
+  }
+
+  // Inicializar OneSignal para notificações push
+  try {
+    await OneSignalService().initialize();
+    print('✅ OneSignal inicializado com sucesso!');
+  } catch (e) {
+    print('❌ Erro ao inicializar OneSignal: $e');
   }
 
   runApp(const MyApp());
@@ -167,9 +176,14 @@ class MyApp extends StatelessWidget {
           '/debug_supabase': (context) => const SupabaseDebugScreen(),
         },
         onGenerateRoute: (settings) {
+          print('🎯 onGenerateRoute chamado para: ${settings.name}');
+          print('🎯 Argumentos: ${settings.arguments}');
+          
           switch (settings.name) {
             case TripOptionsScreen.routeName:
+              print('✅ Processando TripOptionsScreen');
               final args = settings.arguments as Map<String, dynamic>?;
+              print('✅ Args processados: $args');
               return _createSlideRoute(TripOptionsScreen.fromArgs(args), settings);
             case DriverSelectionScreen.routeName:
               final args = settings.arguments as Map<String, dynamic>?;

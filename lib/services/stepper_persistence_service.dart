@@ -37,11 +37,11 @@ class StepperPersistenceService {
         await prefs.setString(_keyPhone, phone);
       }
       
-      if (fullName != null && fullName.isNotEmpty) {
+      if (fullName != null && fullName.isNotEmpty && fullName.toLowerCase() != 'null') {
         await prefs.setString(_keyFullName, fullName);
       }
       
-      if (email != null && email.isNotEmpty) {
+      if (email != null && email.isNotEmpty && email.toLowerCase() != 'null') {
         await prefs.setString(_keyEmail, email);
       }
       

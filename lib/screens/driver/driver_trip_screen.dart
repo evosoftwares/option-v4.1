@@ -180,7 +180,7 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
         _markers.add(Marker(
           markerId: const MarkerId('driver_location'),
           position: here,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          icon: BitmapDescriptor.defaultMarkerWithHue(0.0),
           infoWindow: const InfoWindow(title: 'Sua localização'),
         ),);
       });
@@ -335,8 +335,8 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
     if (dLat == 0.0 && dLng == 0.0) return;
 
     // Set markers for origin/destination
-    _setMarker('origin', oLat, oLng, BitmapDescriptor.hueGreen, title: 'Origem');
-    _setMarker('destination', dLat, dLng, BitmapDescriptor.hueRed, title: 'Destino');
+    _setMarker('origin', oLat, oLng, 0.0, title: 'Origem');
+    _setMarker('destination', dLat, dLng, 0.0, title: 'Destino');
 
     _clearRoute();
 
@@ -390,7 +390,7 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
       _markers.add(Marker(
         markerId: MarkerId(id),
         position: pos,
-        icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+        icon: BitmapDescriptor.defaultMarkerWithHue(0.0),
         infoWindow: title != null ? InfoWindow(title: title) : const InfoWindow(),
       ),);
     });

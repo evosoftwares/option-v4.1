@@ -1,17 +1,17 @@
 import 'dart:async';
-import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../utils/supabase_helper.dart';
-import '../models/emergency_contact.dart';
 import '../models/emergency.dart';
+import '../models/emergency_contact.dart';
 import '../models/supabase/app_user.dart';
 import '../models/user.dart' as app;
 import '../services/location_service.dart';
 import '../services/user_service.dart';
+import '../utils/supabase_helper.dart';
 
 
 

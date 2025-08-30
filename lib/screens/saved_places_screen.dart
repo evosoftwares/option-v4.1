@@ -91,7 +91,6 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                            ? _buildEmptyState()
                            : _SavedPlacesList(
                               places: controller.savedPlaces,
-                              onEdit: _showEditPlaceDialog,
                               onDelete: _showDeleteConfirmation,
                               onRefresh: _loadSavedPlaces,
                             ),
@@ -259,38 +258,6 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
     );
   }
 
-  Future<void> _showEditPlaceDialog(SavedPlace place) async {
-    final favoriteLocation = FavoriteLocation(
-      id: place.id,
-      name: place.label,
-      address: place.address,
-      latitude: place.latitude,
-      longitude: place.longitude,
-      type: place.category,
-      userId: place.userId,
-    );
-    
-    final result = await showDialog<FavoriteLocation>(
-      context: context,
-      builder: (context) => _EditPlaceDialog(place: favoriteLocation, onSave: (p) => Navigator.pop(context, p)),
-    );
-
-    if (result != null && mounted) {
-      await _controller.updateSavedPlace(
-        id: result.id ?? '',
-        label: result.name,
-        address: result.address,
-        latitude: result.latitude ?? 0.0,
-        longitude: result.longitude ?? 0.0,
-        category: result.type,
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Local atualizado com sucesso!')),
-        );
-      }
-    }
-  }
 
   Future<void> _showDeleteConfirmation(SavedPlace place) async {
     final confirmed = await showDialog<bool>(
@@ -382,7 +349,7 @@ class _CategorySelector extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        _getCategoryIcon(category),
+                        category.icon,
                         color: isSelected 
                             ? colorScheme.onPrimaryContainer 
                             : colorScheme.onSurface,
@@ -390,7 +357,7 @@ class _CategorySelector extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _getCategoryName(category),
+                        category.label,
                         style: TextStyle(
                           color: isSelected 
                               ? colorScheme.onPrimaryContainer 
@@ -409,52 +376,6 @@ class _CategorySelector extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  IconData _getCategoryIcon(LocationType type) {
-    switch (type) {
-      case LocationType.home:
-        return Icons.home;
-      case LocationType.work:
-        return Icons.work;
-      case LocationType.favorite:
-        return Icons.favorite;
-      case LocationType.other:
-        return Icons.place;
-      case LocationType.school:
-        return Icons.school;
-      case LocationType.gym:
-        return Icons.fitness_center;
-      case LocationType.restaurant:
-        return Icons.restaurant;
-      case LocationType.shopping:
-        return Icons.shopping_bag;
-      default:
-        return Icons.place;
-    }
-  }
-
-  String _getCategoryName(LocationType type) {
-    switch (type) {
-      case LocationType.home:
-        return 'Casa';
-      case LocationType.work:
-        return 'Trabalho';
-      case LocationType.favorite:
-        return 'Favorito';
-      case LocationType.other:
-        return 'Outro';
-      case LocationType.school:
-        return 'Escola';
-      case LocationType.gym:
-        return 'Academia';
-      case LocationType.restaurant:
-        return 'Restaurante';
-      case LocationType.shopping:
-        return 'Compras';
-      default:
-        return 'Outro';
-    }
   }
 }
 
@@ -508,29 +429,14 @@ class _ErrorView extends StatelessWidget {
     );
 }
 
-class _EmptyStateView extends StatelessWidget {
-
-  const _EmptyStateView({
-    required this.onAddPlace,
-  });
-  final VoidCallback onAddPlace;
-
-  @override
-  Widget build(BuildContext context) => _EmptyStateView(
-      onAddPlace: onAddPlace,
-    );
-}
-
 class _SavedPlacesList extends StatelessWidget {
 
   const _SavedPlacesList({
     required this.places,
-    required this.onEdit,
     required this.onDelete,
     required this.onRefresh,
   });
   final List<SavedPlace> places;
-  final Function(SavedPlace) onEdit;
   final Function(SavedPlace) onDelete;
   final VoidCallback onRefresh;
 
@@ -547,134 +453,21 @@ class _SavedPlacesList extends StatelessWidget {
           return AppCard(
             margin: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: ListTile(
-              leading: Icon(_getCategoryIcon(place.category)),
+              leading: Icon(place.category.icon),
               title: Text(place.label),
               subtitle: Text(place.address),
-              trailing: PopupMenuButton(
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit),
-                        SizedBox(width: AppSpacing.sm),
-                        Text('Editar'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete, color: AppColors.error),
-                        SizedBox(width: AppSpacing.sm),
-                        Text('Excluir', style: TextStyle(color: AppColors.error)),
-                      ],
-                    ),
-                  ),
-                ],
-                onSelected: (value) {
-                  if (value == 'edit') {
-                    onEdit(place);
-                  } else if (value == 'delete') {
-                    onDelete(place);
-                  }
-                },
+              trailing: IconButton(
+                icon: const Icon(Icons.delete, color: AppColors.error),
+                onPressed: () => onDelete(place),
+                tooltip: 'Excluir local',
               ),
             ),
           );
         },
       ),
     );
-
-  IconData _getCategoryIcon(LocationType type) {
-    switch (type) {
-      case LocationType.home:
-        return Icons.home;
-      case LocationType.work:
-        return Icons.work;
-      case LocationType.favorite:
-        return Icons.favorite;
-      case LocationType.other:
-        return Icons.place;
-      default:
-        return Icons.place;
-    }
-  }
 }
 
-class _EditPlaceDialog extends StatefulWidget {
-
-  const _EditPlaceDialog({
-    required this.place,
-    required this.onSave,
-  });
-  final FavoriteLocation place;
-  final Function(FavoriteLocation) onSave;
-
-  @override
-  State<_EditPlaceDialog> createState() => _EditPlaceDialogState();
-}
-
-class _EditPlaceDialogState extends State<_EditPlaceDialog> {
-  late TextEditingController _nameController;
-  late LocationType _selectedType;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.place.name);
-    _selectedType = widget.place.type;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-      title: const Text('Editar Local'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Nome do local',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _CategorySelector(
-            selectedCategory: _selectedType,
-            onCategoryChanged: (type) {
-              setState(() {
-                _selectedType = type;
-              });
-            },
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            final updatedPlace = widget.place.copyWith(
-              name: _nameController.text,
-              type: _selectedType,
-            );
-            widget.onSave(updatedPlace);
-          },
-          child: const Text('Salvar'),
-        ),
-      ],
-    );
-}
 
 class _AddPlaceDialog extends StatefulWidget {
 

@@ -277,7 +277,7 @@ class MetricsService {
           .from('driver_operation_zones')
           .select('id')
           .eq('is_active', true)
-          .count();
+          .count(CountOption.exact);
       
       return response.count;
     } catch (e) {

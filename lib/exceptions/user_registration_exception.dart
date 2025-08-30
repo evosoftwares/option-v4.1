@@ -21,10 +21,10 @@ enum UserRegistrationExceptionType {
 class UserRegistrationException extends AppException {
   
   UserRegistrationException(
-    String message,
-    String code,
+    super.message,
+    String super.code,
     this.type,
-  ) : super(message, code);
+  );
   final UserRegistrationExceptionType type;
 
   @override

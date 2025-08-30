@@ -24,12 +24,29 @@ class TripOptionsScreen extends StatefulWidget {
   });
 
   factory TripOptionsScreen.fromArgs(Map<String, dynamic>? args) {
+    print('🎯 TripOptionsScreen.fromArgs chamado');
+    print('🎯 Args recebidos: $args');
+    
     final originJson = (args?['origin'] as Map<String, dynamic>?) ?? {};
     final destinationJson = (args?['destination'] as Map<String, dynamic>?) ?? {};
-    return TripOptionsScreen(
-      origin: FavoriteLocation.fromJson(originJson),
-      destination: FavoriteLocation.fromJson(destinationJson),
-    );
+    
+    print('🎯 Origin JSON: $originJson');
+    print('🎯 Destination JSON: $destinationJson');
+    
+    try {
+      final origin = FavoriteLocation.fromJson(originJson);
+      final destination = FavoriteLocation.fromJson(destinationJson);
+      
+      print('✅ FavoriteLocation criados com sucesso');
+      
+      return TripOptionsScreen(
+        origin: origin,
+        destination: destination,
+      );
+    } catch (e) {
+      print('❌ Erro ao criar FavoriteLocation: $e');
+      rethrow;
+    }
   }
   static const String routeName = '/trip_options';
 
@@ -167,8 +184,6 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _LocationsSummary(origin: widget.origin, destination: widget.destination),
-              const SizedBox(height: 16),
               const _SectionTitle(title: 'Categoria do veículo'),
               const SizedBox(height: 8),
               if (_isLoading)
@@ -570,6 +585,9 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
     });
     
     try {
+      print('🚀 NAVEGANDO para DriverSelectionScreen');
+      print('🚀 Argumentos: ${widget.origin.toJson()}');
+      
       await Navigator.pushNamed(
         context,
         DriverSelectionScreen.routeName,
@@ -604,58 +622,7 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
   }
 }
 
-class _LocationsSummary extends StatelessWidget {
-  const _LocationsSummary({required this.origin, required this.destination});
-  final FavoriteLocation origin;
-  final FavoriteLocation destination;
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.my_location, color: colorScheme.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  origin.address,
-                  style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.location_on, color: colorScheme.tertiary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  destination.address,
-                  style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+
 
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle({required this.title});

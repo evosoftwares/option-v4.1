@@ -1,15 +1,16 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:geolocator/geolocator.dart';
 
+import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
+
+import '../../config/app_config.dart';
 import '../../controllers/stepper_controller.dart';
 import '../../models/favorite_location.dart';
 import '../../services/location_service.dart';
 import '../../utils/supabase_helper.dart';
-import '../../config/app_config.dart';
-import '../place_picker_screen.dart';
 import '../../widgets/app_card.dart';
+import '../place_picker_screen.dart';
 
 class PlacesStep extends StatefulWidget {
 

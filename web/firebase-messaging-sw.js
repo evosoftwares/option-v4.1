@@ -153,13 +153,25 @@ self.addEventListener('notificationclose', (event) => {
 });
 
 // Manipular instalação do service worker
+// Firebase Messaging Service Worker DESATIVADO
+// Este arquivo foi mantido apenas como placeholder para evitar 404.
+// As notificações Web são gerenciadas pelo OneSignal (OneSignalSDKWorker.js).
+
 self.addEventListener('install', (event) => {
-  console.log('[firebase-messaging-sw.js] Service worker installing.');
+  console.log('[firebase-messaging-sw.js] desativado: usando OneSignal para Web Push');
   self.skipWaiting();
 });
 
-// Manipular ativação do service worker
 self.addEventListener('activate', (event) => {
-  console.log('[firebase-messaging-sw.js] Service worker activating.');
-  event.waitUntil(clients.claim());
+  console.log('[firebase-messaging-sw.js] ativado (placeholder).');
+  // Opcional: remover caches antigos criados por FCM
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys
+      .filter((key) => key.startsWith('firebase-messaging'))
+      .map((key) => caches.delete(key))
+    );
+  })());
 });
+
+// Não registrar listeners de push/click para evitar duplicidade

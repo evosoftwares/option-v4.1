@@ -49,27 +49,27 @@ class NotificationSegmentationService {
   Future<List<String>> _getAllActiveTokens() async {
     final driversResponse = await Supabase.instance.client
         .from('drivers')
-        .select('fcm_token')
+        .select('onesignal_player_id')
         .eq('token_active', true)
-        .not('fcm_token', 'is', null);
+        .not('onesignal_player_id', 'is', null);
     
     final usersResponse = await Supabase.instance.client
         .from('app_users')
-        .select('fcm_token')
+        .select('onesignal_player_id')
         .eq('token_active', true)
-        .not('fcm_token', 'is', null);
+        .not('onesignal_player_id', 'is', null);
     
     final tokens = <String>[];
     
     for (final driver in driversResponse) {
-      if (driver['fcm_token'] != null) {
-        tokens.add(driver['fcm_token']);
+      if (driver['onesignal_player_id'] != null) {
+        tokens.add(driver['onesignal_player_id']);
       }
     }
     
     for (final user in usersResponse) {
-      if (user['fcm_token'] != null) {
-        tokens.add(user['fcm_token']);
+      if (user['onesignal_player_id'] != null) {
+        tokens.add(user['onesignal_player_id']);
       }
     }
     
@@ -80,12 +80,12 @@ class NotificationSegmentationService {
   Future<List<String>> _getDriverTokens() async {
     final response = await Supabase.instance.client
         .from('drivers')
-        .select('fcm_token')
+        .select('onesignal_player_id')
         .eq('token_active', true)
-        .not('fcm_token', 'is', null);
+        .not('onesignal_player_id', 'is', null);
     
     return response
-        .map<String>((driver) => driver['fcm_token'] as String)
+        .map<String>((driver) => driver['onesignal_player_id'] as String)
         .toList();
   }
   
@@ -93,12 +93,12 @@ class NotificationSegmentationService {
   Future<List<String>> _getPassengerTokens() async {
     final response = await Supabase.instance.client
         .from('app_users')
-        .select('fcm_token')
+        .select('onesignal_player_id')
         .eq('token_active', true)
-        .not('fcm_token', 'is', null);
+        .not('onesignal_player_id', 'is', null);
     
     return response
-        .map<String>((user) => user['fcm_token'] as String)
+        .map<String>((user) => user['onesignal_player_id'] as String)
         .toList();
   }
   
@@ -106,13 +106,13 @@ class NotificationSegmentationService {
   Future<List<String>> _getActiveDriverTokens() async {
     final response = await Supabase.instance.client
         .from('drivers')
-        .select('fcm_token')
+        .select('onesignal_player_id')
         .eq('token_active', true)
         .eq('is_online', true)
-        .not('fcm_token', 'is', null);
+        .not('onesignal_player_id', 'is', null);
     
     return response
-        .map<String>((driver) => driver['fcm_token'] as String)
+        .map<String>((driver) => driver['onesignal_player_id'] as String)
         .toList();
   }
   
@@ -127,7 +127,7 @@ class NotificationSegmentationService {
     final longitude = filters['longitude'] as double;
     final radiusKm = filters['radius_km'] as double? ?? 10.0;
     
-    // Usar função PostGIS para buscar motoristas próximos
+    // Usar função PostGIS para buscar motoristas próximos (compatível com retorno antigo)
     final response = await Supabase.instance.client
         .rpc('get_nearby_drivers', params: {
           'lat': latitude,
@@ -136,7 +136,10 @@ class NotificationSegmentationService {
         });
     
     return response
-        .map<String>((driver) => driver['fcm_token'] as String)
+        .map<String>((driver) {
+          final dynamic pid = driver['onesignal_player_id'] ?? driver['player_id'];
+          return (pid is String) ? pid : '';
+        })
         .where((token) => token.isNotEmpty)
         .toList();
   }
@@ -153,7 +156,10 @@ class NotificationSegmentationService {
         });
     
     return response
-        .map<String>((user) => user['fcm_token'] as String)
+        .map<String>((user) {
+          final dynamic pid = user['onesignal_player_id'] ?? user['player_id'];
+          return (pid is String) ? pid : '';
+        })
         .where((token) => token.isNotEmpty)
         .toList();
   }
@@ -165,29 +171,29 @@ class NotificationSegmentationService {
     
     final driversResponse = await Supabase.instance.client
         .from('drivers')
-        .select('fcm_token')
+        .select('onesignal_player_id')
         .eq('token_active', true)
         .gte('created_at', cutoffDate.toIso8601String())
-        .not('fcm_token', 'is', null);
+        .not('onesignal_player_id', 'is', null);
     
     final usersResponse = await Supabase.instance.client
         .from('app_users')
-        .select('fcm_token')
+        .select('onesignal_player_id')
         .eq('token_active', true)
         .gte('created_at', cutoffDate.toIso8601String())
-        .not('fcm_token', 'is', null);
+        .not('onesignal_player_id', 'is', null);
     
     final tokens = <String>[];
     
     for (final driver in driversResponse) {
-      if (driver['fcm_token'] != null) {
-        tokens.add(driver['fcm_token']);
+      if (driver['onesignal_player_id'] != null) {
+        tokens.add(driver['onesignal_player_id']);
       }
     }
     
     for (final user in usersResponse) {
-      if (user['fcm_token'] != null) {
-        tokens.add(user['fcm_token']);
+      if (user['onesignal_player_id'] != null) {
+        tokens.add(user['onesignal_player_id']);
       }
     }
     
@@ -223,9 +229,9 @@ class NotificationSegmentationService {
   Future<List<String>> _getDriverTokensWithFilters(Map<String, dynamic> filters) async {
     var query = Supabase.instance.client
         .from('drivers')
-        .select('fcm_token')
+        .select('onesignal_player_id')
         .eq('token_active', true)
-        .not('fcm_token', 'is', null);
+        .not('onesignal_player_id', 'is', null);
     
     // Aplicar filtros
     if (filters.containsKey('vehicle_type')) {
@@ -255,7 +261,7 @@ class NotificationSegmentationService {
     final response = await query;
     
     return response
-        .map<String>((driver) => driver['fcm_token'] as String)
+        .map<String>((driver) => driver['onesignal_player_id'] as String)
         .toList();
   }
   
@@ -263,9 +269,9 @@ class NotificationSegmentationService {
   Future<List<String>> _getUserTokensWithFilters(Map<String, dynamic> filters) async {
     var query = Supabase.instance.client
         .from('app_users')
-        .select('fcm_token')
+        .select('onesignal_player_id')
         .eq('token_active', true)
-        .not('fcm_token', 'is', null);
+        .not('onesignal_player_id', 'is', null);
     
     // Aplicar filtros
     if (filters.containsKey('city')) {
@@ -293,7 +299,7 @@ class NotificationSegmentationService {
     final response = await query;
     
     return response
-        .map<String>((user) => user['fcm_token'] as String)
+        .map<String>((user) => user['onesignal_player_id'] as String)
         .toList();
   }
   

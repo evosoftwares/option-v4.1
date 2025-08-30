@@ -11,9 +11,8 @@ class AppUser {
     required this.createdAt,
     required this.updatedAt,
     this.userId,
-    this.fcmToken,
-    this.deviceId,
-    this.devicePlatform,
+    this.onesignalPlayerId,
+    this.pushToken,
     this.lastActiveAt,
   });
 
@@ -28,9 +27,8 @@ class AppUser {
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       userId: json['user_id'] as String?,
-      fcmToken: json['fcm_token'] as String?,
-      deviceId: json['device_id'] as String?,
-      devicePlatform: json['device_platform'] as String?,
+      onesignalPlayerId: json['onesignal_player_id'] as String?,
+      pushToken: json['push_token'] as String?,
       lastActiveAt: json['last_active_at'] != null 
           ? DateTime.parse(json['last_active_at'] as String) 
           : null,
@@ -45,9 +43,8 @@ class AppUser {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? userId;
-  final String? fcmToken;
-  final String? deviceId;
-  final String? devicePlatform;
+  final String? onesignalPlayerId;
+  final String? pushToken;
   final DateTime? lastActiveAt;
 
   Map<String, dynamic> toJson() => {
@@ -61,9 +58,8 @@ class AppUser {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'user_id': userId,
-      'fcm_token': fcmToken,
-      'device_id': deviceId,
-      'device_platform': devicePlatform,
+      'onesignal_player_id': onesignalPlayerId,
+      'push_token': pushToken,
       'last_active_at': lastActiveAt?.toIso8601String(),
     };
 
@@ -78,9 +74,8 @@ class AppUser {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? userId,
-    String? fcmToken,
-    String? deviceId,
-    String? devicePlatform,
+    String? onesignalPlayerId,
+    String? pushToken,
     DateTime? lastActiveAt,
   }) => AppUser(
       id: id ?? this.id,
@@ -93,9 +88,8 @@ class AppUser {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       userId: userId ?? this.userId,
-      fcmToken: fcmToken ?? this.fcmToken,
-      deviceId: deviceId ?? this.deviceId,
-      devicePlatform: devicePlatform ?? this.devicePlatform,
+      onesignalPlayerId: onesignalPlayerId ?? this.onesignalPlayerId,
+      pushToken: pushToken ?? this.pushToken,
       lastActiveAt: lastActiveAt ?? this.lastActiveAt,
     );
 

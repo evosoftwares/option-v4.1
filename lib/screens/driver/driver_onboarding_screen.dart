@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../services/driver_document_service.dart';
-import '../stepper/driver_documents_stepper.dart';
 import '../../theme/app_colors.dart';
+import '../stepper/driver_documents_stepper.dart';
 
 /// Tela de onboarding para motoristas - valida documentação antes de permitir acesso completo
 class DriverOnboardingScreen extends StatefulWidget {

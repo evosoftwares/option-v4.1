@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/supabase/trip_request.dart';
 import '../../services/trip_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/supabase_helper.dart';
 import '../../widgets/trip_request_card.dart';
 
 class DriverRequestsScreen extends StatefulWidget {
@@ -42,7 +43,13 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
 
   Future<void> _loadTargetedRequests() async {
     try {
-      final driverId = Supabase.instance.client.auth.currentUser?.id;
+      final supabase = SupabaseHelper.client;
+      if (supabase == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+      
+      final driverId = supabase.auth.currentUser?.id;
       
       if (driverId == null) {
         return;
@@ -68,7 +75,12 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
   }
 
   void _subscribeToRequests() {
-    final driverId = Supabase.instance.client.auth.currentUser?.id;
+    final supabase = SupabaseHelper.client;
+    if (supabase == null) {
+      return;
+    }
+    
+    final driverId = supabase.auth.currentUser?.id;
     
     if (driverId == null) {
       return;
@@ -137,7 +149,12 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
 
   Future<void> _acceptRequest(TripRequest request) async {
     try {
-      final driverId = Supabase.instance.client.auth.currentUser?.id;
+      final supabase = SupabaseHelper.client;
+      if (supabase == null) {
+        return;
+      }
+      
+      final driverId = supabase.auth.currentUser?.id;
       
       if (driverId == null) {
         return;
@@ -169,7 +186,12 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
 
   Future<void> _declineRequest(TripRequest request) async {
     try {
-      final driverId = Supabase.instance.client.auth.currentUser?.id;
+      final supabase = SupabaseHelper.client;
+      if (supabase == null) {
+        return;
+      }
+      
+      final driverId = supabase.auth.currentUser?.id;
       
       if (driverId == null) {
         return;

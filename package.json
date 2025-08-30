@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "@postgrestools/postgrestools": "^0.11.0"
+  }
+}

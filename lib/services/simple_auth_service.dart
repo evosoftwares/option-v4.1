@@ -105,8 +105,8 @@ class SimpleAuthService {
   static Future<bool> testConnection() async {
     try {
       // Tentar uma operação simples que não depende de tabelas
-      final response = await _supabase.from('app_users').select('count').count();
-      print('✅ [SIMPLE AUTH] Conexão OK: $response');
+      final response = await _supabase.from('app_users').select('id').count(CountOption.exact);
+      print('✅ [SIMPLE AUTH] Conexão OK: ${response.count}');
       return true;
     } catch (e) {
       print('❌ [SIMPLE AUTH] Conexão falhou: $e');

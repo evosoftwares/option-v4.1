@@ -53,9 +53,9 @@ class AuthIntegrityTestService {
       results.add(await _testInputValidation());
 
       // Calcular score geral
-      final scores = results.map((r) => r.score).where((s) => s != null);
-      if (scores.isNotEmpty) {
-        overallScore = scores.reduce((a, b) => a + b) / scores.length;
+      final scoreValues = results.map((r) => r.score).whereType<double>().toList();
+      if (scoreValues.isNotEmpty) {
+        overallScore = scoreValues.reduce((a, b) => a + b) / scoreValues.length;
       }
 
       // Contar falhas críticas
@@ -155,13 +155,13 @@ class AuthIntegrityTestService {
       
       // Verificar órfãos
       try {
-        final orphanedPassengers = await _supabase
+        final orphanedCountResponse = await _supabase
             .from('passengers')
             .select('id')
             .not('user_id', 'in', '(${await _getUserIds()})')
-            .count();
-        if (orphanedPassengers > 0) {
-          issues.add('$orphanedPassengers passageiros órfãos');
+            .count(CountOption.exact);
+        if (orphanedCountResponse.count > 0) {
+          issues.add('${orphanedCountResponse.count} passageiros órfãos');
         }
       } catch (e) {
         issues.add('Falha na verificação de órfãos: $e');
@@ -199,10 +199,11 @@ class AuthIntegrityTestService {
       // Verificar usuários auth sem app_users
       try {
         final authUsersCount = await _supabase.rpc('count_auth_users') ?? 0;
-        final appUsersCount = await _supabase
+        final appUsersCountResponse = await _supabase
             .from('app_users')
-            .select('id', const FetchOptions(count: CountOption.exact))
-            .count();
+            .select('id')
+            .count(CountOption.exact);
+        final appUsersCount = appUsersCountResponse.count;
         
         final difference = (authUsersCount - appUsersCount).abs();
         if (difference > 5) { // Tolerância de 5 usuários
@@ -412,11 +413,11 @@ class AuthIntegrityTestService {
       
       try {
         // Query de contagem de usuários
-        await _supabase
+        final countResponse = await _supabase
             .from('app_users')
-            .select('id', const FetchOptions(count: CountOption.exact))
+            .select('id')
             .limit(1)
-            .count();
+            .count(CountOption.exact);
         
         final userQueryTime = DateTime.now().difference(startTime);
         if (userQueryTime.inMilliseconds > 1000) {

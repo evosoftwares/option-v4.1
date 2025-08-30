@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
+// import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// Serviço de monitoramento para logs estruturados e métricas
 class MonitoringService {
@@ -21,16 +21,16 @@ class MonitoringService {
       _logger.i('Monitoring service initialized in debug mode');
     }
     
-    // Configurar Sentry se não estiver em debug
-    if (!kDebugMode) {
-      await SentryFlutter.init(
-        (options) {
-          options.dsn = 'YOUR_SENTRY_DSN_HERE';
-          options.tracesSampleRate = 0.1;
-          options.environment = kReleaseMode ? 'production' : 'staging';
-        },
-      );
-    }
+    // Configurar Sentry se não estiver em debug (desativado por enquanto)
+    // if (!kDebugMode) {
+    //   await SentryFlutter.init(
+    //     (options) {
+    //       options.dsn = 'YOUR_SENTRY_DSN_HERE';
+    //       options.tracesSampleRate = 0.1;
+    //       options.environment = kReleaseMode ? 'production' : 'staging';
+    //     },
+    //   );
+    // }
   }
 
   /// Log estruturado para operações de zona
@@ -77,16 +77,16 @@ class MonitoringService {
 
     // Enviar para Sentry em caso de erro
     if (status == 'error' && !kDebugMode) {
-      Sentry.captureException(
-        error,
-        stackTrace: stackTrace,
-        withScope: (scope) {
-          scope.setTag('operation', operation);
-          scope.setTag('service', 'zone_service');
-          scope.setUser(SentryUser(id: userId));
-          scope.setExtra('zone_operation', logData);
-        },
-      );
+      // Sentry.captureException(
+      //   error,
+      //   stackTrace: stackTrace,
+      //   withScope: (scope) {
+      //     scope.setTag('operation', operation);
+      //     scope.setTag('service', 'zone_service');
+      //     scope.setUser(SentryUser(id: userId));
+      //     scope.setExtra('zone_operation', logData);
+      //   },
+      // );
     }
 
     // Coletar métricas
@@ -152,16 +152,16 @@ class MonitoringService {
 
     // Sempre enviar eventos de segurança para Sentry
     if (!kDebugMode) {
-      Sentry.captureMessage(
-        'Security Event: $eventType',
-        level: SentryLevel.warning,
-        withScope: (scope) {
-          scope.setTag('event_type', eventType);
-          scope.setTag('service', 'security');
-          scope.setUser(SentryUser(id: userId));
-          scope.setExtra('security_event', logData);
-        },
-      );
+      // Sentry.captureMessage(
+      //   'Security Event: $eventType',
+      //   level: SentryLevel.warning,
+      //   withScope: (scope) {
+      //     scope.setTag('event_type', eventType);
+      //     scope.setTag('service', 'security');
+      //     scope.setUser(SentryUser(id: userId));
+      //     scope.setExtra('security_event', logData);
+      //   },
+      // );
     }
 
     _sendLogToBackend(logData);

@@ -1,14 +1,9 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/supabase/driver.dart';
 import '../../models/supabase/trip.dart';
@@ -65,7 +60,6 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
   void initState() {
     super.initState();
     _initializeScreen();
-    _createDriverMarkerIcon();
   }
 
   @override
@@ -88,39 +82,13 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
   }
 
   Future<void> _loadCustomMarkers() async {
-    _driverMarkerIcon = await _createCustomMarker(
-      'assets/icons/driver_marker.png',
-      size: 120,
-    );
-    _originMarkerIcon = await _createCustomMarker(
-      'assets/icons/origin_marker.png',
-    );
-    _destinationMarkerIcon = await _createCustomMarker(
-      'assets/icons/destination_marker.png',
-    );
+    // Usando ícones padrão pretos para todos os marcadores
+    _driverMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(0.0);
+    _originMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(0.0);
+    _destinationMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(0.0);
   }
 
-  Future<BitmapDescriptor> _createCustomMarker(
-    String assetPath, {
-    int size = 100,
-  }) async {
-    try {
-      final data = await rootBundle.load(assetPath);
-      final codec = await ui.instantiateImageCodec(
-        data.buffer.asUint8List(),
-        targetWidth: size,
-        targetHeight: size,
-      );
-      final frameInfo = await codec.getNextFrame();
-      final byteData = await frameInfo.image.toByteData(
-        format: ui.ImageByteFormat.png,
-      );
-      return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
-    } catch (e) {
-      // Fallback para marcador padrão se não conseguir carregar o ícone personalizado
-      return BitmapDescriptor.defaultMarker;
-    }
-  }
+
 
   Future<void> _subscribeToTrip() async {
     _tripSubscription = _tripService.subscribeToTrip(widget.tripId).listen(
@@ -182,7 +150,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
           _currentTrip!.originLatitude,
           _currentTrip!.originLongitude,
         ),
-        icon: _originMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        icon: _originMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(0.0),
         infoWindow: InfoWindow(
           title: 'Origem',
           snippet: _currentTrip!.originAddress,
@@ -198,7 +166,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
           _currentTrip!.destinationLatitude,
           _currentTrip!.destinationLongitude,
         ),
-        icon: _destinationMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon: _destinationMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(0.0),
         infoWindow: InfoWindow(
           title: 'Destino',
           snippet: _currentTrip!.destinationAddress,
@@ -215,79 +183,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
     });
   }
 
-  Future<void> _createDriverMarkerIcon() async {
-    final markerIcon = await _createCustomMarkerIcon();
-    setState(() {
-      _driverMarkerIcon = markerIcon;
-    });
-  }
 
-  Future<BitmapDescriptor> _createCustomMarkerIcon() async {
-    const size = 120.0;
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    
-    // Desenhar sombra
-    final shadowPaint = Paint()
-      ..color = AppColors.black.withOpacity(0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-    canvas.drawCircle(
-      const Offset(size / 2, size / 2 + 2),
-      size / 2 - 8,
-      shadowPaint,
-    );
-    
-    // Desenhar círculo principal
-    final circlePaint = Paint()
-      ..shader = ui.Gradient.linear(
-        const Offset(0, 0),
-        const Offset(size, size),
-        [AppColors.lightPrimary, AppColors.lightPrimary.withOpacity(0.8)],
-      );
-    canvas.drawCircle(
-      const Offset(size / 2, size / 2),
-      size / 2 - 8,
-      circlePaint,
-    );
-    
-    // Desenhar borda
-    final borderPaint = Paint()
-      ..color = AppColors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    canvas.drawCircle(
-      const Offset(size / 2, size / 2),
-      size / 2 - 8,
-      borderPaint,
-    );
-    
-    // Desenhar ícone do carro
-    final iconPainter = TextPainter(
-      text: TextSpan(
-        text: String.fromCharCode(Icons.directions_car.codePoint),
-        style: TextStyle(
-          fontSize: AppSpacing.xl,
-          fontFamily: Icons.directions_car.fontFamily,
-          color: AppColors.white,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    iconPainter.layout();
-    iconPainter.paint(
-      canvas,
-      Offset(
-        (size - iconPainter.width) / 2,
-        (size - iconPainter.height) / 2,
-      ),
-    );
-    
-    final picture = recorder.endRecording();
-    final image = await picture.toImage(size.toInt(), size.toInt());
-    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    
-    return BitmapDescriptor.fromBytes(bytes!.buffer.asUint8List());
-  }
 
   void _updateDriverMarker() {
     if (_currentDriver?.currentLatitude == null || 
@@ -301,7 +197,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
         _currentDriver!.currentLatitude!,
         _currentDriver!.currentLongitude!,
       ),
-      icon: _driverMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+      icon: _driverMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(0.0),
       infoWindow: InfoWindow(
         title: 'Seu motorista',
         snippet: '${_currentDriver!.brand} ${_currentDriver!.model} - ${_currentDriver!.plate}',

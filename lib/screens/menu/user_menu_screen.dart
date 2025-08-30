@@ -133,11 +133,12 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
                   }
                 }),
               ),
-              _MenuTile(
-                icon: Icons.payment_outlined,
-                label: 'Pagamentos',
-                onTap: () => Navigator.pushNamed(context, '/payments'),
-              ),
+              // Opção Pagamentos removida temporariamente
+              // _MenuTile(
+              //   icon: Icons.payment_outlined,
+              //   label: 'Pagamentos',
+              //   onTap: () => Navigator.pushNamed(context, '/payments'),
+              // ),
               _MenuTile(
                 icon: Icons.place_outlined,
                 label: 'Locais salvos',
@@ -154,11 +155,12 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
 
               const SizedBox(height: AppSpacing.sectionSpacing),
               const _SectionTitle(title: 'Geral'),
-              _MenuTile(
-                icon: Icons.emergency,
-                label: 'Emergência',
-                onTap: () => Navigator.pushNamed(context, '/emergency'),
-              ),
+              // Botão Emergência ocultado
+              // _MenuTile(
+              //   icon: Icons.emergency,
+              //   label: 'Emergência',
+              //   onTap: () => Navigator.pushNamed(context, '/emergency'),
+              // ),
               _MenuTile(
                 icon: Icons.notifications_none,
                 label: 'Notificações',

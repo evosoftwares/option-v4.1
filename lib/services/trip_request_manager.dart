@@ -1,14 +1,16 @@
 import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../config/feature_flags.dart';
+import '../exceptions/app_exceptions.dart';
+import '../models/supabase/driver.dart';
 import '../models/supabase/trip_request.dart';
 import '../models/trip_request_data.dart';
-import '../models/supabase/driver.dart';
-import '../services/trip_service.dart';
 import '../services/driver_service.dart';
 import '../services/notification_service.dart';
 import '../services/transaction_service.dart';
-import '../exceptions/app_exceptions.dart';
-import '../config/feature_flags.dart';
+import '../services/trip_service.dart';
 
 class TripRequestManager {
   TripRequestManager(this._supabase) :

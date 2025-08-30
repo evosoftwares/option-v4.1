@@ -198,9 +198,9 @@ class FavoriteLocation {
 
   factory FavoriteLocation.fromJson(Map<String, dynamic> json) => FavoriteLocation(
       id: json['id'],
-      userId: json['user_id'] ?? json['userId'],
-      name: json['label'] ?? json['name'], // Mapeia 'label' do banco para 'name' do modelo
-      address: json['address'],
+      userId: json['user_id'] ?? json['userId'] ?? 'temp-user', // Valor padrão para evitar erro
+      name: json['label'] ?? json['name'] ?? 'Local', // Valor padrão
+      address: json['address'] ?? 'Endereço não informado', // Valor padrão
       type: LocationType.values.firstWhere(
         (e) => e.toString() == json['category'] || e.name == json['category'] || e.toString() == json['type'] || e.name == json['type'],
         orElse: () => LocationType.other,

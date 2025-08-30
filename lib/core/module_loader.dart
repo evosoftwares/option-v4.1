@@ -234,7 +234,7 @@ class ModuleLoader {
   double getTotalDownloadedSize() => _modules.values
         .where((info) => info.status == ModuleStatus.loaded || 
                         info.status == ModuleStatus.downloaded)
-        .fold(0.0, (sum, info) => sum + info.type.sizeMB);
+        .fold(0, (sum, info) => sum + info.type.sizeMB);
 
   /// Limpa cache de um módulo
   Future<bool> clearModule(ModuleType module) async {

@@ -21,6 +21,8 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
   bool _isCompletingRegistration = false;
   String? _registrationError;
   UserRegistrationException? _registrationException;
+  int _registrationAttempts = 0;
+  static const int _maxRegistrationAttempts = 3;
 
   @override
   void initState() {
@@ -97,12 +99,25 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
   Future<void> _completeRegistration() async {
     if (_isCompletingRegistration) return;
     
+    // Verificar limite de tentativas
+     if (_registrationAttempts >= _maxRegistrationAttempts) {
+       print('🚫 [REGISTRATION] Limite máximo de tentativas atingido ($_maxRegistrationAttempts)');
+       setState(() {
+         _registrationError = 'Limite máximo de tentativas atingido. Tente novamente mais tarde.';
+         _registrationException = RegistrationNetworkException('Muitas tentativas de cadastro');
+       });
+       return;
+     }
+    
+    _registrationAttempts++;
     final timestamp = DateTime.now().toIso8601String();
     
     setState(() {
       _isCompletingRegistration = true;
       _registrationError = null;
     });
+    
+    print('🔄 [REGISTRATION] Tentativa $_registrationAttempts de $_maxRegistrationAttempts');
     
     print('🏁 [$timestamp] [REGISTRATION] Finalizando cadastro...');
     final controller = Provider.of<StepperController>(context, listen: false);
@@ -127,6 +142,8 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
       
       if (ok) {
         print('✅ [$timestamp] [REGISTRATION] Cadastro finalizado com sucesso!');
+        // Reset contador de tentativas em caso de sucesso
+        _registrationAttempts = 0;
         // Redirecionar baseado no tipo de usuário
         if (controller.userType == 'driver') {
           print('🚗 [$timestamp] [REGISTRATION] Navegando para /driver_home (motorista)');

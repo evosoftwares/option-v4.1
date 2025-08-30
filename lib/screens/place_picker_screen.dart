@@ -274,30 +274,38 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
                       
                       return AppCard(
                         elevation: isSelected ? 4 : 1,
+                        backgroundColor: isSelected ? colorScheme.primary : null,
+                        borderColor: isSelected ? colorScheme.primary : null,
                         child: ListTile(
                           leading: Icon(
                             location.type.icon,
-                            color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.primary,
+                            color: isSelected ? colorScheme.onPrimary : colorScheme.primary,
                           ),
                           title: Text(
                             location.name,
                             style: textTheme.titleMedium?.copyWith(
-                              color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+                              color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
                             ),
                           ),
                           subtitle: Text(
                             location.address,
                             style: textTheme.bodyMedium?.copyWith(
-                              color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+                              color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
                             ),
                           ),
                           trailing: widget.allowMultiple
                               ? Checkbox(
                                   value: isSelected,
                                   onChanged: (_) => _selectLocation(location),
+                                  fillColor: isSelected 
+                                      ? WidgetStateProperty.all(colorScheme.onPrimary)
+                                      : null,
+                                  checkColor: isSelected 
+                                      ? colorScheme.primary
+                                      : null,
                                 )
                               : isSelected
-                                  ? Icon(Icons.check_circle, color: colorScheme.onPrimaryContainer)
+                                  ? Icon(Icons.check_circle, color: colorScheme.onPrimary)
                                   : null,
                           onTap: () => _selectLocation(location),
                         ),

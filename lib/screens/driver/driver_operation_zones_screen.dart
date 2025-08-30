@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../models/supabase/driver_operation_zone.dart';
 import '../../services/driver_operation_zones_service.dart';
@@ -8,6 +7,7 @@ import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../utils/supabase_helper.dart';
 import '../../widgets/app_card.dart';
 
 class DriverOperationZonesScreen extends StatefulWidget {
@@ -47,8 +47,13 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
   @override
   void initState() {
     super.initState();
-    _service = DriverOperationZonesService(Supabase.instance.client);
-    _loadDriverData();
+    final supabase = SupabaseHelper.client;
+    if (supabase != null) {
+      _service = DriverOperationZonesService(supabase);
+      _loadDriverData();
+    } else {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _loadDriverData() async {
@@ -134,7 +139,7 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
         Marker(
           markerId: MarkerId('point_${_currentPolygonPoints.length}'),
           position: point,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          icon: BitmapDescriptor.defaultMarkerWithHue(0.0),
         ),
       );
     });

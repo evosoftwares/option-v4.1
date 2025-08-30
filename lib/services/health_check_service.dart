@@ -112,10 +112,10 @@ class HealthCheckService {
     ),
     const HealthCheckConfig(
       serviceName: 'notification_service',
-      endpoint: 'https://fcm.googleapis.com/fcm/send',
+      endpoint: 'https://onesignal.com/',
       timeout: Duration(seconds: 8),
       interval: Duration(minutes: 2),
-      headers: {'Authorization': 'key=YOUR_SERVER_KEY'},
+      headers: {},
     ),
   ];
 

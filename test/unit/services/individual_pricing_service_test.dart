@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:option/models/supabase/driver.dart';
-import 'package:option/models/supabase/trip_request.dart';
 import 'package:option/models/trip_preferences.dart';
 import 'package:option/models/vehicle_category.dart';
 import 'package:option/services/individual_pricing_service.dart';

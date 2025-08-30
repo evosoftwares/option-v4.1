@@ -61,6 +61,10 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
 
       // Armazenar em App State (StepperController) e seguir para o stepper
       final controller = Provider.of<StepperController>(context, listen: false);
+      
+      // Limpar dados persistidos corrompidos antes de definir novos valores
+      await controller.clearCorruptedPersistedData();
+      
       controller
         ..setUserType(_selectedType!)
         ..setFullName(fullName)

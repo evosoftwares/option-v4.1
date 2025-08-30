@@ -1,13 +1,10 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
-import '../config/feature_flags.dart';
 import '../exceptions/app_exceptions.dart';
-import '../utils/supabase_helper.dart';
 import '../exceptions/validation_exception.dart' as validation;
 import '../models/user.dart';
+import '../utils/supabase_helper.dart';
 import '../validators/user_data_validator.dart';
-import '../validators/database_constraints_validator.dart';
-import 'enhanced_data_integrity_service.dart';
 
 class UserService {
   static SupabaseClient get _supabase {

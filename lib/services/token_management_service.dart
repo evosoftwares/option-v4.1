@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:logger/logger.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Serviço especializado para gerenciamento de tokens FCM
+/// Serviço especializado para gerenciamento de tokens OneSignal
 /// Inclui validação, sincronização, limpeza e analytics
 class TokenManagementService {
   factory TokenManagementService() => _instance;
@@ -14,54 +14,60 @@ class TokenManagementService {
   static final TokenManagementService _instance = TokenManagementService._internal();
 
   final Logger _logger = Logger();
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   
-  static const String _tokenKey = 'fcm_token';
-  static const String _tokenTimestampKey = 'fcm_token_timestamp';
-  static const String _lastSyncKey = 'fcm_last_sync';
+  static const String _playerIdKey = 'onesignal_player_id';
+  static const String _pushTokenKey = 'onesignal_push_token';
+  static const String _playerIdTimestampKey = 'onesignal_player_id_timestamp';
+  static const String _pushTokenTimestampKey = 'onesignal_push_token_timestamp';
+  static const String _lastSyncKey = 'onesignal_last_sync';
   static const String _deviceIdKey = 'device_id';
   
-  /// Registra ou atualiza token FCM
+  /// Registra ou atualiza Player ID e Push Token do OneSignal
   Future<bool> registerToken() async {
     try {
-      final token = await _firebaseMessaging.getToken();
-      if (token == null) {
-        _logger.w('Token FCM não disponível');
+      // No OneSignal v5.x, usar getOnesignalId() que pode retornar null se chamado antes da inicialização
+      final playerId = await OneSignal.User.getOnesignalId();
+      final pushToken = OneSignal.User.pushSubscription.token;
+      if (playerId == null && pushToken == null) {
+        _logger.w('Player ID e Push Token OneSignal não disponíveis');
         return false;
       }
       
       final currentUser = Supabase.instance.client.auth.currentUser;
       if (currentUser == null) {
         _logger.w('Usuário não autenticado');
-        await _saveTokenLocally(token);
+        if (playerId != null) await _savePlayerIdLocally(playerId);
+        if (pushToken != null) await _savePushTokenLocally(pushToken);
         return false;
       }
       
-      // Verificar se o token mudou
-      final lastToken = await _getLocalToken();
-      if (lastToken == token) {
-        _logger.i('Token FCM não mudou, verificando sincronização');
-        return await _ensureTokenSynced(token, currentUser.id);
+      // Verificar se os dados mudaram
+      final lastPlayerId = await _getLocalPlayerId();
+      final lastPushToken = await _getLocalPushToken();
+      if (lastPlayerId == playerId && lastPushToken == pushToken) {
+        _logger.i('Dados OneSignal não mudaram, verificando sincronização');
+        return await _ensureTokenSynced(playerId, pushToken, currentUser.id);
       }
       
-      // Registrar novo token
-      final success = await _saveTokenToDatabase(token, currentUser.id);
+      // Registrar novos dados
+      final success = await _saveTokenToDatabase(playerId, pushToken, currentUser.id);
       if (success) {
-        await _saveTokenLocally(token);
+        if (playerId != null) await _savePlayerIdLocally(playerId);
+        if (pushToken != null) await _savePushTokenLocally(pushToken);
         await _updateLastSync();
-        _logger.i('Token FCM registrado com sucesso');
+        _logger.i('Dados OneSignal registrados com sucesso');
       }
       
       return success;
       
     } catch (e, stackTrace) {
-      _logger.e('Erro ao registrar token FCM', error: e, stackTrace: stackTrace);
+      _logger.e('Erro ao registrar dados OneSignal', error: e, stackTrace: stackTrace);
       return false;
     }
   }
   
-  /// Salva token no banco de dados
-  Future<bool> _saveTokenToDatabase(String token, String userId) async {
+  /// Salva dados OneSignal no banco de dados
+  Future<bool> _saveTokenToDatabase(String? playerId, String? pushToken, String userId) async {
     try {
       final platform = _getCurrentPlatform();
       final deviceId = await _getDeviceId();
@@ -70,32 +76,50 @@ class TokenManagementService {
       // Verificar se é motorista ou passageiro
       final userType = await _getUserType(userId);
       
+      final updateData = <String, dynamic>{
+        'token_updated_at': timestamp,
+        'token_active': true,
+      };
+      
+      if (playerId != null) {
+        updateData['onesignal_player_id'] = playerId;
+        // removido: updateData['player_id_updated_at'] = timestamp;
+      }
+      
+      if (pushToken != null) {
+        updateData['push_token'] = pushToken;
+        // removido: updateData['push_token_updated_at'] = timestamp;
+      }
+      
+      if (userType == 'driver') {
+        updateData['device_platform'] = platform;
+        updateData['device_id'] = deviceId;
+      } else {
+        // app_users não possui colunas de device_*, apenas manter last_active_at se existir
+        updateData['last_active_at'] = timestamp;
+      }
+      
       if (userType == 'driver') {
         await Supabase.instance.client
             .from('drivers')
-            .update({
-              'fcm_token': token,
-              'device_platform': platform,
-              'device_id': deviceId,
-              'token_updated_at': timestamp,
-              'token_active': true,
-            })
+            .update(updateData)
             .eq('user_id', userId);
       } else {
         await Supabase.instance.client
             .from('app_users')
-            .update({
-              'fcm_token': token,
-              'device_platform': platform,
-              'device_id': deviceId,
-              'token_updated_at': timestamp,
-              'token_active': true,
-            })
+            .update(updateData)
             .eq('user_id', userId);
       }
       
-      // Registrar no histórico de tokens
-      await _logTokenRegistration(token, userId, platform, deviceId);
+      // Registrar no histórico de tokens (alinhado ao schema)
+      await _logTokenRegistration(
+        playerId: playerId ?? '',
+        pushToken: pushToken ?? '',
+        userId: userId,
+        platform: platform,
+        deviceId: deviceId,
+        role: userType,
+      );
       
       return true;
       
@@ -121,8 +145,8 @@ class TokenManagementService {
     }
   }
   
-  /// Garante que o token está sincronizado
-  Future<bool> _ensureTokenSynced(String token, String userId) async {
+  /// Garante que os dados estão sincronizados
+  Future<bool> _ensureTokenSynced(String? playerId, String? pushToken, String userId) async {
     try {
       final lastSync = await _getLastSync();
       final now = DateTime.now();
@@ -138,15 +162,16 @@ class TokenManagementService {
       
       final response = await Supabase.instance.client
           .from(tableName)
-          .select('fcm_token, token_active')
+          .select('onesignal_player_id, push_token, token_active')
           .eq('user_id', userId)
           .maybeSingle();
       
       if (response == null || 
-          response['fcm_token'] != token || 
+          response['onesignal_player_id'] != playerId || 
+          response['push_token'] != pushToken ||
           response['token_active'] != true) {
-        // Token não sincronizado, forçar atualização
-        return await _saveTokenToDatabase(token, userId);
+        // Dados não sincronizados, forçar atualização
+        return await _saveTokenToDatabase(playerId, pushToken, userId);
       }
       
       await _updateLastSync();
@@ -175,10 +200,10 @@ class TokenManagementService {
           })
           .eq('user_id', currentUser.id);
       
-      // Limpar token local
-      await _clearLocalToken();
+      // Limpar dados locais
+      await _clearLocalData();
       
-      _logger.i('Token FCM invalidado com sucesso');
+      _logger.i('Token OneSignal invalidado com sucesso');
       return true;
       
     } catch (e) {
@@ -192,16 +217,24 @@ class TokenManagementService {
     try {
       final cutoffDate = DateTime.now().subtract(const Duration(days: 30));
       
-      // Limpar tokens de motoristas inativos
+      // Limpar dados de motoristas inativos
       await Supabase.instance.client
           .from('drivers')
-          .update({'fcm_token': null, 'token_active': false})
+          .update({
+            'onesignal_player_id': null, 
+            'push_token': null, 
+            'token_active': false
+          })
           .lt('token_updated_at', cutoffDate.toIso8601String());
       
-      // Limpar tokens de passageiros inativos
+      // Limpar dados de passageiros inativos
       await Supabase.instance.client
           .from('app_users')
-          .update({'fcm_token': null, 'token_active': false})
+          .update({
+            'onesignal_player_id': null, 
+            'push_token': null, 
+            'token_active': false
+          })
           .lt('token_updated_at', cutoffDate.toIso8601String());
       
       _logger.i('Limpeza de tokens inativos concluída');
@@ -217,14 +250,22 @@ class TokenManagementService {
       // Estatísticas de motoristas
       final driversStats = await Supabase.instance.client
           .from('drivers')
-          .select('fcm_token, token_active, device_platform')
-          .not('fcm_token', 'is', null);
+          .select('onesignal_player_id, push_token, token_active, device_platform')
+          .not('onesignal_player_id', 'is', null);
       
-      // Estatísticas de passageiros
+      // Estatísticas de passageiros (app_users não possui device_platform)
       final usersStats = await Supabase.instance.client
           .from('app_users')
-          .select('fcm_token, token_active, device_platform')
-          .not('fcm_token', 'is', null);
+          .select('onesignal_player_id, push_token, token_active')
+          .not('onesignal_player_id', 'is', null);
+      
+      final combined = <dynamic>[
+        ...driversStats,
+        ...usersStats.map((u) => {
+          ...u,
+          'device_platform': 'unknown',
+        }),
+      ];
       
       final stats = {
         'total_tokens': driversStats.length + usersStats.length,
@@ -232,7 +273,7 @@ class TokenManagementService {
                         usersStats.where((u) => u['token_active'] == true).length,
         'drivers_with_tokens': driversStats.length,
         'users_with_tokens': usersStats.length,
-        'platform_distribution': _calculatePlatformDistribution(driversStats + usersStats),
+        'platform_distribution': _calculatePlatformDistribution(combined),
         'last_updated': DateTime.now().toIso8601String(),
       };
       
@@ -256,19 +297,28 @@ class TokenManagementService {
     return distribution;
   }
   
-  /// Registra token no histórico
-  Future<void> _logTokenRegistration(String token, String userId, String platform, String deviceId) async {
+  /// Registra dados no histórico
+  Future<void> _logTokenRegistration({
+    required String playerId,
+    required String pushToken,
+    required String userId,
+    required String platform,
+    required String deviceId,
+    required String role,
+  }) async {
     try {
-      await Supabase.instance.client.from('fcm_token_history').insert({
+      await Supabase.instance.client.from('onesignal_token_history').insert({
         'user_id': userId,
-        'token_hash': _hashToken(token),
-        'platform': platform,
+        'role': role,
+        'player_id': playerId,
+        'push_token': pushToken,
         'device_id': deviceId,
-        'action': 'registered',
-        'created_at': DateTime.now().toIso8601String(),
+        'device_platform': platform,
+        'event': 'updated',
+        'changed_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-      _logger.e('Erro ao registrar token no histórico', error: e);
+      _logger.e('Erro ao registrar dados no histórico', error: e);
     }
   }
   
@@ -306,36 +356,59 @@ class TokenManagementService {
     }
   }
   
-  /// Salva token localmente
-  Future<void> _saveTokenLocally(String token) async {
+  /// Salva Player ID localmente
+  Future<void> _savePlayerIdLocally(String playerId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_tokenKey, token);
-      await prefs.setString(_tokenTimestampKey, DateTime.now().toIso8601String());
+      await prefs.setString(_playerIdKey, playerId);
+      await prefs.setString(_playerIdTimestampKey, DateTime.now().toIso8601String());
     } catch (e) {
-      _logger.e('Erro ao salvar token localmente', error: e);
+      _logger.e('Erro ao salvar Player ID localmente', error: e);
     }
   }
   
-  /// Obtém token local
-  Future<String?> _getLocalToken() async {
+  /// Salva Push Token localmente
+  Future<void> _savePushTokenLocally(String pushToken) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(_tokenKey);
+      await prefs.setString(_pushTokenKey, pushToken);
+      await prefs.setString(_pushTokenTimestampKey, DateTime.now().toIso8601String());
+    } catch (e) {
+      _logger.e('Erro ao salvar Push Token localmente', error: e);
+    }
+  }
+  
+  /// Obtém Player ID local
+  Future<String?> _getLocalPlayerId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_playerIdKey);
     } catch (e) {
       return null;
     }
   }
   
-  /// Limpa token local
-  Future<void> _clearLocalToken() async {
+  /// Obtém Push Token local
+  Future<String?> _getLocalPushToken() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_tokenKey);
-      await prefs.remove(_tokenTimestampKey);
+      return prefs.getString(_pushTokenKey);
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  /// Limpa dados locais
+  Future<void> _clearLocalData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_playerIdKey);
+      await prefs.remove(_pushTokenKey);
+      await prefs.remove(_playerIdTimestampKey);
+      await prefs.remove(_pushTokenTimestampKey);
       await prefs.remove(_lastSyncKey);
     } catch (e) {
-      _logger.e('Erro ao limpar token local', error: e);
+      _logger.e('Erro ao limpar dados locais', error: e);
     }
   }
   
@@ -360,19 +433,23 @@ class TokenManagementService {
     }
   }
   
-  /// Obtém token atual
-  Future<String?> getCurrentToken() async => _getLocalToken();
+  /// Obtém Player ID atual
+  Future<String?> getCurrentPlayerId() async => _getLocalPlayerId();
   
-  /// Verifica se token está válido
-  Future<bool> isTokenValid() async {
+  /// Obtém Push Token atual
+  Future<String?> getCurrentPushToken() async => _getLocalPushToken();
+  
+  /// Verifica se dados estão válidos
+  Future<bool> areTokensValid() async {
     try {
-      final token = await _getLocalToken();
-      if (token == null) return false;
+      final playerId = await _getLocalPlayerId();
+      final pushToken = await _getLocalPushToken();
+      if (playerId == null && pushToken == null) return false;
       
       final currentUser = Supabase.instance.client.auth.currentUser;
       if (currentUser == null) return false;
       
-      return await _ensureTokenSynced(token, currentUser.id);
+      return await _ensureTokenSynced(playerId, pushToken, currentUser.id);
     } catch (e) {
       return false;
     }

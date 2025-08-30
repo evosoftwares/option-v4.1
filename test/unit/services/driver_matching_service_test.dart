@@ -149,7 +149,6 @@ void main() {
         const criteria = MatchingCriteria(
           passengerLatitude: -23.5505,
           passengerLongitude: -46.6333,
-          maxRadiusKm: 10,
           vehicleCategory: 'standard',
         );
 
@@ -229,7 +228,6 @@ void main() {
         const criteria = MatchingCriteria(
           passengerLatitude: -23.5505,
           passengerLongitude: -46.6333,
-          maxRadiusKm: 10,
           vehicleCategory: 'standard',
           needsPet: true,
         );

@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:option/screens/wallet/wallet_screen.dart';
-import 'package:option/screens/profile/profile_edit_screen.dart';
-import 'package:option/screens/trips/trip_history_screen.dart';
 import 'package:option/screens/about/about_screen.dart';
-import 'package:option/screens/notifications/notifications_screen.dart';
-import 'package:option/screens/saved_places_screen.dart';
-import 'package:option/screens/payments/payments_screen.dart';
-import 'package:option/screens/emergency/emergency_screen.dart';
+import 'package:option/screens/driver/custom_pricing_screen.dart';
 import 'package:option/screens/driver/driver_documents_screen.dart';
+import 'package:option/screens/driver/driver_excluded_zones_screen.dart';
+import 'package:option/screens/driver/driver_operation_zones_screen.dart';
+import 'package:option/screens/driver/statistics_screen.dart';
 import 'package:option/screens/driver/vehicle_screen.dart';
 import 'package:option/screens/driver/working_hours_screen.dart';
-import 'package:option/screens/driver/custom_pricing_screen.dart';
-import 'package:option/screens/driver/statistics_screen.dart';
-import 'package:option/screens/driver/driver_operation_zones_screen.dart';
-import 'package:option/screens/driver/driver_excluded_zones_screen.dart';
+import 'package:option/screens/emergency/emergency_screen.dart';
+import 'package:option/screens/notifications/notifications_screen.dart';
+import 'package:option/screens/payments/payments_screen.dart';
+import 'package:option/screens/profile/profile_edit_screen.dart';
+import 'package:option/screens/saved_places_screen.dart';
+import 'package:option/screens/trips/trip_history_screen.dart';
+import 'package:option/screens/wallet/wallet_screen.dart';
 
 /// Classe para testar a funcionalidade de navegação dos menus
 /// Verifica se cada tela pode ser instanciada corretamente

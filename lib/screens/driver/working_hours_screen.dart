@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../utils/supabase_helper.dart';
 
 class WorkingHoursScreen extends StatefulWidget {
   const WorkingHoursScreen({super.key});
@@ -62,7 +63,13 @@ class _WorkingHoursScreenState extends State<WorkingHoursScreen> {
 
   Future<void> _loadWorkingHours() async {
     try {
-      final supabase = Supabase.instance.client;
+      final supabase = SupabaseHelper.client;
+      if (supabase == null) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
       final userId = supabase.auth.currentUser?.id;
       
       if (userId == null) {

@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Uber Clone</string>
+	<string>OPTION</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>uber_clone</string>
+	<string>option</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -65,11 +65,7 @@
 		<string>background-processing</string>
 	</array>
 	
-	<!-- Firebase Cloud Messaging -->
-	<key>FirebaseMessagingAutoInitEnabled</key>
-	<true/>
-	<key>FirebaseAnalyticsCollectionEnabled</key>
-	<true/>
+	<!-- Removido: Chaves específicas do Firebase Cloud Messaging -->
 	
 	<!-- Push Notifications -->
 	<key>aps-environment</key>
@@ -121,5 +117,9 @@
 			</array>
 		</dict>
 	</array>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
 </dict>
 </plist>

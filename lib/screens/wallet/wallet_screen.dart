@@ -133,6 +133,7 @@ class _PassengerWalletContentState extends State<_PassengerWalletContent> {
                     totalCashback: wallet?.totalCashback ?? 0.0,
                     onAddCredit: () => _onAddCredit(passengerId),
                     onViewPaymentMethods: _onViewPaymentMethods,
+                    onWithdraw: () => _onWithdraw(passengerId),
                   );
                 },
               ),
@@ -205,6 +206,21 @@ class _PassengerWalletContentState extends State<_PassengerWalletContent> {
         content: Text('Gerenciamento de métodos de pagamento em breve'),
       ),
     );
+  }
+
+  Future<void> _onWithdraw(String passengerId) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _WithdrawBottomSheet(
+        passengerId: passengerId,
+        availableBalance: widget.walletService.getPassengerWallet(passengerId).then((wallet) => wallet?.availableBalance ?? 0.0),
+      ),
+    );
+
+    if (result ?? false) {
+      await _refreshData(passengerId);
+    }
   }
 }
 
@@ -546,6 +562,7 @@ class _PassengerBalanceCard extends StatelessWidget {
     required this.totalCashback,
     required this.onAddCredit,
     required this.onViewPaymentMethods,
+    required this.onWithdraw,
   });
 
   final double availableBalance;
@@ -554,6 +571,7 @@ class _PassengerBalanceCard extends StatelessWidget {
   final double totalCashback;
   final VoidCallback onAddCredit;
   final VoidCallback onViewPaymentMethods;
+  final VoidCallback onWithdraw;
 
   @override
   Widget build(BuildContext context) {
@@ -572,27 +590,34 @@ class _PassengerBalanceCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text('R\$ ${availableBalance.toStringAsFixed(2)}', style: AppTypography.displaySmall.copyWith(color: cs.onPrimaryContainer)),
           const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: _StatChip(
-                  label: 'Total gasto',
-                  value: 'R\$ ${totalSpent.toStringAsFixed(2)}',
-                  background: cs.secondaryContainer,
-                  foreground: cs.onSecondaryContainer,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: _StatChip(
-                  label: 'Cashback',
-                  value: 'R\$ ${totalCashback.toStringAsFixed(2)}',
-                  background: cs.tertiaryContainer,
-                  foreground: cs.onTertiaryContainer,
-                ),
-              ),
-            ],
+          _StatChip(
+            label: 'Total gasto',
+            value: 'R\$ ${totalSpent.toStringAsFixed(2)}',
+            background: cs.secondaryContainer,
+            foreground: cs.onSecondaryContainer,
           ),
+          // Row(
+          //   children: [
+          //     Expanded(
+          //       child: _StatChip(
+          //         label: 'Total gasto',
+          //         value: 'R\$ ${totalSpent.toStringAsFixed(2)}',
+          //         background: cs.secondaryContainer,
+          //         foreground: cs.onSecondaryContainer,
+          //       ),
+          //     ),
+          //     // Cashback removido temporariamente
+          //     // const SizedBox(width: AppSpacing.md),
+          //     // Expanded(
+          //     //   child: _StatChip(
+          //     //     label: 'Cashback',
+          //     //     value: 'R\$ ${totalCashback.toStringAsFixed(2)}',
+          //     //     background: cs.tertiaryContainer,
+          //     //     foreground: cs.onTertiaryContainer,
+          //     //   ),
+          //     // ),
+          //   ],
+          // ),
           if (pendingBalance > 0) ...[
             const SizedBox(height: AppSpacing.md),
             _StatChip(
@@ -603,25 +628,45 @@ class _PassengerBalanceCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: onAddCredit,
-                  style: FilledButton.styleFrom(backgroundColor: cs.primary, foregroundColor: cs.onPrimary),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Adicionar crédito'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              OutlinedButton.icon(
-                onPressed: onViewPaymentMethods,
-                style: OutlinedButton.styleFrom(foregroundColor: cs.onPrimaryContainer),
-                icon: const Icon(Icons.payment),
-                label: const Text('Métodos'),
-              ),
-            ],
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onAddCredit,
+              style: FilledButton.styleFrom(backgroundColor: cs.primary, foregroundColor: cs.onPrimary),
+              icon: const Icon(Icons.add),
+              label: const Text('Adicionar crédito'),
+            ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onWithdraw,
+              style: OutlinedButton.styleFrom(foregroundColor: cs.onPrimaryContainer),
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+              label: const Text('Sacar'),
+            ),
+          ),
+          // Botão de métodos removido temporariamente
+          // Row(
+          //   children: [
+          //     Expanded(
+          //       child: FilledButton.icon(
+          //         onPressed: onAddCredit,
+          //         style: FilledButton.styleFrom(backgroundColor: cs.primary, foregroundColor: cs.onPrimary),
+          //         icon: const Icon(Icons.add),
+          //         label: const Text('Adicionar crédito'),
+          //       ),
+          //     ),
+          //     const SizedBox(width: AppSpacing.md),
+          //     OutlinedButton.icon(
+          //       onPressed: onViewPaymentMethods,
+          //       style: OutlinedButton.styleFrom(foregroundColor: cs.onPrimaryContainer),
+          //       icon: const Icon(Icons.payment),
+          //       label: const Text('Métodos'),
+          //     ),
+          //   ],
+          // ),
         ],
       ),
     );
@@ -888,11 +933,29 @@ class _AddCreditBottomSheetState extends State<_AddCreditBottomSheet> {
   }
 
   void _showPaymentDetails(Map<String, dynamic> paymentData) {
-    if (_selectedMethod == PaymentMethodType.pix) {
-      showDialog(
-        context: context,
-        builder: (context) => _PixPaymentDialog(paymentData: paymentData),
-      );
+    switch (_selectedMethod) {
+      case PaymentMethodType.pix:
+        showDialog(
+          context: context,
+          builder: (context) => _PixPaymentDialog(paymentData: paymentData),
+        );
+        break;
+      case PaymentMethodType.creditCard:
+      case PaymentMethodType.debitCard:
+        showDialog(
+          context: context,
+          builder: (context) => _CardPaymentDialog(
+            paymentData: paymentData,
+            isCredit: _selectedMethod == PaymentMethodType.creditCard,
+          ),
+        );
+        break;
+      case PaymentMethodType.wallet:
+        // Wallet payment não precisa de detalhes adicionais
+        break;
+      case PaymentMethodType.cash:
+        // Cash payment não aplicável para recarga de carteira
+        break;
     }
   }
 }
@@ -921,7 +984,26 @@ class _PaymentMethodSelector extends StatelessWidget {
           cs: cs,
           isEnabled: true,
         ),
-        // Cartão de crédito removido - não suportado pela estratégia de pagamentos digitais
+        _PaymentMethodTile(
+          type: PaymentMethodType.creditCard,
+          isSelected: selectedMethod == PaymentMethodType.creditCard,
+          onTap: () => onChanged(PaymentMethodType.creditCard),
+          icon: Icons.credit_card,
+          title: 'Cartão de Crédito',
+          subtitle: 'Pagamento parcelado disponível',
+          cs: cs,
+          isEnabled: true,
+        ),
+        _PaymentMethodTile(
+          type: PaymentMethodType.debitCard,
+          isSelected: selectedMethod == PaymentMethodType.debitCard,
+          onTap: () => onChanged(PaymentMethodType.debitCard),
+          icon: Icons.credit_card_outlined,
+          title: 'Cartão de Débito',
+          subtitle: 'Débito direto da conta',
+          cs: cs,
+          isEnabled: true,
+        ),
       ],
     );
   }
@@ -1038,6 +1120,246 @@ class _PixPaymentDialog extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _CardPaymentDialog extends StatelessWidget {
+  const _CardPaymentDialog({
+    required this.paymentData,
+    required this.isCredit,
+  });
+  
+  final Map<String, dynamic> paymentData;
+  final bool isCredit;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final cardType = isCredit ? 'Crédito' : 'Débito';
+    
+    return AlertDialog(
+      backgroundColor: cs.surface,
+      title: Text('Pagamento com Cartão de $cardType', style: AppTypography.titleMedium.copyWith(color: cs.onSurface)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isCredit ? Icons.credit_card : Icons.credit_card_outlined, 
+            size: 48,
+            color: cs.primary,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Você será redirecionado para inserir os dados do seu cartão de $cardType',
+            style: AppTypography.bodyMedium.copyWith(color: cs.onSurfaceVariant),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Container(
+            padding: AppSpacing.paddingMd,
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ),
+            child: Text(
+              isCredit 
+                ? 'Pagamento seguro com parcelamento disponível'
+                : 'Débito direto e seguro da sua conta',
+              style: AppTypography.bodySmall.copyWith(color: cs.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(context);
+            // TODO: Implementar integração com gateway de pagamento
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Integração com cartão de $cardType em desenvolvimento'),
+              ),
+            );
+          },
+          child: const Text('Continuar'),
+        ),
+      ],
+    );
+  }
+}
+
+class _WithdrawBottomSheet extends StatefulWidget {
+  const _WithdrawBottomSheet({
+    required this.passengerId,
+    required this.availableBalance,
+  });
+
+  final String passengerId;
+  final Future<double> availableBalance;
+
+  @override
+  State<_WithdrawBottomSheet> createState() => _WithdrawBottomSheetState();
+}
+
+class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
+  final _amountController = TextEditingController();
+  final _pixKeyController = TextEditingController();
+  bool _isLoading = false;
+  double _currentBalance = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.availableBalance.then((balance) {
+      if (mounted) {
+        setState(() => _currentBalance = balance);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _pixKeyController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: EdgeInsets.only(
+        left: AppSpacing.lg,
+        right: AppSpacing.lg,
+        top: AppSpacing.lg,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Text('Sacar dinheiro', style: AppTypography.titleLarge.copyWith(color: cs.onSurface)),
+              const Spacer(),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Container(
+            padding: AppSpacing.paddingMd,
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.account_balance_wallet, color: cs.primary),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  'Saldo disponível: R\$ ${_currentBalance.toStringAsFixed(2)}',
+                  style: AppTypography.bodyMedium.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          TextField(
+            controller: _amountController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: r'Valor a sacar (R$)',
+              hintText: '0,00',
+              prefixText: r'R$ ',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          TextField(
+            controller: _pixKeyController,
+            keyboardType: TextInputType.text,
+            decoration: const InputDecoration(
+              labelText: 'Chave PIX',
+              hintText: 'Digite sua chave PIX (CPF, e-mail, telefone ou chave aleatória)',
+              prefixIcon: Icon(Icons.pix),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton(
+            onPressed: _isLoading ? null : _onWithdraw,
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.primary,
+              foregroundColor: cs.onPrimary,
+              minimumSize: const Size.fromHeight(48),
+            ),
+            child: _isLoading
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Solicitar saque'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _onWithdraw() async {
+    final amountText = _amountController.text.replaceAll(',', '.');
+    final amount = double.tryParse(amountText);
+    final pixKey = _pixKeyController.text.trim();
+
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, insira um valor válido')),
+      );
+      return;
+    }
+
+    if (amount > _currentBalance) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Valor solicitado maior que o saldo disponível')),
+      );
+      return;
+    }
+
+    if (pixKey.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, informe sua chave PIX')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // TODO: Implementar saque via serviço
+      await Future.delayed(const Duration(seconds: 2)); // Simula processamento
+      
+      if (mounted) {
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Saque de R\$ ${amount.toStringAsFixed(2)} solicitado com sucesso!\nProcessamento em até 2 horas úteis.'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao processar saque: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 }
 

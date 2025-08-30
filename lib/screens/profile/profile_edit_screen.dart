@@ -1,12 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../models/user.dart' as app;
+import '../../services/file_upload_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../utils/phone_mask.dart';
 import '../../utils/phone_validator.dart';
+import '../../utils/supabase_helper.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/logo_branding.dart';
 
@@ -25,7 +28,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   bool _loading = true;
   bool _saving = false;
+  bool _uploadingPhoto = false;
   app.User? _currentUser;
+  File? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -35,7 +41,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   Future<void> _loadData() async {
     try {
-      final authUser = Supabase.instance.client.auth.currentUser;
+      final supabase = SupabaseHelper.client;
+      if (supabase == null) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+      
+      final authUser = supabase.auth.currentUser;
       if (authUser == null) {
         if (!mounted) return;
         Navigator.of(context).pushReplacementNamed('/login');
@@ -74,6 +86,86 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
   }
 
+  Future<void> _selectImage() async {
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Câmera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Galeria'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source != null) {
+      try {
+        final XFile? image = await _picker.pickImage(
+          source: source,
+          maxWidth: 1024,
+          maxHeight: 1024,
+          imageQuality: 85,
+        );
+
+        if (image != null) {
+          setState(() => _selectedImage = File(image.path));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao selecionar imagem: $e'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<String?> _uploadPhoto() async {
+    if (_selectedImage == null || _currentUser == null) return null;
+
+    setState(() => _uploadingPhoto = true);
+    try {
+      final photoPath = FileUploadService.generateUserPhotoPath(
+        userId: _currentUser!.id,
+        fileName: 'profile.jpg',
+      );
+
+      final photoUrl = await FileUploadService.uploadImage(
+        file: _selectedImage!,
+        bucket: 'user-photos', // Usar o mesmo bucket do stepper para consistência
+        path: photoPath,
+        compress: true,
+      );
+
+      return photoUrl;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao fazer upload da foto: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return null;
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
+  }
+
   Future<void> _onSave() async {
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) return;
@@ -85,11 +177,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           ? PhoneValidator.unformat(_phoneController.text)
           : null;
 
+      // Upload da foto se foi selecionada uma nova
+      String? newPhotoUrl;
+      if (_selectedImage != null) {
+        newPhotoUrl = await _uploadPhoto();
+      }
+
       final updated = await UserService.updateUser(
         userId: _currentUser!.id,
         fullName: _nameController.text.trim(),
         phone: unformattedPhone,
         userType: _selectedType,
+        photoUrl: newPhotoUrl ?? _currentUser!.photoUrl,
       );
 
       if (!mounted) return;
@@ -113,6 +212,19 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  ImageProvider? _getProfileImage() {
+    if (_selectedImage != null) {
+      return FileImage(_selectedImage!);
+    }
+    
+    final photoUrl = _currentUser?.photoUrl;
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      return NetworkImage(photoUrl);
+    }
+    
+    return null;
   }
 
   @override
@@ -140,15 +252,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     // Container surface for user info
                     AppCard(
                       child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Informações da conta', style: textTheme.titleLarge),
-                            const SizedBox(height: AppSpacing.md),
+                            Text('Informações da conta', style: textTheme.titleMedium),
+                            const SizedBox(height: 4),
                             Text(
                               _currentUser?.email ?? '-',
-                              style: textTheme.bodyMedium?.copyWith(
+                              style: textTheme.bodySmall?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
                               ),
                             ),
@@ -158,6 +270,66 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     ),
 
                     const SizedBox(height: AppSpacing.lg),
+
+                    // Profile photo section
+                    Center(
+                      child: Column(
+                        children: [
+                          Stack(
+                            alignment: Alignment.bottomRight,
+                            children: [
+                              CircleAvatar(
+                                radius: 60,
+                                backgroundColor: colorScheme.surfaceContainerHighest,
+                                backgroundImage: _getProfileImage(),
+                                child: _getProfileImage() == null
+                                    ? Icon(
+                                        Icons.person,
+                                        size: 60,
+                                        color: colorScheme.onSurfaceVariant,
+                                      )
+                                    : null,
+                              ),
+                              if (_uploadingPhoto)
+                                const Positioned.fill(
+                                  child: CircleAvatar(
+                                    backgroundColor: Colors.black54,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                )
+                              else
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: colorScheme.surface,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.camera_alt),
+                                    color: colorScheme.onPrimary,
+                                    onPressed: _uploadingPhoto ? null : _selectImage,
+                                    iconSize: 20,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'Toque no ícone para alterar sua foto',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.xl),
 
                     // Full name field
                     Text('Nome completo', style: textTheme.titleMedium),

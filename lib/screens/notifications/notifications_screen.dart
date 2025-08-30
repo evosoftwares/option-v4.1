@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/notification_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../utils/supabase_helper.dart';
 import '../../widgets/logo_branding.dart';
 
 enum NotificationScreenState {
@@ -27,7 +27,7 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final NotificationService _notificationService = NotificationService(Supabase.instance.client);
+  NotificationService? _notificationService;
   List<NotificationModel> _notifications = [];
   StreamSubscription<List<NotificationModel>>? _notificationsSubscription;
   NotificationScreenState _screenState = NotificationScreenState.initial;
@@ -69,22 +69,40 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _initializeNotifications() async {
     try {
-      final user = await UserService.getCurrentUser();
-      if (user != null) {
-        setState(() {
-          _userId = user.id;
-        });
+      final client = SupabaseHelper.client;
+      if (client != null) {
+        _notificationService = NotificationService(client);
         
-        _loadNotifications();
-        _subscribeToNotifications();
+        final user = await UserService.getCurrentUser();
+        if (user != null) {
+          setState(() {
+            _userId = user.id;
+          });
+          
+          _loadNotifications();
+          _subscribeToNotifications();
+        } else {
+          setState(() {
+            _screenState = NotificationScreenState.error;
+            _errorMessage = 'Usuário não autenticado';
+          });
+        }
+      } else {
+        setState(() {
+          _screenState = NotificationScreenState.error;
+          _errorMessage = 'Serviço de notificações indisponível';
+        });
       }
     } catch (e) {
-      debugPrint('Erro ao inicializar notificações: $e');
+      setState(() {
+        _screenState = NotificationScreenState.error;
+        _errorMessage = _getErrorMessage(e);
+      });
     }
   }
 
   Future<void> _loadNotifications() async {
-    if (_userId == null) return;
+    if (_userId == null || _notificationService == null) return;
     
     // Verificar se precisa recarregar baseado no cache
     if (!_shouldRefresh() && _notifications.isNotEmpty) {
@@ -99,7 +117,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
     
     try {
-      final notifications = await _notificationService.getUserNotifications(_userId!);
+      final notifications = await _notificationService!.getUserNotifications(_userId!);
       
       if (mounted) {
         setState(() {
@@ -117,16 +135,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (mounted) {
         setState(() {
           _screenState = NotificationScreenState.error;
-          _errorMessage = e.toString();
+          _errorMessage = _getErrorMessage(e);
         });
       }
     }
   }
 
+  Future<void> _refresh() async {
+    try {
+      final user = await UserService.getCurrentUser();
+      if (user != null) {
+        final notifications = await _notificationService!.getUserNotifications(user.id);
+        setState(() {
+          _notifications = notifications;
+          _screenState = notifications.isEmpty 
+              ? NotificationScreenState.empty 
+              : NotificationScreenState.loaded;
+          _errorMessage = null;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _screenState = NotificationScreenState.error;
+        _errorMessage = _getErrorMessage(e);
+      });
+    }
+  }
+
   void _subscribeToNotifications() {
-    if (_userId == null) return;
+    if (_userId == null || _notificationService == null) return;
     
-    _notificationsSubscription = _notificationService
+    _notificationsSubscription = _notificationService!
         .streamUserNotifications(_userId!)
         .listen((notifications) {
       // Implementar debounce para evitar múltiplas atualizações
@@ -178,21 +217,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (notification.isRead) return;
 
     try {
-      await _notificationService.markAsRead(notification.id);
+      await _notificationService!.markAsRead(notification.id);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao marcar como lida: $e')),
+          SnackBar(content: Text('Erro ao marcar como lida: ${_getErrorMessage(e)}')),
         );
       }
     }
   }
 
   Future<void> _markAllAsRead() async {
-    if (_userId == null) return;
+    if (_userId == null || _notificationService == null) return;
 
     try {
-      await _notificationService.markAllAsRead(_userId!);
+      await _notificationService!.markAllAsRead(_userId!);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Todas as notificações foram marcadas como lidas')),
@@ -201,9 +240,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao marcar todas como lidas: $e')),
+          SnackBar(content: Text('Erro ao marcar todas como lidas: ${_getErrorMessage(e)}')),
         );
       }
+    }
+  }
+
+  String _getErrorMessage(dynamic error) {
+    if (error.toString().contains('network')) {
+      return 'Verifique sua conexão com a internet';
+    } else if (error.toString().contains('timeout')) {
+      return 'Tempo limite excedido. Tente novamente';
+    } else if (error.toString().contains('unauthorized')) {
+      return 'Acesso não autorizado';
+    } else if (error.toString().contains('not found')) {
+      return 'Dados não encontrados';
+    } else {
+      return 'Erro inesperado. Tente novamente mais tarde';
     }
   }
 

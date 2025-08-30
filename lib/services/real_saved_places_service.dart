@@ -50,9 +50,19 @@ class RealSavedPlacesService {
 
       AppLogger.info('RealSavedPlacesService: Adicionando local favorito para usuário ${location.userId}');
       
+      // Criar dados para inserção usando user_id diretamente
+      final insertData = {
+        'user_id': location.userId,
+        'label': location.name,
+        'address': location.address,
+        'category': location.type.name,
+        'latitude': location.latitude,
+        'longitude': location.longitude,
+      };
+      
       final response = await _supabase
           .from(_tableName)
-          .insert(location.toInsertJson())
+          .insert(insertData)
           .select()
           .single();
 
@@ -102,20 +112,22 @@ class RealSavedPlacesService {
   }
 
   /// Remove um local favorito
-  Future<void> removePlace(String placeId) async {
+  Future<bool> removePlace(String userId, String placeId) async {
     try {
-      if (placeId.isEmpty) {
-        throw ValidationException('ID do local é obrigatório');
+      if (userId.isEmpty || placeId.isEmpty) {
+        throw ValidationException('ID do usuário e ID do local são obrigatórios');
       }
 
-      AppLogger.info('RealSavedPlacesService: Removendo local favorito $placeId');
+      AppLogger.info('RealSavedPlacesService: Removendo local favorito $placeId do usuário $userId');
       
       await _supabase
           .from(_tableName)
           .delete()
-          .eq('id', placeId);
+          .eq('id', placeId)
+          .eq('user_id', userId);
 
       AppLogger.info('RealSavedPlacesService: Local favorito removido com sucesso');
+      return true;
     } on PostgrestException catch (e) {
       AppLogger.error('RealSavedPlacesService: Erro de banco ao remover local: ${e.message}');
       throw DatabaseException('Erro ao remover local favorito: ${e.message}', originalError: e);
@@ -127,34 +139,28 @@ class RealSavedPlacesService {
     }
   }
 
-  /// Atualiza um local favorito
-  Future<FavoriteLocation> updatePlace(FavoriteLocation location) async {
+  /// Atualiza um local favorito existente
+  Future<FavoriteLocation?> updatePlace(String userId, String placeId, FavoriteLocation updatedLocation) async {
     try {
-      if (location.id == null || location.id!.isEmpty) {
-        throw ValidationException('ID do local é obrigatório para atualização');
-      }
-      if (location.name.isEmpty) {
-        throw ValidationException('Nome do local é obrigatório');
-      }
-      if (location.address.isEmpty) {
-        throw ValidationException('Endereço do local é obrigatório');
+      if (userId.isEmpty || placeId.isEmpty) {
+        throw ValidationException('ID do usuário e ID do local são obrigatórios');
       }
 
-      AppLogger.info('RealSavedPlacesService: Atualizando local favorito ${location.id}');
+      AppLogger.info('RealSavedPlacesService: Atualizando local favorito $placeId do usuário $userId');
       
       final updateData = {
-        'label': location.name, // Mapeia 'name' do modelo para 'label' do banco
-        'address': location.address,
-        'category': location.type.name, // Mapeia 'type' do modelo para 'category' do banco
-        'latitude': location.latitude,
-        'longitude': location.longitude,
-        'updated_at': DateTime.now().toIso8601String(),
+        'label': updatedLocation.name,
+        'address': updatedLocation.address,
+        'category': updatedLocation.type.name,
+        'latitude': updatedLocation.latitude,
+        'longitude': updatedLocation.longitude,
       };
-
+      
       final response = await _supabase
           .from(_tableName)
           .update(updateData)
-          .eq('id', location.id!)
+          .eq('id', placeId)
+          .eq('user_id', userId)
           .select()
           .single();
 
@@ -171,13 +177,31 @@ class RealSavedPlacesService {
     }
   }
 
-  /// Verifica se o usuário tem locais favoritos
+  /// Verifica se o usuário tem locais favoritos salvos
   Future<bool> hasPlaces(String userId) async {
     try {
-      final places = await getPlaces(userId);
-      return places.isNotEmpty;
+      if (userId.isEmpty) {
+        throw ValidationException('ID do usuário é obrigatório');
+      }
+
+      AppLogger.info('RealSavedPlacesService: Verificando se usuário $userId tem locais favoritos');
+      
+      final response = await _supabase
+          .from(_tableName)
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1);
+
+      final hasPlaces = (response as List).isNotEmpty;
+      AppLogger.info('RealSavedPlacesService: Usuário ${hasPlaces ? 'tem' : 'não tem'} locais favoritos');
+      return hasPlaces;
+    } on PostgrestException catch (e) {
+      AppLogger.error('RealSavedPlacesService: Erro de banco ao verificar locais: ${e.message}');
+      return false;
+    } on ValidationException {
+      rethrow;
     } catch (e) {
-      AppLogger.error('RealSavedPlacesService: Erro ao verificar locais favoritos: $e');
+      AppLogger.error('RealSavedPlacesService: Erro inesperado ao verificar locais: $e');
       return false;
     }
   }
@@ -185,9 +209,21 @@ class RealSavedPlacesService {
   /// Adiciona múltiplos locais favoritos em batch
   Future<List<FavoriteLocation>> addMultiplePlaces(List<FavoriteLocation> locations) async {
     try {
+      if (locations.isEmpty) {
+        return [];
+      }
+      
       AppLogger.info('RealSavedPlacesService: Adicionando ${locations.length} locais favoritos em batch');
       
-      final placesToInsert = locations.map((location) => location.toInsertJson()).toList();
+      // Criar dados para inserção usando user_id diretamente
+      final placesToInsert = locations.map((location) => {
+        'user_id': location.userId,
+        'label': location.name,
+        'address': location.address,
+        'category': location.type.name,
+        'latitude': location.latitude,
+        'longitude': location.longitude,
+      }).toList();
 
       final response = await _supabase
           .from(_tableName)
@@ -205,4 +241,5 @@ class RealSavedPlacesService {
       return [];
     }
   }
+  
 }

@@ -83,15 +83,15 @@ class _EmergencyButtonState extends State<EmergencyButton>
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(
               Icons.warning,
               color: AppColors.error,
               size: AppSpacing.lg,
             ),
-            const SizedBox(width: AppSpacing.sm),
-            const Text('Confirmar Emergência'),
+            SizedBox(width: AppSpacing.sm),
+            Text('Confirmar Emergência'),
           ],
         ),
         content: const Text(
@@ -176,8 +176,7 @@ class _EmergencyButtonState extends State<EmergencyButton>
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
       animation: _scaleAnimation,
-      builder: (context, child) {
-        return Transform.scale(
+      builder: (context, child) => Transform.scale(
           scale: _scaleAnimation.value,
           child: GestureDetector(
             onTapDown: (_) => setState(() => _isPressed = true),
@@ -233,8 +232,7 @@ class _EmergencyButtonState extends State<EmergencyButton>
                     ),
             ),
           ),
-        );
-      },
+        ),
     );
 }
 
@@ -269,7 +267,7 @@ class CompactEmergencyButton extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.error,
         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -287,7 +285,7 @@ class CompactEmergencyButton extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                const Icon(
                   Icons.emergency,
                   color: AppColors.white,
                   size: AppSpacing.lg,

@@ -1,11 +1,10 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/passenger_wallet_transaction.dart';
-import '../models/driver_wallet.dart';
-import '../models/wallet_transaction.dart';
+
 import '../exceptions/app_exceptions.dart';
-import 'wallet_service.dart';
-import 'passenger_payment_service.dart';
+import '../models/passenger_wallet_transaction.dart';
 import 'driver_wallet_service.dart';
+import 'passenger_payment_service.dart';
+import 'wallet_service.dart';
 
 /// Resultado do processamento de pagamento de viagem
 class TripPaymentResult {

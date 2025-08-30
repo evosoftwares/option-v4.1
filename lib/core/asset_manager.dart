@@ -308,7 +308,7 @@ class DynamicAssetManager {
     return errorWidget ?? _buildErrorWidget(key);
   }
 
-  Widget _buildPlaceholder(AssetInfo asset) => Container(
+  Widget _buildPlaceholder(AssetInfo asset) => DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(8),
@@ -394,7 +394,7 @@ class DynamicAssetManager {
 
   double getTotalCacheSize() => _assets.values
         .where((asset) => asset.isLoaded)
-        .fold(0.0, (sum, asset) => sum + asset.sizeKB);
+        .fold(0, (sum, asset) => sum + asset.sizeKB);
 
   void dispose() {
     _assets.clear();

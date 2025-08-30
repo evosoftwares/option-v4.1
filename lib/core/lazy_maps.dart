@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as maps;
 import 'module_loader.dart';
 
+// Tipos de mapa (mantidos para compatibilidade, mas não usados diretamente)
 typedef MapLatLng = dynamic;
 typedef MapMarker = dynamic;
 typedef MapController = dynamic;
@@ -94,11 +96,11 @@ class LazyMaps {
   }
 
   Widget _buildGoogleMap({
-    required LatLng initialLocation,
-    Set<Marker>? markers,
-    void Function(GoogleMapController)? onMapCreated,
-    void Function(LatLng)? onTap,
-    MapType mapType = MapType.normal,
+    required maps.LatLng initialLocation,
+    Set<maps.Marker>? markers,
+    void Function(maps.GoogleMapController)? onMapCreated,
+    void Function(maps.LatLng)? onTap,
+    maps.MapType mapType = maps.MapType.normal,
     bool myLocationEnabled = true,
     bool myLocationButtonEnabled = true,
     bool zoomControlsEnabled = true,
@@ -107,7 +109,7 @@ class LazyMaps {
         target: initialLocation,
         zoom: 14.0,
       ),
-      markers: markers ?? {},
+      markers: markers ?? <maps.Marker>{},
       onMapCreated: onMapCreated,
       onTap: onTap,
       mapType: mapType,
@@ -139,7 +141,7 @@ class LazyMaps {
           children: [
             const Icon(Icons.error, size: 48, color: Colors.red),
             const SizedBox(height: 16),
-            Text('Erro ao carregar mapa'),
+            const Text('Erro ao carregar mapa'),
             Text(error, style: const TextStyle(fontSize: 12)),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -154,21 +156,21 @@ class LazyMaps {
       ),
     );
 
-  static Future<LatLng> getCurrentLocation() async {
+  static Future<maps.LatLng> getCurrentLocation() async {
     try {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      return LatLng(position.latitude, position.longitude);
+      return maps.LatLng(position.latitude, position.longitude);
     } catch (e) {
       dev.log('❌ Erro ao obter localização: $e', name: 'LazyMaps');
       // Localização padrão (São Paulo)
-      return const LatLng(-23.5505, -46.6333);
+      return const maps.LatLng(-23.5505, -46.6333);
     }
   }
 
   static Future<bool> requestLocationPermission() async {
-    var serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       return false;
     }

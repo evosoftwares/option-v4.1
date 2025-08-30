@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -8,18 +9,17 @@ import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../config/app_config.dart';
-import '../../theme/app_spacing.dart';
 import '../../controllers/driver_status_controller.dart';
 import '../../models/driver_status.dart';
 import '../../models/supabase/trip.dart';
 import '../../services/driver_service.dart';
-import '../../services/fcm_service.dart';
+// import '../../services/fcm_service.dart'; // Removido - usando OneSignal
 import '../../services/location_service.dart';
 import '../../services/map_style_service.dart';
 import '../../services/user_service.dart';
 import '../../services/wallet_service.dart';
-import '../../widgets/emergency_button.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
 /// Production-ready main driver screen with enhanced UI and Uber-like design
@@ -107,9 +107,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     );
     
     // Inicializar FCM Service para notificações push
-    FCMService().initialize().catchError((e) {
-      debugPrint('Erro ao inicializar FCMService: $e');
-    });
+    // FCMService().initialize().catchError((e) => {
+      //   debugPrint('Erro ao inicializar FCMService: $e');
+      // }); // Removido - usando OneSignal
   }
 
   @override
@@ -229,7 +229,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
           _markers.add(Marker(
             markerId: const MarkerId('driver_location'),
             position: here,
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            icon: BitmapDescriptor.defaultMarkerWithHue(0.0),
             infoWindow: const InfoWindow(title: 'Sua localização'),
           ),);
         });
@@ -397,10 +397,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     if (oLat == 0.0 && oLng == 0.0) return;
     if (dLat == 0.0 && dLng == 0.0) return;
 
-    _setMarker('origin', oLat, oLng, BitmapDescriptor.hueGreen,
-        title: 'Origem',);
-    _setMarker('destination', dLat, dLng, BitmapDescriptor.hueRed,
-        title: 'Destino',);
+    _setMarker('origin', oLat, oLng, 0.0,
+        title: 'Origem');
+    _setMarker('destination', dLat, dLng, 0.0,
+        title: 'Destino');
 
     _clearRoute();
 
@@ -440,7 +440,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
         _markers.add(Marker(
           markerId: MarkerId(id),
           position: pos,
-          icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+          icon: BitmapDescriptor.defaultMarkerWithHue(0.0),
           infoWindow:
               title != null ? InfoWindow(title: title) : InfoWindow.noText,
         ),);
@@ -658,25 +658,26 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                   ),
                 ),
 
-                // Emergency and Menu buttons
+                // Menu button (Emergência ocultado)
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: colorScheme.surface.withOpacity(0.95),
-                        borderRadius: BorderRadius.circular(AppSpacing.lg + AppSpacing.xs),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.black.withOpacity(0.1),
-                            blurRadius: AppSpacing.sm,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const CompactEmergencyButton(),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
+                    // Botão Emergência ocultado
+                    // DecoratedBox(
+                    //   decoration: BoxDecoration(
+                    //     color: colorScheme.surface.withOpacity(0.95),
+                    //     borderRadius: BorderRadius.circular(AppSpacing.lg + AppSpacing.xs),
+                    //     boxShadow: [
+                    //       BoxShadow(
+                    //         color: AppColors.black.withOpacity(0.1),
+                    //         blurRadius: AppSpacing.sm,
+                    //         offset: const Offset(0, 2),
+                    //       ),
+                    //     ],
+                    //   ),
+                    //   child: const CompactEmergencyButton(),
+                    // ),
+                    // const SizedBox(width: AppSpacing.sm),
                     DecoratedBox(
                       decoration: BoxDecoration(
                         color: colorScheme.surface.withOpacity(0.95),

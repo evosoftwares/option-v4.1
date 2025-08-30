@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:logger/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'fcm_service.dart';
 import 'notification_segmentation_service.dart';
+import 'onesignal_service.dart';
 
 /// Serviço para agendamento de notificações push
 /// Permite programar envios para datas/horários específicos
@@ -14,7 +14,7 @@ class NotificationSchedulerService {
   static final NotificationSchedulerService _instance = NotificationSchedulerService._internal();
 
   final Logger _logger = Logger();
-  final FCMService _fcmService = FCMService();
+  final OneSignalService _oneSignalService = OneSignalService();
   final NotificationSegmentationService _segmentationService = NotificationSegmentationService();
   
   Timer? _schedulerTimer;
@@ -265,8 +265,8 @@ class NotificationSchedulerService {
       }
       
       // Enviar notificação
-      final success = await _fcmService.sendBulkNotification(
-        tokens: tokens,
+      final success = await _oneSignalService.sendBulkNotification(
+        playerIds: tokens,
         title: notification['title'],
         body: notification['body'],
         data: notification['data'] ?? {},

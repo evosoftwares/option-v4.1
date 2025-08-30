@@ -337,13 +337,13 @@ class DriverMatchingService {
 
   /// Calcula score de matching baseado em múltiplos critérios
   double _calculateMatchScore(Driver driver, double distance, MatchingCriteria criteria) {
-    var score = 0;
+    var score = 0.0;
 
     // 1. Score de distância (40% do peso total) - mais próximo = melhor
     if (criteria.prioritizeDistance) {
       final maxDistance = criteria.maxRadiusKm;
       final distanceScore = ((maxDistance - distance) / maxDistance) * 40;
-      score += math.max(0, distanceScore);
+      score += math.max(0.0, distanceScore);
     }
 
     // 2. Score de rating (30% do peso total)
@@ -352,7 +352,7 @@ class DriverMatchingService {
       score += ratingScore;
     } else {
       // Motoristas sem rating recebem score neutro
-      score += 15;
+      score += 15.0;
     }
 
     // 3. Score de experiência (20% do peso total)
@@ -366,12 +366,12 @@ class DriverMatchingService {
     score += reliabilityScore;
 
     // Bônus por preferências atendidas
-    if (criteria.needsPet && (driver.acceptsPet ?? false)) score += 2;
-    if (criteria.needsGrocery && (driver.acceptsGrocery ?? false)) score += 2;
-    if (criteria.needsCondo && (driver.acceptsCondo ?? false)) score += 2;
+    if (criteria.needsPet && (driver.acceptsPet ?? false)) score += 2.0;
+    if (criteria.needsGrocery && (driver.acceptsGrocery ?? false)) score += 2.0;
+    if (criteria.needsCondo && (driver.acceptsCondo ?? false)) score += 2.0;
     if (criteria.needsAC && driver.acPolicy != null && 
         !['never', 'nunca'].contains(driver.acPolicy!.toLowerCase())) {
-      score += 2;
+      score += 2.0;
     }
 
     return math.min(100, score); // Score máximo de 100
@@ -413,10 +413,5 @@ class DriverMatchingService {
       destinationLongitude: request.destinationLng,
       maxRadiusKm: maxRadiusKm,
       maxDrivers: maxDrivers,
-      // TODO: Adicionar campos de preferências no PassengerRequest se necessário
-      needsPet: false,
-      needsAC: false,
-      needsGrocery: false,
-      needsCondo: false,
     );
 }

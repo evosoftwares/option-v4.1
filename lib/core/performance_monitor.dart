@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../config/app_config.dart';
 
 class PerformanceMetrics {
 
@@ -336,49 +338,49 @@ class ShellAppMonitor {
 }
 
 class AnalyticsReporter {
-  static const String _endpoint = 'https://qlbwacmavngtonauxnte.supabase.co/functions/v1/analytics';
+    static String get _endpoint => '${AppConfig.supabaseUrl}/functions/v1/analytics';
   
-  static Future<void> sendShellAppMetrics(Map<String, dynamic> metrics) async {
-    try {
-      final dio = Dio();
-      
-      await dio.post(
-        _endpoint,
-        data: {
-          'type': 'shell_app_metrics',
-          'data': metrics,
-          'app_version': '4.1.0',
-          'timestamp': DateTime.now().toIso8601String(),
-        },
-        options: Options(
-          headers: {
-            'Content-Type': 'application/json',
+    static Future<void> sendShellAppMetrics(Map<String, dynamic> metrics) async {
+      try {
+        final dio = Dio();
+        
+        await dio.post(
+          _endpoint,
+          data: {
+            'type': 'shell_app_metrics',
+            'data': metrics,
+            'app_version': '4.1.0',
+            'timestamp': DateTime.now().toIso8601String(),
           },
-        ),
-      );
-      
-      dev.log('📤 Métricas enviadas com sucesso', name: 'Analytics');
-    } catch (e) {
-      dev.log('❌ Erro ao enviar métricas: $e', name: 'Analytics');
-    }
-  }
-  
-  static Future<void> reportOptimizationImpact({
-    required double downloadReduction,
-    required double loadTimeImprovement,
-    required int modulesLazyLoaded,
-    required double aiAccuracy,
-  }) async {
-    final impactData = {
-      'optimization_impact': {
-        'download_reduction_percent': downloadReduction,
-        'load_time_improvement_percent': loadTimeImprovement,
-        'modules_lazy_loaded': modulesLazyLoaded,
-        'ai_prediction_accuracy': aiAccuracy,
-        'shell_app_version': '1.0',
+          options: Options(
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          ),
+        );
+        
+        dev.log('📤 Métricas enviadas com sucesso', name: 'Analytics');
+      } catch (e) {
+        dev.log('❌ Erro ao enviar métricas: $e', name: 'Analytics');
       }
-    };
+    }
     
-    await sendShellAppMetrics(impactData);
-  }
+    static Future<void> reportOptimizationImpact({
+      required double downloadReduction,
+      required double loadTimeImprovement,
+      required int modulesLazyLoaded,
+      required double aiAccuracy,
+    }) async {
+      final impactData = {
+        'optimization_impact': {
+          'download_reduction_percent': downloadReduction,
+          'load_time_improvement_percent': loadTimeImprovement,
+          'modules_lazy_loaded': modulesLazyLoaded,
+          'ai_prediction_accuracy': aiAccuracy,
+          'shell_app_version': '1.0',
+        }
+      };
+      
+      await sendShellAppMetrics(impactData);
+    }
 }

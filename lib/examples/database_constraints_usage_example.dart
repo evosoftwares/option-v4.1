@@ -1,5 +1,5 @@
-import '../validators/database_constraints_validator.dart';
 import '../exceptions/validation_exception.dart';
+import '../validators/database_constraints_validator.dart';
 
 /// Exemplo de uso do DatabaseConstraintsValidator
 /// 

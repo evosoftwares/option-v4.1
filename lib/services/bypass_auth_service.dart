@@ -127,10 +127,10 @@ class BypassAuthService {
       // Tentar uma consulta simples
       final response = await _supabase
           .from('app_users')
-          .select('count')
-          .count();
+          .select('id')
+          .count(CountOption.exact);
       
-      print('✅ [BYPASS] Conexão funcionando: $response');
+      print('✅ [BYPASS] Conexão funcionando: ${response.count}');
       return true;
     } catch (e) {
       print('❌ [BYPASS] Falha na conexão: $e');

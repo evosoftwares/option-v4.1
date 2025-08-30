@@ -115,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     if (result is FavoriteLocation) {
       setState(() => _origin = result);
-      _setMarker('origin', result.latitude, result.longitude, BitmapDescriptor.hueGreen);
+      _setMarker('origin', result.latitude, result.longitude, 0.0);
       await _fitBounds();
       await _tryBuildRoute();
     }
@@ -128,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     if (result is FavoriteLocation) {
       setState(() => _destination = result);
-      _setMarker('destination', result.latitude, result.longitude, BitmapDescriptor.hueRed);
+      _setMarker('destination', result.latitude, result.longitude, 0.0);
       await RecentDestinationsService.instance.addRecentDestination(result);
       await _loadRecentDestinations();
       await _fitBounds();
@@ -138,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _selectRecentDestination(FavoriteLocation destination) async {
     setState(() => _destination = destination);
-    _setMarker('destination', destination.latitude, destination.longitude, BitmapDescriptor.hueRed);
+    _setMarker('destination', destination.latitude, destination.longitude, 0.0);
     await RecentDestinationsService.instance.addRecentDestination(destination);
     await _loadRecentDestinations();
     await _fitBounds();
@@ -153,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _markers.add(Marker(
         markerId: MarkerId(id),
         position: pos,
-        icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+        icon: BitmapDescriptor.defaultMarkerWithHue(0.0),
       ),);
     });
   }

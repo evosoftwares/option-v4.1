@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/notification_service.dart';
 import '../services/user_service.dart';
+import '../utils/supabase_helper.dart';
 
 class NotificationIconWidget extends StatefulWidget {
   const NotificationIconWidget({super.key});
@@ -12,7 +12,7 @@ class NotificationIconWidget extends StatefulWidget {
 }
 
 class _NotificationIconWidgetState extends State<NotificationIconWidget> {
-  final NotificationService _notificationService = NotificationService(Supabase.instance.client);
+  NotificationService? _notificationService;
   StreamSubscription<int>? _notificationCountSub;
   int _unreadNotificationCount = 0;
   bool _isInitialized = false;
@@ -33,9 +33,17 @@ class _NotificationIconWidgetState extends State<NotificationIconWidget> {
     if (_isInitialized) return;
     
     try {
+      final supabase = SupabaseHelper.client;
+      if (supabase == null) {
+        debugPrint('Supabase não inicializado - notificações desabilitadas');
+        return;
+      }
+      
+      _notificationService = NotificationService(supabase);
+      
       final user = await UserService.getCurrentUser();
-      if (user != null && mounted) {
-        _notificationCountSub = _notificationService
+      if (user != null && mounted && _notificationService != null) {
+        _notificationCountSub = _notificationService!
             .streamUnreadCount(user.id)
             .listen((count) {
           if (mounted) {

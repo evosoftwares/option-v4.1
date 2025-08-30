@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:option/services/driver_matching_service.dart';
 import 'package:option/models/supabase/driver.dart';
+import 'package:option/services/driver_matching_service.dart';
 
 void main() {
   group('DriverMatchingService Integration Tests', () {

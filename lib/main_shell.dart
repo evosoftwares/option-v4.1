@@ -24,7 +24,7 @@ void main() async {
   await assetManager.initialize();
   await smartPreloader.initialize();
   
-  runApp(OptionShellApp());
+  runApp(const OptionShellApp());
 }
 
 class OptionShellApp extends StatelessWidget {

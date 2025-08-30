@@ -18,8 +18,7 @@ class UserProfile {
     required this.behaviorScores,
   });
 
-  factory UserProfile.fromAppUser(AppUser user) {
-    return UserProfile(
+  factory UserProfile.fromAppUser(AppUser user) => UserProfile(
       userId: user.id,
       userType: user.userType,
       locationHistory: [],
@@ -29,7 +28,6 @@ class UserProfile {
       isFirstTime: DateTime.now().difference(user.createdAt).inDays < 7,
       behaviorScores: {},
     );
-  }
   final String userId;
   final String userType;
   final List<String> locationHistory;

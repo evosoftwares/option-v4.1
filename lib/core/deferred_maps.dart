@@ -25,7 +25,7 @@ class _SimpleMapsWidgetState extends State<SimpleMapsWidget> {
   bool _isLoading = false;
   
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => DecoratedBox(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),
         borderRadius: BorderRadius.circular(8),
@@ -35,7 +35,7 @@ class _SimpleMapsWidgetState extends State<SimpleMapsWidget> {
           : _buildStaticMap(),
     );
   
-  Widget _buildLoadingMap() => Container(
+  Widget _buildLoadingMap() => SizedBox(
       height: 200,
       child: const Center(
         child: Column(
@@ -192,8 +192,7 @@ class _SimpleMapsWidgetState extends State<SimpleMapsWidget> {
   
   Future<void> _showFullMapDialog() async => showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return Dialog(
+      builder: (context) => Dialog(
           child: Container(
             height: 400,
             padding: const EdgeInsets.all(16),
@@ -270,8 +269,7 @@ class _SimpleMapsWidgetState extends State<SimpleMapsWidget> {
               ],
             ),
           ),
-        );
-      },
+        ),
     );
 }
 

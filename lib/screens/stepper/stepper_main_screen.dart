@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../controllers/stepper_controller.dart';
-import '../../widgets/stepper_progress_indicator.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/stepper_progress_indicator.dart';
 import 'phone_step.dart';
 import 'photo_step.dart';
 

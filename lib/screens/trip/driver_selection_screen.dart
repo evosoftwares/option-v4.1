@@ -45,10 +45,79 @@ class DriverSelectionScreen extends StatefulWidget {
   final TripRequestData tripRequestData;
   final Position userPosition;
   
-  static DriverSelectionScreen fromArgs(Map<String, dynamic> args) => DriverSelectionScreen(
-      tripRequestData: args['tripRequestData'] as TripRequestData,
-      userPosition: args['userPosition'] as Position,
-    );
+  static DriverSelectionScreen fromArgs(Map<String, dynamic> args) {
+    print('🎯 DriverSelectionScreen.fromArgs chamado');
+    print('🎯 Args: $args');
+    
+    try {
+      // Se os argumentos já contêm os objetos esperados (caso antigo)
+      if (args.containsKey('tripRequestData') && args.containsKey('userPosition')) {
+        return DriverSelectionScreen(
+          tripRequestData: args['tripRequestData'] as TripRequestData,
+          userPosition: args['userPosition'] as Position,
+        );
+      }
+      
+      // Caso novo: construir objetos a partir dos argumentos individuais
+      final origin = args['origin'] as Map<String, dynamic>;
+      final destination = args['destination'] as Map<String, dynamic>;
+      
+      // Criar TripRequestData a partir dos argumentos com conversão segura
+      final tripRequestData = TripRequestData(
+        originAddress: origin['address'] ?? 'Origem',
+        originLatitude: _safeToDouble(origin['latitude']),
+        originLongitude: _safeToDouble(origin['longitude']),
+        destinationAddress: destination['address'] ?? 'Destino',
+        destinationLatitude: _safeToDouble(destination['latitude']),
+        destinationLongitude: _safeToDouble(destination['longitude']),
+        vehicleCategory: args['vehicle_category'] ?? 'standard',
+        needsPet: args['needsPet'] ?? false,
+        needsGrocery: args['needsGrocery'] ?? false,
+        needsCondo: args['needsCondo'] ?? false,
+        needsAc: false,
+        numberOfStops: 0,
+        estimatedDistanceKm: 0.0, // Será calculado
+        estimatedDurationMinutes: 0, // Será calculado
+        estimatedFare: 0.0, // Será calculado
+      );
+      
+      // Criar Position fictícia (será obtida em tempo real)
+      final userPosition = Position(
+        longitude: _safeToDouble(origin['longitude']),
+        latitude: _safeToDouble(origin['latitude']),
+        timestamp: DateTime.now(),
+        accuracy: 10.0,
+        altitude: 0.0,
+        heading: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0,
+        altitudeAccuracy: 0.0,
+        headingAccuracy: 0.0,
+      );
+      
+      print('✅ Objetos criados com sucesso');
+      
+      return DriverSelectionScreen(
+        tripRequestData: tripRequestData,
+        userPosition: userPosition,
+      );
+      
+    } catch (e) {
+      print('❌ Erro ao criar DriverSelectionScreen: $e');
+      rethrow;
+    }
+  }
+
+  /// Converte qualquer tipo para double de forma segura
+  static double _safeToDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
 
   @override
   State<DriverSelectionScreen> createState() => _DriverSelectionScreenState();
@@ -109,6 +178,10 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
 
   Future<void> _loadDriversWithUserData() async {
     try {
+      print('🔍 _loadDriversWithUserData iniciado');
+      print('🔍 Position: ${widget.userPosition.latitude}, ${widget.userPosition.longitude}');
+      print('🔍 TripData: ${widget.tripRequestData.vehicleCategory}');
+      
       setState(() {
         _isLoading = true;
         _errorMessage = null;
@@ -118,13 +191,14 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
       final criteria = MatchingCriteria(
           passengerLatitude: widget.userPosition.latitude,
           passengerLongitude: widget.userPosition.longitude,
-          maxRadiusKm: 10,
           vehicleCategory: widget.tripRequestData.vehicleCategory,
           needsPet: widget.tripRequestData.needsPet,
           needsAC: widget.tripRequestData.needsAc,
           needsGrocery: widget.tripRequestData.needsGrocery,
           needsCondo: widget.tripRequestData.needsCondo,
         );
+        
+      print('🔍 Criteria criado: $criteria');
         
         final driversWithDistance = await _driverMatchingService.findBestDrivers(criteria);
 
@@ -185,7 +259,10 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
       if (driverIds.isNotEmpty) {
         _setupRealtimeListener(driverIds);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ ERRO EM _loadDriversWithUserData: $e');
+      print('❌ StackTrace: $stackTrace');
+      
       setState(() {
         _errorMessage = 'Erro ao carregar motoristas: $e';
         _isLoading = false;
@@ -276,10 +353,10 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: AppColors.black,
+      backgroundColor: AppColors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.black,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.white,
+        foregroundColor: AppColors.black,
         title: const Text('Selecionar Motorista'),
         elevation: 0,
       ),
@@ -289,7 +366,7 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.black,
+              color: AppColors.white,
               border: Border(
                 bottom: BorderSide(color: colorScheme.outlineVariant),
               ),
@@ -304,7 +381,7 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
                     Expanded(
                       child: Text(
                         widget.tripRequestData.originAddress,
-                        style: textTheme.bodyMedium?.copyWith(color: AppColors.white),
+                        style: textTheme.bodyMedium?.copyWith(color: AppColors.black),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -319,7 +396,7 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
                     Expanded(
                       child: Text(
                         widget.tripRequestData.destinationAddress,
-                        style: textTheme.bodyMedium?.copyWith(color: AppColors.white),
+                        style: textTheme.bodyMedium?.copyWith(color: AppColors.black),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -339,7 +416,7 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.white),
+                    child: CircularProgressIndicator(color: AppColors.black),
                   )
                 : _errorMessage != null
                     ? _ErrorState(onRetry: _loadDriversWithUserData)
@@ -393,7 +470,7 @@ class _DriverCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isAvailable ? AppColors.black : AppColors.black.withOpacity(0.5),
+          color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isAvailable ? colorScheme.outlineVariant : colorScheme.error,
@@ -405,7 +482,7 @@ class _DriverCard extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                  backgroundColor: isAvailable ? colorScheme.primaryContainer : colorScheme.primaryContainer.withOpacity(0.5),
                   backgroundImage: driverWithUserData.driverPhotoUrl != null 
                       ? NetworkImage(driverWithUserData.driverPhotoUrl!) 
                       : null,
@@ -415,7 +492,7 @@ class _DriverCard extends StatelessWidget {
                               ? driverWithUserData.driverName[0].toUpperCase() 
                               : 'M',
                           style: TextStyle(
-                            color: isAvailable ? AppColors.black : AppColors.black.withOpacity(0.5),
+                            color: isAvailable ? colorScheme.onPrimaryContainer : colorScheme.onPrimaryContainer.withOpacity(0.5),
                           ),
                         )
                       : null,
@@ -428,7 +505,7 @@ class _DriverCard extends StatelessWidget {
                       Text(
                         driverWithUserData.driverName,
                         style: textTheme.titleMedium?.copyWith(
-                          color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                          color: isAvailable ? AppColors.black : AppColors.black.withOpacity(0.5),
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 1,
@@ -438,7 +515,7 @@ class _DriverCard extends StatelessWidget {
                       Text(
                         '${driverWithUserData.driver.brand} ${driverWithUserData.driver.model} ${driverWithUserData.driver.year ?? ''} · ${driverWithUserData.driver.color}',
                         style: textTheme.bodyMedium?.copyWith(
-                          color: isAvailable ? AppColors.white.withOpacity(0.9) : AppColors.white.withOpacity(0.4),
+                          color: isAvailable ? AppColors.black.withOpacity(0.7) : AppColors.black.withOpacity(0.4),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -447,7 +524,7 @@ class _DriverCard extends StatelessWidget {
                       Text(
                         'Placa ${driverWithUserData.driver.plate} · ${driverWithUserData.driver.category.toUpperCase()}',
                         style: textTheme.bodyMedium?.copyWith(
-                          color: isAvailable ? AppColors.white.withOpacity(0.8) : AppColors.white.withOpacity(0.4),
+                          color: isAvailable ? AppColors.black.withOpacity(0.6) : AppColors.black.withOpacity(0.4),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -462,7 +539,7 @@ class _DriverCard extends StatelessWidget {
                           Text(
                             driverWithUserData.driver.ratings.toStringAsFixed(1), 
                             style: textTheme.bodyMedium?.copyWith(
-                              color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                              color: isAvailable ? AppColors.black : AppColors.black.withOpacity(0.5),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -475,7 +552,7 @@ class _DriverCard extends StatelessWidget {
                           Text(
                             '${driverWithUserData.distanceKm.toStringAsFixed(1)} km', 
                             style: textTheme.bodyMedium?.copyWith(
-                              color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                              color: isAvailable ? AppColors.black : AppColors.black.withOpacity(0.5),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -488,7 +565,7 @@ class _DriverCard extends StatelessWidget {
                           Text(
                             '~${driverWithUserData.etaMinutes} min', 
                             style: textTheme.bodyMedium?.copyWith(
-                              color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                              color: isAvailable ? AppColors.black : AppColors.black.withOpacity(0.5),
                             ),
                           ),
                         ],
@@ -506,7 +583,7 @@ class _DriverCard extends StatelessWidget {
                             Text(
                               driverWithUserData.driver.acPolicy!, 
                               style: textTheme.bodyMedium?.copyWith(
-                                color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                                color: isAvailable ? AppColors.black : AppColors.black.withOpacity(0.5),
                               ),
                             ),
                           ],
@@ -525,7 +602,7 @@ class _DriverCard extends StatelessWidget {
                             Text(
                               'R\$ ${driverWithUserData.estimatedFare!.toStringAsFixed(2)}', 
                               style: textTheme.bodyMedium?.copyWith(
-                                color: isAvailable ? AppColors.white : AppColors.white.withOpacity(0.5),
+                                color: isAvailable ? AppColors.black : AppColors.black.withOpacity(0.5),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

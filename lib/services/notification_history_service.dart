@@ -312,9 +312,8 @@ class NotificationHistoryService {
   Future<void> _logRecipients(String historyId, List<String> recipients) async {
     try {
       final recipientData = recipients.map((token) => {
-        'notification_history_id': historyId,
-        'fcm_token': token,
-        'created_at': DateTime.now().toIso8601String(),
+        'notification_id': historyId,
+        'player_id': token,
       }).toList();
       
       // Inserir em lotes de 100

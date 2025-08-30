@@ -4,9 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_spacing.dart';
 import '../../utils/supabase_helper.dart';
 import '../../validators/database_constraints_validator.dart';
-import '../../widgets/logo_branding.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_text_field.dart';
+import '../../widgets/logo_branding.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});

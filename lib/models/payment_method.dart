@@ -109,6 +109,14 @@ class PaymentMethod {
 }
 
 class CardData {
+  const CardData({
+    required this.cardNumber,
+    required this.expiryMonth,
+    required this.expiryYear,
+    required this.cvv,
+    required this.holderName,
+    required this.brand,
+  });
 
   factory CardData.fromMap(Map<String, dynamic> map) => CardData(
       cardNumber: map['card_number'] as String,
@@ -118,14 +126,6 @@ class CardData {
       holderName: map['holder_name'] as String,
       brand: CardBrand.fromString(map['brand'] as String),
     );
-  const CardData({
-    required this.cardNumber,
-    required this.expiryMonth,
-    required this.expiryYear,
-    required this.cvv,
-    required this.holderName,
-    required this.brand,
-  });
 
   final String cardNumber;
   final int expiryMonth;

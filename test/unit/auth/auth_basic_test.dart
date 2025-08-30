@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:option/exceptions/app_exceptions.dart';
 import 'package:option/services/user_service.dart';
 import 'package:option/utils/supabase_helper.dart';
-import 'package:option/exceptions/app_exceptions.dart';
 
 void main() {
   group('Auth Basic Tests', () {
