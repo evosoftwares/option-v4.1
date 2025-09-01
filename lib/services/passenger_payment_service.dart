@@ -296,15 +296,14 @@ class PassengerPaymentService {
     }
   }
 
-  /// Calculate cashback for a trip
-  double calculateCashback(double tripAmount, {double percentage = 0.02}) => tripAmount * percentage;
+
 
   /// Process trip payment using wallet balance
   Future<PassengerWalletTransaction> processTripPayment({
     required String passengerId,
     required String tripId,
     required double amount,
-    bool applyCashback = true,
+
     String? promoCodeId,
     double? discountApplied,
   }) async {
@@ -332,18 +331,7 @@ class PassengerPaymentService {
         amount: finalAmount,
       );
 
-      // Add cashback if enabled
-      if (applyCashback) {
-        final cashbackAmount = calculateCashback(amount);
-        if (cashbackAmount > 0.01) { // Only add cashback if more than 1 cent
-          await _wallet.addCashback(
-            passengerId: passengerId,
-            amount: cashbackAmount,
-            description: 'Cashback da viagem',
-            tripId: tripId,
-          );
-        }
-      }
+
 
       return transaction;
     } catch (e) {

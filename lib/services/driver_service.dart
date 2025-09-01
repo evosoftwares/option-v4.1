@@ -140,12 +140,21 @@ class DriverService {
     bool acceptsPet = false,
     bool acceptsGrocery = false,
     bool acceptsCondo = false,
-    Map<String, dynamic> fees = const {},
+    double petFee = 0.0,
+    double groceryFee = 0.0,
+    double condoFee = 0.0,
+    double stopFee = 0.0,
     String? acPolicy,
     double? customPricePerKm,
     double? customPricePerMinute,
-    Map<String, dynamic>? bankData,
-    Map<String, dynamic>? pixData,
+    String? bankAccountType,
+    String? bankCode,
+    String? bankAgency,
+    String? bankAccount,
+    String? pixKey,
+    String? pixKeyType,
+    String? fcmToken,
+    String? devicePlatform,
     double? currentLatitude,
     double? currentLongitude,
   }) async {
@@ -167,12 +176,21 @@ class DriverService {
         'accepts_pet': acceptsPet,
         'accepts_grocery': acceptsGrocery,
         'accepts_condo': acceptsCondo,
-        'fees': fees,
+        'pet_fee': petFee,
+        'grocery_fee': groceryFee,
+        'condo_fee': condoFee,
+        'stop_fee': stopFee,
         'ac_policy': acPolicy,
         'custom_price_per_km': customPricePerKm,
         'custom_price_per_minute': customPricePerMinute,
-        'bank_data': bankData,
-        'pix_data': pixData,
+        'bank_account_type': bankAccountType,
+        'bank_code': bankCode,
+        'bank_agency': bankAgency,
+        'bank_account': bankAccount,
+        'pix_key': pixKey,
+        'pix_key_type': pixKeyType,
+        'fcm_token': fcmToken,
+        'device_platform': devicePlatform,
         'current_latitude': currentLatitude,
         'current_longitude': currentLongitude,
         'average_rating': 0.0,
@@ -218,12 +236,21 @@ class DriverService {
     bool? acceptsPet,
     bool? acceptsGrocery,
     bool? acceptsCondo,
-    Map<String, dynamic>? fees,
+    double? petFee,
+    double? groceryFee,
+    double? condoFee,
+    double? stopFee,
     String? acPolicy,
     double? customPricePerKm,
     double? customPricePerMinute,
-    Map<String, dynamic>? bankData,
-    Map<String, dynamic>? pixData,
+    String? bankAccountType,
+    String? bankCode,
+    String? bankAgency,
+    String? bankAccount,
+    String? pixKey,
+    String? pixKeyType,
+    String? fcmToken,
+    String? devicePlatform,
     double? currentLatitude,
     double? currentLongitude,
   }) async {
@@ -280,7 +307,10 @@ class DriverService {
       if (acceptsGrocery != null) updates['accepts_grocery'] = acceptsGrocery;
       if (acceptsCondo != null) updates['accepts_condo'] = acceptsCondo;
 
-      if (fees != null) updates['fees'] = fees;
+      if (petFee != null) updates['pet_fee'] = petFee;
+      if (groceryFee != null) updates['grocery_fee'] = groceryFee;
+      if (condoFee != null) updates['condo_fee'] = condoFee;
+      if (stopFee != null) updates['stop_fee'] = stopFee;
       if (acPolicy != null) updates['ac_policy'] = acPolicy;
       if (customPricePerKm != null) {
         updates['custom_price_per_km'] = customPricePerKm;
@@ -288,8 +318,14 @@ class DriverService {
       if (customPricePerMinute != null) {
         updates['custom_price_per_minute'] = customPricePerMinute;
       }
-      if (bankData != null) updates['bank_data'] = bankData;
-      if (pixData != null) updates['pix_data'] = pixData;
+      if (bankAccountType != null) updates['bank_account_type'] = bankAccountType;
+      if (bankCode != null) updates['bank_code'] = bankCode;
+      if (bankAgency != null) updates['bank_agency'] = bankAgency;
+      if (bankAccount != null) updates['bank_account'] = bankAccount;
+      if (pixKey != null) updates['pix_key'] = pixKey;
+      if (pixKeyType != null) updates['pix_key_type'] = pixKeyType;
+      if (fcmToken != null) updates['fcm_token'] = fcmToken;
+      if (devicePlatform != null) updates['device_platform'] = devicePlatform;
 
       if (currentLatitude != null) {
         updates['current_latitude'] = currentLatitude;
@@ -548,8 +584,10 @@ class DriverService {
     double radiusKm = 5.0,
     String? category,
     bool? needsPet,
-    bool? needsGrocery,
-    bool? needsCondo,
+    bool? needsGrocerySpace,
+    bool? isCondoOrigin,
+    bool? isCondoDestination,
+    bool? needsAc,
     String? destinationNeighborhood,
     String? destinationCity,
     String? destinationState,
@@ -562,8 +600,10 @@ class DriverService {
     print('  - radiusKm: $radiusKm');
     print('  - category: $category');
     print('  - needsPet: $needsPet');
-    print('  - needsGrocery: $needsGrocery');
-    print('  - needsCondo: $needsCondo');
+    print('  - needsGrocerySpace: $needsGrocerySpace');
+    print('  - isCondoOrigin: $isCondoOrigin');
+    print('  - isCondoDestination: $isCondoDestination');
+    print('  - needsAc: $needsAc');
     print('  - limit: $limit');
     
     try {
@@ -598,13 +638,19 @@ class DriverService {
           query = query.eq('accepts_pet', true);
           print('🐕 [${DateTime.now()}] Filtro pet aplicado');
         }
-        if (needsGrocery ?? false) {
+        if (needsGrocerySpace ?? false) {
           query = query.eq('accepts_grocery', true);
           print('🛒 [${DateTime.now()}] Filtro grocery aplicado');
         }
-        if (needsCondo ?? false) {
+        if ((isCondoOrigin ?? false) || (isCondoDestination ?? false)) {
           query = query.eq('accepts_condo', true);
           print('🏢 [${DateTime.now()}] Filtro condo aplicado');
+        }
+        
+        // Filtro de ar-condicionado
+        if (needsAc ?? false) {
+          query = query.or('ac_policy.eq.always_on,ac_policy.eq.on_request');
+          print('❄️ [${DateTime.now()}] Filtro ar-condicionado aplicado');
         }
 
         // Bounding box
@@ -646,13 +692,19 @@ class DriverService {
           query = query.eq('accepts_pet', true);
           print('🐕 [${DateTime.now()}] Filtro pet aplicado');
         }
-        if (needsGrocery ?? false) {
+        if (needsGrocerySpace ?? false) {
           query = query.eq('accepts_grocery', true);
           print('🛒 [${DateTime.now()}] Filtro grocery aplicado');
         }
-        if (needsCondo ?? false) {
+        if ((isCondoOrigin ?? false) || (isCondoDestination ?? false)) {
           query = query.eq('accepts_condo', true);
           print('🏢 [${DateTime.now()}] Filtro condo aplicado');
+        }
+        
+        // Filtro de ar-condicionado
+        if (needsAc ?? false) {
+          query = query.or('ac_policy.eq.always_on,ac_policy.eq.on_request');
+          print('❄️ [${DateTime.now()}] Filtro ar-condicionado aplicado');
         }
 
         // Bounding box
@@ -684,8 +736,9 @@ class DriverService {
             fb = fb.or('approval_status.eq.approved,approval_status.is.null');
             if (category != null && category.isNotEmpty) fb = fb.eq('vehicle_category', category);
             if (needsPet ?? false) fb = fb.eq('accepts_pet', true);
-            if (needsGrocery ?? false) fb = fb.eq('accepts_grocery', true);
-            if (needsCondo ?? false) fb = fb.eq('accepts_condo', true);
+            if (needsGrocerySpace ?? false) fb = fb.eq('accepts_grocery', true);
+            if ((isCondoOrigin ?? false) || (isCondoDestination ?? false)) fb = fb.eq('accepts_condo', true);
+            if (needsAc ?? false) fb = fb.or('ac_policy.eq.always_on,ac_policy.eq.on_request');
             fb = fb
                 .gte('current_latitude', latitude - latDelta)
                 .lte('current_latitude', latitude + latDelta)
@@ -833,8 +886,9 @@ class DriverService {
     double radiusKm = 5.0,
     String? category,
     bool? needsPet,
-    bool? needsGrocery,
-    bool? needsCondo,
+    bool? needsGrocerySpace,
+    bool? isCondoOrigin,
+    bool? isCondoDestination,
     String? destinationNeighborhood,
     String? destinationCity,
     String? destinationState,
@@ -867,10 +921,10 @@ class DriverService {
       if (needsPet ?? false) {
         query = query.eq('accepts_pet', true);
       }
-      if (needsGrocery ?? false) {
+      if (needsGrocerySpace ?? false) {
         query = query.eq('accepts_grocery', true);
       }
-      if (needsCondo ?? false) {
+      if ((isCondoOrigin ?? false) || (isCondoDestination ?? false)) {
         query = query.eq('accepts_condo', true);
       }
       

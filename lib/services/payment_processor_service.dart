@@ -49,7 +49,7 @@ class PaymentProcessorService {
     required double totalAmount,
     String? promoCodeId,
     double? discountApplied,
-    bool applyCashback = true,
+
   }) async {
     try {
       print('💳 [${DateTime.now()}] Iniciando processamento de pagamento');
@@ -69,12 +69,11 @@ class PaymentProcessorService {
         throw const DatabaseException('Saldo insuficiente na carteira do passageiro');
       }
       
-      // 3. Processar pagamento do passageiro (débito + cashback)
-      final passengerTransaction = await _passengerPaymentService.processTripPayment(
-        passengerId: passengerId,
-        tripId: tripId,
-        amount: totalAmount, // Valor original para cálculo do cashback
-        applyCashback: applyCashback,
+      // 3. Processar pagamento do passageiro
+    final passengerTransaction = await _passengerPaymentService.processTripPayment(
+      passengerId: passengerId,
+      tripId: tripId,
+      amount: totalAmount,
         promoCodeId: promoCodeId,
         discountApplied: discountApplied,
       );

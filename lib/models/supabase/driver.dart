@@ -14,28 +14,36 @@ class Driver {
     required this.category,
     this.crlvPhotoUrl,
     required this.approvalStatus,
+    this.approvedBy,
+    this.approvedAt,
     required this.isOnline,
     required this.acceptsPet,
+    required this.petFee,
     required this.acceptsGrocery,
+    required this.groceryFee,
     required this.acceptsCondo,
-    required this.fees,
+    required this.condoFee,
+    required this.stopFee,
     this.acPolicy,
     this.customPricePerKm,
     this.customPricePerMinute,
-    this.bankData,
-    this.pixData,
+    this.bankAccountType,
+    this.bankCode,
+    this.bankAgency,
+    this.bankAccount,
+    this.pixKey,
+    this.pixKeyType,
     this.currentLatitude,
     this.currentLongitude,
+    this.lastLocationUpdate,
     required this.ratings,
     required this.trips,
     required this.cancellations,
     required this.createdAt,
     required this.updatedAt,
-    this.onesignalPlayerId,
-    this.pushToken,
-    this.deviceId,
+    this.fcmToken,
     this.devicePlatform,
-    this.lastActiveAt,
+    this.lastNotificationAt,
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
@@ -65,25 +73,37 @@ class Driver {
       acceptsPet: json['accepts_pet'] as bool? ?? false,
       acceptsGrocery: json['accepts_grocery'] as bool? ?? false,
       acceptsCondo: json['accepts_condo'] as bool? ?? false,
-      fees: (json['fees'] as Map<String, dynamic>?) ?? const {},
+      petFee: toDoubleOrZero(json['pet_fee']),
+      groceryFee: toDoubleOrZero(json['grocery_fee']),
+      condoFee: toDoubleOrZero(json['condo_fee']),
+      stopFee: toDoubleOrZero(json['stop_fee']),
       acPolicy: json['ac_policy'] as String?,
       customPricePerKm: toDouble(json['custom_price_per_km']),
       customPricePerMinute: toDouble(json['custom_price_per_minute']),
-      bankData: json['bank_data'] as Map<String, dynamic>?,
-      pixData: json['pix_data'] as Map<String, dynamic>?,
+      bankAccountType: json['bank_account_type'] as String?,
+      bankCode: json['bank_code'] as String?,
+      bankAgency: json['bank_agency'] as String?,
+      bankAccount: json['bank_account'] as String?,
+      pixKey: json['pix_key'] as String?,
+      pixKeyType: json['pix_key_type'] as String?,
+      approvedBy: json['approved_by'] as String?,
+      approvedAt: json['approved_at'] != null 
+          ? DateTime.parse(json['approved_at'] as String) 
+          : null,
       currentLatitude: toDouble(json['current_latitude']),
       currentLongitude: toDouble(json['current_longitude']),
+      lastLocationUpdate: json['last_location_update'] != null 
+          ? DateTime.parse(json['last_location_update'] as String) 
+          : null,
       ratings: toDoubleOrZero(json['average_rating']),
       trips: toIntOrZero(json['total_trips']),
       cancellations: toIntOrZero(json['consecutive_cancellations']),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
-      onesignalPlayerId: json['onesignal_player_id'] as String?,
-      pushToken: json['push_token'] as String?,
-      deviceId: json['device_id'] as String?,
+      fcmToken: json['fcm_token'] as String?,
       devicePlatform: json['device_platform'] as String?,
-      lastActiveAt: json['last_active_at'] != null 
-          ? DateTime.parse(json['last_active_at'] as String) 
+      lastNotificationAt: json['last_notification_at'] != null 
+          ? DateTime.parse(json['last_notification_at'] as String) 
           : null,
     );
   }
@@ -104,24 +124,32 @@ class Driver {
   final bool acceptsPet;
   final bool acceptsGrocery;
   final bool acceptsCondo;
-  final Map<String, dynamic> fees;
+  final double petFee;
+  final double groceryFee;
+  final double condoFee;
+  final double stopFee;
   final String? acPolicy;
   final double? customPricePerKm;
   final double? customPricePerMinute;
-  final Map<String, dynamic>? bankData;
-  final Map<String, dynamic>? pixData;
+  final String? bankAccountType;
+  final String? bankCode;
+  final String? bankAgency;
+  final String? bankAccount;
+  final String? pixKey;
+  final String? pixKeyType;
+  final String? approvedBy;
+  final DateTime? approvedAt;
   final double? currentLatitude;
   final double? currentLongitude;
+  final DateTime? lastLocationUpdate;
   final double ratings;
   final int trips;
   final int cancellations;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final String? onesignalPlayerId;
-  final String? pushToken;
-  final String? deviceId;
+  final String? fcmToken;
   final String? devicePlatform;
-  final DateTime? lastActiveAt;
+  final DateTime? lastNotificationAt;
 
   Map<String, dynamic> toJson() => {
       'id': id,
@@ -141,24 +169,32 @@ class Driver {
       'accepts_pet': acceptsPet,
       'accepts_grocery': acceptsGrocery,
       'accepts_condo': acceptsCondo,
-      'fees': fees,
+      'pet_fee': petFee,
+      'grocery_fee': groceryFee,
+      'condo_fee': condoFee,
+      'stop_fee': stopFee,
       'ac_policy': acPolicy,
       'custom_price_per_km': customPricePerKm,
       'custom_price_per_minute': customPricePerMinute,
-      'bank_data': bankData,
-      'pix_data': pixData,
+      'bank_account_type': bankAccountType,
+      'bank_code': bankCode,
+      'bank_agency': bankAgency,
+      'bank_account': bankAccount,
+      'pix_key': pixKey,
+      'pix_key_type': pixKeyType,
+      'approved_by': approvedBy,
+      'approved_at': approvedAt?.toIso8601String(),
       'current_latitude': currentLatitude,
       'current_longitude': currentLongitude,
+      'last_location_update': lastLocationUpdate?.toIso8601String(),
       'average_rating': ratings,
       'total_trips': trips,
       'consecutive_cancellations': cancellations,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
-      'onesignal_player_id': onesignalPlayerId,
-      'push_token': pushToken,
-      'device_id': deviceId,
+      'fcm_token': fcmToken,
       'device_platform': devicePlatform,
-      'last_active_at': lastActiveAt?.toIso8601String(),
+      'last_notification_at': lastNotificationAt?.toIso8601String(),
     };
 
   Driver copyWith({
@@ -175,28 +211,36 @@ class Driver {
     String? category,
     String? crlvPhotoUrl,
     String? approvalStatus,
+    String? approvedBy,
+    DateTime? approvedAt,
     bool? isOnline,
     bool? acceptsPet,
+    double? petFee,
     bool? acceptsGrocery,
+    double? groceryFee,
     bool? acceptsCondo,
-    Map<String, dynamic>? fees,
+    double? condoFee,
+    double? stopFee,
     String? acPolicy,
     double? customPricePerKm,
     double? customPricePerMinute,
-    Map<String, dynamic>? bankData,
-    Map<String, dynamic>? pixData,
+    String? bankAccountType,
+    String? bankCode,
+    String? bankAgency,
+    String? bankAccount,
+    String? pixKey,
+    String? pixKeyType,
     double? currentLatitude,
     double? currentLongitude,
+    DateTime? lastLocationUpdate,
     double? ratings,
     int? trips,
     int? cancellations,
     DateTime? createdAt,
     DateTime? updatedAt,
-    String? onesignalPlayerId,
-    String? pushToken,
-    String? deviceId,
+    String? fcmToken,
     String? devicePlatform,
-    DateTime? lastActiveAt,
+    DateTime? lastNotificationAt,
   }) => Driver(
       id: id ?? this.id,
       userId: userId ?? this.userId,
@@ -211,27 +255,35 @@ class Driver {
       category: category ?? this.category,
       crlvPhotoUrl: crlvPhotoUrl ?? this.crlvPhotoUrl,
       approvalStatus: approvalStatus ?? this.approvalStatus,
+      approvedBy: approvedBy ?? this.approvedBy,
+      approvedAt: approvedAt ?? this.approvedAt,
       isOnline: isOnline ?? this.isOnline,
       acceptsPet: acceptsPet ?? this.acceptsPet,
+      petFee: petFee ?? this.petFee,
       acceptsGrocery: acceptsGrocery ?? this.acceptsGrocery,
+      groceryFee: groceryFee ?? this.groceryFee,
       acceptsCondo: acceptsCondo ?? this.acceptsCondo,
-      fees: fees ?? this.fees,
+      condoFee: condoFee ?? this.condoFee,
+      stopFee: stopFee ?? this.stopFee,
       acPolicy: acPolicy ?? this.acPolicy,
       customPricePerKm: customPricePerKm ?? this.customPricePerKm,
       customPricePerMinute: customPricePerMinute ?? this.customPricePerMinute,
-      bankData: bankData ?? this.bankData,
-      pixData: pixData ?? this.pixData,
+      bankAccountType: bankAccountType ?? this.bankAccountType,
+      bankCode: bankCode ?? this.bankCode,
+      bankAgency: bankAgency ?? this.bankAgency,
+      bankAccount: bankAccount ?? this.bankAccount,
+      pixKey: pixKey ?? this.pixKey,
+      pixKeyType: pixKeyType ?? this.pixKeyType,
       currentLatitude: currentLatitude ?? this.currentLatitude,
       currentLongitude: currentLongitude ?? this.currentLongitude,
+      lastLocationUpdate: lastLocationUpdate ?? this.lastLocationUpdate,
       ratings: ratings ?? this.ratings,
       trips: trips ?? this.trips,
       cancellations: cancellations ?? this.cancellations,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      onesignalPlayerId: onesignalPlayerId ?? this.onesignalPlayerId,
-      pushToken: pushToken ?? this.pushToken,
-      deviceId: deviceId ?? this.deviceId,
+      fcmToken: fcmToken ?? this.fcmToken,
       devicePlatform: devicePlatform ?? this.devicePlatform,
-      lastActiveAt: lastActiveAt ?? this.lastActiveAt,
+      lastNotificationAt: lastNotificationAt ?? this.lastNotificationAt,
     );
 }

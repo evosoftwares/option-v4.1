@@ -15,7 +15,7 @@ class TripRequest {
     this.destinationNeighborhood,
     required this.vehicleCategory,
     required this.needsPet,
-    required this.needsGrocery,
+    required this.needsGrocerySpace,
     required this.isCondoDestination,
     required this.isCondoOrigin,
     required this.needsAc,
@@ -50,7 +50,7 @@ class TripRequest {
       destinationNeighborhood: json['destination_neighborhood'] as String?,
       vehicleCategory: json['vehicle_category'] as String,
       needsPet: json['needs_pet'] as bool? ?? false,
-      needsGrocery: json['needs_grocery_space'] as bool? ?? false,
+      needsGrocerySpace: json['needs_grocery_space'] as bool? ?? false,
       isCondoDestination: json['is_condo_destination'] as bool? ?? false,
       isCondoOrigin: json['is_condo_origin'] as bool? ?? false,
       needsAc: json['needs_ac'] as bool? ?? false,
@@ -87,7 +87,7 @@ class TripRequest {
   final String? destinationNeighborhood;
   final String vehicleCategory;
   final bool needsPet;
-  final bool needsGrocery;
+  final bool needsGrocerySpace;
   final bool isCondoDestination;
   final bool isCondoOrigin;
   final bool needsAc;
@@ -119,7 +119,7 @@ class TripRequest {
       'destination_neighborhood': destinationNeighborhood,
       'vehicle_category': vehicleCategory,
       'needs_pet': needsPet,
-      'needs_grocery_space': needsGrocery,
+      'needs_grocery_space': needsGrocerySpace,
       'is_condo_destination': isCondoDestination,
       'is_condo_origin': isCondoOrigin,
       'needs_ac': needsAc,
@@ -152,7 +152,7 @@ class TripRequest {
     String? destinationNeighborhood,
     String? vehicleCategory,
     bool? needsPet,
-    bool? needsGrocery,
+    bool? needsGrocerySpace,
     bool? isCondoDestination,
     bool? isCondoOrigin,
     bool? needsAc,
@@ -183,7 +183,7 @@ class TripRequest {
       destinationNeighborhood: destinationNeighborhood ?? this.destinationNeighborhood,
       vehicleCategory: vehicleCategory ?? this.vehicleCategory,
       needsPet: needsPet ?? this.needsPet,
-      needsGrocery: needsGrocery ?? this.needsGrocery,
+      needsGrocerySpace: needsGrocerySpace ?? this.needsGrocerySpace,
       isCondoDestination: isCondoDestination ?? this.isCondoDestination,
       isCondoOrigin: isCondoOrigin ?? this.isCondoOrigin,
       needsAc: needsAc ?? this.needsAc,

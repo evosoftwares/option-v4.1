@@ -130,7 +130,7 @@ class _PassengerWalletContentState extends State<_PassengerWalletContent> {
                     availableBalance: wallet?.availableBalance ?? 0.0,
                     pendingBalance: wallet?.pendingBalance ?? 0.0,
                     totalSpent: wallet?.totalSpent ?? 0.0,
-                    totalCashback: wallet?.totalCashback ?? 0.0,
+            
                     onAddCredit: () => _onAddCredit(passengerId),
                     onViewPaymentMethods: _onViewPaymentMethods,
                     onWithdraw: () => _onWithdraw(passengerId),
@@ -559,7 +559,7 @@ class _PassengerBalanceCard extends StatelessWidget {
     required this.availableBalance,
     required this.pendingBalance,
     required this.totalSpent,
-    required this.totalCashback,
+
     required this.onAddCredit,
     required this.onViewPaymentMethods,
     required this.onWithdraw,
@@ -568,7 +568,7 @@ class _PassengerBalanceCard extends StatelessWidget {
   final double availableBalance;
   final double pendingBalance;
   final double totalSpent;
-  final double totalCashback;
+
   final VoidCallback onAddCredit;
   final VoidCallback onViewPaymentMethods;
   final VoidCallback onWithdraw;
@@ -596,28 +596,7 @@ class _PassengerBalanceCard extends StatelessWidget {
             background: cs.secondaryContainer,
             foreground: cs.onSecondaryContainer,
           ),
-          // Row(
-          //   children: [
-          //     Expanded(
-          //       child: _StatChip(
-          //         label: 'Total gasto',
-          //         value: 'R\$ ${totalSpent.toStringAsFixed(2)}',
-          //         background: cs.secondaryContainer,
-          //         foreground: cs.onSecondaryContainer,
-          //       ),
-          //     ),
-          //     // Cashback removido temporariamente
-          //     // const SizedBox(width: AppSpacing.md),
-          //     // Expanded(
-          //     //   child: _StatChip(
-          //     //     label: 'Cashback',
-          //     //     value: 'R\$ ${totalCashback.toStringAsFixed(2)}',
-          //     //     background: cs.tertiaryContainer,
-          //     //     foreground: cs.onTertiaryContainer,
-          //     //   ),
-          //     // ),
-          //   ],
-          // ),
+
           if (pendingBalance > 0) ...[
             const SizedBox(height: AppSpacing.md),
             _StatChip(
@@ -647,26 +626,7 @@ class _PassengerBalanceCard extends StatelessWidget {
               label: const Text('Sacar'),
             ),
           ),
-          // Botão de métodos removido temporariamente
-          // Row(
-          //   children: [
-          //     Expanded(
-          //       child: FilledButton.icon(
-          //         onPressed: onAddCredit,
-          //         style: FilledButton.styleFrom(backgroundColor: cs.primary, foregroundColor: cs.onPrimary),
-          //         icon: const Icon(Icons.add),
-          //         label: const Text('Adicionar crédito'),
-          //       ),
-          //     ),
-          //     const SizedBox(width: AppSpacing.md),
-          //     OutlinedButton.icon(
-          //       onPressed: onViewPaymentMethods,
-          //       style: OutlinedButton.styleFrom(foregroundColor: cs.onPrimaryContainer),
-          //       icon: const Icon(Icons.payment),
-          //       label: const Text('Métodos'),
-          //     ),
-          //   ],
-          // ),
+
         ],
       ),
     );
@@ -757,8 +717,7 @@ class _PassengerTransactionTile extends StatelessWidget {
         return Icons.add_circle_outline;
       case TransactionType.tripPayment:
         return Icons.directions_car;
-      case TransactionType.cashback:
-        return Icons.monetization_on;
+
       case TransactionType.refund:
         return Icons.undo;
       case TransactionType.cancellationFee:

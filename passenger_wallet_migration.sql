@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS passenger_wallets (
     available_balance NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (available_balance >= 0),
     pending_balance NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (pending_balance >= 0),
     total_spent NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (total_spent >= 0),
-    total_cashback NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (total_cashback >= 0),
+  
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT unique_passenger_wallet UNIQUE (passenger_id),
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS passenger_wallet_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     wallet_id UUID NOT NULL REFERENCES passenger_wallets(id) ON DELETE CASCADE,
     passenger_id UUID NOT NULL REFERENCES passengers(id) ON DELETE CASCADE,
-    type VARCHAR(50) NOT NULL CHECK (type IN ('credit', 'trip_payment', 'cashback', 'refund', 'cancellation_fee')),
+    type VARCHAR(50) NOT NULL CHECK (type IN ('credit', 'trip_payment', 'refund', 'cancellation_fee')),
     amount NUMERIC(10,2) NOT NULL CHECK (amount > 0),
     description TEXT NOT NULL,
     trip_id UUID REFERENCES trips(id) ON DELETE SET NULL,
@@ -243,8 +243,8 @@ CREATE TRIGGER bi_set_passenger_wallet_id
 CREATE OR REPLACE FUNCTION create_passenger_wallet_on_passenger_insert()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO passenger_wallets (passenger_id, user_id, available_balance, pending_balance, total_spent, total_cashback)
-    VALUES (NEW.id, NEW.user_id, 0.00, 0.00, 0.00, 0.00)
+    INSERT INTO passenger_wallets (passenger_id, user_id, available_balance, pending_balance, total_spent)
+    VALUES (NEW.id, NEW.user_id, 0.00, 0.00, 0.00)
     ON CONFLICT (passenger_id) DO NOTHING; -- idempotent safeguard
     RETURN NEW;
 END;
@@ -264,7 +264,7 @@ CREATE TRIGGER trigger_create_passenger_wallet
 INSERT INTO passenger_promo_codes (code, type, value, min_amount, max_discount, is_first_ride_only, valid_until)
 VALUES
   ('PRIMEIRAVIAGEM', 'percentage', 50.00, 10.00, 25.00, TRUE, NOW() + INTERVAL '1 year'),
-  ('CASHBACK10', 'percentage', 10.00, 20.00, 15.00, FALSE, NOW() + INTERVAL '3 months'),
+
   ('VIAGRAGRATIS', 'free_ride', 35.00, 0.00, 35.00, TRUE, NOW() + INTERVAL '6 months')
 ON CONFLICT (code) DO NOTHING;
 

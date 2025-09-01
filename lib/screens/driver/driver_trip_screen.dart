@@ -13,8 +13,10 @@ import '../../models/supabase/trip.dart';
 import '../../services/driver_service.dart';
 import '../../services/location_service.dart';
 import '../../services/map_style_service.dart';
+import '../../services/trip_service.dart';
 import '../../services/user_service.dart';
 import '../../services/wallet_service.dart';
+import '../../theme/app_colors.dart';
 import '../../widgets/driver_bottom_sheet.dart';
 import '../../widgets/driver_earnings_widget.dart';
 
@@ -37,12 +39,15 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<List<Trip>>? _tripSub;
   String? _currentTripId;
+  Trip? _currentTrip;
   late final LocationService _locationService;
   late final DriverStatusController _statusController;
+  late final TripService _tripService;
   int _lastProgressIndex = 0;
 
   String? _driverId; // cache do driverId para updates
   bool _revertingOnlineDueToPermission = false; // guarda para evitar loop ao reverter
+  bool _isUpdatingTripStatus = false; // previne múltiplos cliques
 
   // Controle de envio para Supabase (throttle + movimentação mínima)
   DateTime? _lastLocationSentAt;
@@ -61,6 +66,7 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
     );
     _statusController = DriverStatusController();
     _statusController.addListener(_onStatusChanged);
+    _tripService = TripService(Supabase.instance.client);
     _initLocation();
     _initActiveTrips();
   }
@@ -103,6 +109,7 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
         if (!mounted) return;
         if (trips.isEmpty) {
           _currentTripId = null;
+          _currentTrip = null;
           _clearRoute();
           setState(() {
             _markers.removeWhere((m) => m.markerId.value == 'origin' || m.markerId.value == 'destination');
@@ -118,6 +125,7 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
           return; // Already displaying this trip
         }
         _currentTripId = trip.id;
+        _currentTrip = trip;
         await _buildTripRoute(trip);
         // Ajusta stream para modo com corrida
         _restartPositionStream();
@@ -563,6 +571,254 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
     );
   }
 
+  /// Marca que o motorista chegou ao local de embarque
+  Future<void> _markDriverArrived() async {
+    if (_isUpdatingTripStatus || _currentTripId == null) return;
+    
+    setState(() => _isUpdatingTripStatus = true);
+    
+    try {
+      await _tripService.updateTripRequestStatus(
+        id: _currentTripId!,
+        status: 'driver_arrived',
+        driverId: _driverId,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Chegada marcada com sucesso!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao marcar chegada: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdatingTripStatus = false);
+      }
+    }
+  }
+
+  /// Marca que o passageiro embarcou e inicia a viagem
+  Future<void> _markPassengerPickedUp() async {
+    if (_isUpdatingTripStatus || _currentTripId == null) return;
+    
+    setState(() => _isUpdatingTripStatus = true);
+    
+    try {
+      await _tripService.updateTripRequestStatus(
+        id: _currentTripId!,
+        status: 'in_progress',
+        driverId: _driverId,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🚗 Viagem iniciada!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao iniciar viagem: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdatingTripStatus = false);
+      }
+    }
+  }
+
+  /// Finaliza a viagem e navega para tela de avaliação
+  Future<void> _completeTrip() async {
+    if (_isUpdatingTripStatus || _currentTripId == null || _currentTrip == null) return;
+    
+    setState(() => _isUpdatingTripStatus = true);
+    
+    try {
+      // Marcar viagem como concluída
+      await _tripService.completeTrip(
+        tripId: _currentTripId!,
+        actualDistanceKm: _currentTrip!.actualDistanceKm,
+        actualDurationMinutes: _currentTrip!.actualDurationMinutes,
+        finalFare: _currentTrip!.finalFare,
+      );
+      
+      if (mounted) {
+        // Navegar para tela de avaliação
+        Navigator.of(context).pushNamed(
+          '/trip_rating',
+          arguments: {
+            'tripId': _currentTripId!,
+            'isDriver': true,
+          },
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao finalizar viagem: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        setState(() => _isUpdatingTripStatus = false);
+      }
+    }
+  }
+
+  /// Cancela a viagem com motivo
+  Future<void> _cancelTrip(String reason) async {
+    if (_isUpdatingTripStatus || _currentTripId == null) return;
+    
+    setState(() => _isUpdatingTripStatus = true);
+    
+    try {
+      await _tripService.updateTripRequestStatus(
+        id: _currentTripId!,
+        status: 'cancelled',
+        driverId: _driverId,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Viagem cancelada'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        
+        // Voltar para tela principal
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/driver_home',
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao cancelar viagem: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdatingTripStatus = false);
+      }
+    }
+  }
+
+  /// Mostra dialog para cancelar viagem
+  void _showCancelTripDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar viagem'),
+        content: const Text('Deseja realmente cancelar esta viagem?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Não'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _showCancelReasonDialog();
+            },
+            child: const Text('Sim'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mostra dialog para selecionar motivo do cancelamento
+  void _showCancelReasonDialog() {
+    final reasons = [
+      'Passageiro não apareceu',
+      'Problema com veículo',
+      'Local perigoso',
+      'Outro motivo',
+    ];
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Motivo do cancelamento'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: reasons.map((reason) => 
+            ListTile(
+              title: Text(reason),
+              onTap: () {
+                Navigator.of(context).pop();
+                _cancelTrip(reason);
+              },
+            )
+          ).toList(),
+        ),
+      ),
+    );
+  }
+
+  /// Retorna o botão contextual baseado no status atual da viagem
+  Widget? _buildTripActionButton() {
+    if (_currentTrip == null || _isUpdatingTripStatus) {
+      return null;
+    }
+
+    switch (_currentTrip!.status.toLowerCase()) {
+      case 'accepted':
+        return FloatingActionButton.extended(
+          onPressed: _markDriverArrived,
+          backgroundColor: AppColors.lightPrimary,
+          foregroundColor: AppColors.lightOnPrimary,
+          label: const Text('Cheguei ao local'),
+          icon: const Icon(Icons.location_on),
+        );
+        
+      case 'driver_arrived':
+        return FloatingActionButton.extended(
+          onPressed: _markPassengerPickedUp,
+          backgroundColor: AppColors.success,
+          foregroundColor: Colors.white,
+          label: const Text('Passageiro embarcou'),
+          icon: const Icon(Icons.person),
+        );
+        
+      case 'in_progress':
+      case 'ongoing':
+        return FloatingActionButton.extended(
+          onPressed: _completeTrip,
+          backgroundColor: AppColors.success,
+          foregroundColor: Colors.white,
+          label: const Text('Chegamos ao destino'),
+          icon: const Icon(Icons.flag),
+        );
+        
+      default:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -604,6 +860,32 @@ class _DriverTripScreenState extends State<DriverTripScreen> {
               child: const Icon(Icons.menu),
             ),
           ),
+          
+          // Botões contextuais da viagem
+          if (_buildTripActionButton() != null)
+            Positioned(
+              right: 16,
+              bottom: 200, // Acima do DriverBottomSheet
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildTripActionButton()!,
+                  const SizedBox(height: 12),
+                  // Botão de cancelamento (sempre visível durante viagem ativa)
+                  if (_currentTrip != null && 
+                      ['accepted', 'driver_arrived', 'in_progress'].contains(_currentTrip!.status.toLowerCase()))
+                    FloatingActionButton(
+                      onPressed: _showCancelTripDialog,
+                      backgroundColor: AppColors.error,
+                      foregroundColor: Colors.white,
+                      mini: true,
+                      child: const Icon(Icons.close),
+                      heroTag: 'cancel_trip', // Evita conflito de hero tags
+                    ),
+                ],
+              ),
+            ),
+          
           Positioned(
             left: 0,
             right: 0,

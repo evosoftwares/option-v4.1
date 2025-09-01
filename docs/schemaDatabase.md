@@ -2169,16 +2169,7 @@
     "is_nullable": "NO",
     "is_updatable": "YES"
   },
-  {
-    "table_schema": "public",
-    "table_name": "passenger_wallets",
-    "column_name": "total_cashback",
-    "data_type": "numeric",
-    "character_maximum_length": null,
-    "column_default": "0.00",
-    "is_nullable": "NO",
-    "is_updatable": "YES"
-  },
+
   {
     "table_schema": "public",
     "table_name": "passenger_wallets",

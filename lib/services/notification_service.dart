@@ -45,7 +45,7 @@ class NotificationService {
           .from('notifications')
           .select()
           .eq('user_id', userId)
-          .order('created_at', ascending: false)
+          .order('sent_at', ascending: false)
           .limit(50);
 
       return response.map(NotificationModel.fromJson).toList();
@@ -113,7 +113,7 @@ class NotificationService {
         .from('notifications')
         .stream(primaryKey: ['id'])
         .eq('user_id', userId)
-        .order('sent_at') // Corrigido: usar 'sent_at' do banco
+        .order('sent_at', ascending: false) // Corrigido: usar 'sent_at' do banco com ordem descendente
         .map((data) => data.map(NotificationModel.fromJson).toList());
 
   // Stream unread count
@@ -179,95 +179,148 @@ class NotificationService {
     );
   }
 
-  /// Send driver notification for targeted trip requests
+  /// Send driver notification for targeted trip requests with robust fallback system
   Future<void> sendDriverNotification(String driverId, String requestId) async {
-    try {
-      // 1. Buscar OneSignal Player ID do motorista
-      final driverData = await _supabase
-          .from('drivers')
-          .select('onesignal_player_id, app_users(full_name)')
-          .eq('id', driverId)
-          .single();
-      
-      final playerId = driverData['onesignal_player_id'] as String?;
-      if (playerId == null) {
-        print('❌ Motorista $driverId não tem OneSignal Player ID');
-        // Continue sem push remoto, apenas salvar notificação no database
-      }
-      
-      // 2. Buscar dados do request para payload
-      final requestData = await _supabase
-          .from('trip_requests')
-          .select()
-          .eq('id', requestId)
-          .single();
-      
-      // 3. Criar payload da notificação
-      const title = 'Nova Solicitação de Viagem';
-      final body = 'De: ${requestData['origin_address']}\nPara: ${requestData['destination_address']}';
-      
-      final payload = {
-        'title': title,
-        'body': body,
-        'data': {
+    const maxRetries = 3;
+    const retryDelay = Duration(seconds: 2);
+    
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        print('🔔 Tentativa $attempt/$maxRetries - Enviando notificação para motorista $driverId');
+        
+        // 1. Buscar dados do motorista e request em paralelo para otimizar
+        final results = await Future.wait([
+          _supabase
+              .from('drivers')
+              .select('onesignal_player_id, push_token, app_users(full_name, phone)')
+              .eq('id', driverId)
+              .single(),
+          _supabase
+              .from('trip_requests')
+              .select()
+              .eq('id', requestId)
+              .single(),
+        ]);
+        
+        final driverData = results[0] as Map<String, dynamic>;
+        final requestData = results[1] as Map<String, dynamic>;
+        
+        // 2. Extrair dados necessários
+        final playerId = driverData['onesignal_player_id'] as String?;
+        final pushToken = driverData['push_token'] as String?;
+        final driverPhone = driverData['app_users']?['phone'] as String?;
+        
+        // 3. Criar payload da notificação
+        const title = 'Nova Solicitação de Viagem';
+        final body = 'De: ${requestData['origin_address']}\nPara: ${requestData['destination_address']}';
+        
+        final notificationData = {
           'type': 'trip_request',
           'request_id': requestId,
           'origin': requestData['origin_address'],
           'destination': requestData['destination_address'],
           'estimated_fare': requestData['estimated_fare']?.toString() ?? '0',
           'expires_at': requestData['expires_at'],
+        };
+        
+        bool notificationSent = false;
+        String failureReason = '';
+        
+        // 4. Tentar OneSignal primeiro (método preferido)
+        if (playerId != null && playerId.isNotEmpty) {
+          print('📱 Tentando OneSignal Push (Player ID: ${playerId.substring(0, 8)}...)');
+          
+          final success = await OneSignalService().sendNotificationToPlayerId(
+            playerId: playerId,
+            title: title,
+            body: body,
+            data: notificationData,
+          );
+          
+          if (success) {
+            notificationSent = true;
+            print('✅ OneSignal push enviado com sucesso');
+          } else {
+            failureReason += 'OneSignal failed; ';
+            print('❌ OneSignal push falhou');
+          }
+        } else {
+          failureReason += 'No OneSignal Player ID; ';
+          print('⚠️ Motorista não tem OneSignal Player ID');
         }
-      };
-      
-      // 4. Enviar via OneSignal se Player ID disponível
-      if (playerId != null) {
-        await _sendOneSignalNotification(playerId, payload);
+        
+        // 5. Fallback: Salvar sempre no database
+        try {
+          await createNotification(
+            userId: driverId,
+            title: title,
+            message: body,
+            type: 'trip_request',
+            relatedId: requestId,
+            priority: 'high',
+          );
+          print('✅ Notificação salva no database');
+        } catch (e) {
+          failureReason += 'Database save failed: $e; ';
+          print('❌ Erro ao salvar no database: $e');
+        }
+        
+        // 6. Fallback: Notificação local (sempre executar)
+        try {
+          await _localNotificationService.showRideOfferNotification(
+            title: title,
+            body: body,
+            offerId: requestId,
+            isDriver: true,
+          );
+          print('✅ Notificação local exibida');
+        } catch (e) {
+          failureReason += 'Local notification failed: $e; ';
+          print('❌ Erro na notificação local: $e');
+        }
+        
+        // 7. Atualizar timestamp da última notificação
+        try {
+          await _supabase
+              .from('drivers')
+              .update({'last_notification_at': DateTime.now().toIso8601String()})
+              .eq('id', driverId);
+        } catch (e) {
+          print('⚠️ Erro ao atualizar last_notification_at: $e');
+        }
+        
+        // Se chegou até aqui, tentativa foi bem-sucedida (pelo menos parcialmente)
+        if (notificationSent || attempt == maxRetries) {
+          if (!notificationSent && failureReason.isNotEmpty) {
+            print('⚠️ Notificação enviada apenas via fallback. Razões: $failureReason');
+          }
+          return; // Sair do loop de tentativas
+        }
+        
+      } catch (e, stackTrace) {
+        print('❌ Erro na tentativa $attempt para motorista $driverId: $e');
+        
+        if (attempt < maxRetries) {
+          print('🔄 Aguardando ${retryDelay.inSeconds}s antes da próxima tentativa...');
+          await Future.delayed(retryDelay);
+        } else {
+          print('💥 Todas as tentativas falharam para motorista $driverId');
+          print('Stack trace: $stackTrace');
+          
+          // Última tentativa: notificação local de emergência
+          try {
+            await _localNotificationService.showRideOfferNotification(
+              title: 'Nova Solicitação de Viagem',
+              body: 'Erro na sincronização. Verifique suas solicitações.',
+              offerId: requestId,
+              isDriver: true,
+            );
+            print('🆘 Notificação de emergência enviada');
+          } catch (emergencyError) {
+            print('💀 Falha crítica: notificação de emergência também falhou: $emergencyError');
+          }
+        }
       }
-      
-      // 5. Salvar no database também
-      await createNotification(
-        userId: driverId,
-        title: title,
-        message: body,
-        type: 'trip_request',
-        relatedId: requestId,
-        priority: 'high',
-      );
-      
-      // 6. Show local notification with custom sound
-      await _localNotificationService.showRideOfferNotification(
-        title: title,
-        body: body,
-        offerId: requestId,
-        isDriver: true, // Sempre true pois é notificação para motorista
-      );
-      
-    } catch (e) {
-      print('❌ Erro ao enviar notificação para motorista $driverId: $e');
-      // Log error mas não propagar para não quebrar fluxo
-    }
-  }
-  
-  /// Send OneSignal notification using HTTP API
-  Future<void> _sendOneSignalNotification(String playerId, Map<String, dynamic> payload) async {
-    try {
-      // Use OneSignalService que já tem a implementação completa
-       final success = await OneSignalService().sendNotificationToPlayerId(
-        playerId: playerId,
-        title: payload['title'] ?? '',
-        body: payload['body'] ?? '',
-        data: payload['data'] as Map<String, dynamic>? ?? {},
-      );
-      
-      if (success) {
-        print('🔔 OneSignal Notification sent successfully to ${playerId.substring(0, 20)}...');
-      } else {
-        print('❌ Failed to send OneSignal notification to ${playerId.substring(0, 20)}...');
-      }
-      
-    } catch (e) {
-      print('❌ Error sending OneSignal notification: $e');
-      // Log error but don't throw to avoid breaking the flow
     }
   }
 }

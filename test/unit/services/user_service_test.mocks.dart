@@ -257,8 +257,8 @@ class _FakeFuture_21<T> extends _i1.SmartFake implements _i3.Future<T> {
         );
 }
 
-class _FakePostgrestTransformBuilder_22<T1> extends _i1.SmartFake
-    implements _i2.PostgrestTransformBuilder<T1> {
+class _FakePostgrestTransformBuilder_22<T> extends _i1.SmartFake
+    implements _i2.PostgrestTransformBuilder<T> {
   _FakePostgrestTransformBuilder_22(
     Object parent,
     Invocation parentInvocation,
@@ -268,8 +268,8 @@ class _FakePostgrestTransformBuilder_22<T1> extends _i1.SmartFake
         );
 }
 
-class _FakeResponsePostgrestBuilder_23<T1, S, R> extends _i1.SmartFake
-    implements _i2.ResponsePostgrestBuilder<T1, S, R> {
+class _FakeResponsePostgrestBuilder_23<T, S, R> extends _i1.SmartFake
+    implements _i2.ResponsePostgrestBuilder<T, S, R> {
   _FakeResponsePostgrestBuilder_23(
     Object parent,
     Invocation parentInvocation,
@@ -1501,29 +1501,31 @@ class MockSupabaseQueryBuilder extends _i1.Mock
 /// A class which mocks [PostgrestFilterBuilder].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockPostgrestFilterBuilder<T> extends _i1.Mock
-    implements _i2.PostgrestFilterBuilder<T> {
+class MockPostgrestFilterBuilder extends _i1.Mock
+    implements _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> {
   MockPostgrestFilterBuilder() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i2.PostgrestFilterBuilder<T> copyWithUrl(Uri? url) => (super.noSuchMethod(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> copyWithUrl(
+          Uri? url) =>
+      (super.noSuchMethod(
         Invocation.method(
           #copyWithUrl,
           [url],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #copyWithUrl,
             [url],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> not(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> not(
     String? column,
     String? operator,
     Object? value,
@@ -1537,7 +1539,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #not,
@@ -1548,10 +1550,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> or(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> or(
     String? filters, {
     String? referencedTable,
   }) =>
@@ -1561,7 +1563,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
           [filters],
           {#referencedTable: referencedTable},
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #or,
@@ -1569,10 +1571,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             {#referencedTable: referencedTable},
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> eq(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> eq(
     String? column,
     Object? value,
   ) =>
@@ -1584,7 +1586,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #eq,
@@ -1594,10 +1596,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> neq(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> neq(
     String? column,
     Object? value,
   ) =>
@@ -1609,7 +1611,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #neq,
@@ -1619,10 +1621,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> gt(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> gt(
     String? column,
     Object? value,
   ) =>
@@ -1634,7 +1636,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #gt,
@@ -1644,10 +1646,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> gte(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> gte(
     String? column,
     Object? value,
   ) =>
@@ -1659,7 +1661,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #gte,
@@ -1669,10 +1671,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> lt(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> lt(
     String? column,
     Object? value,
   ) =>
@@ -1684,7 +1686,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #lt,
@@ -1694,10 +1696,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> lte(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> lte(
     String? column,
     Object? value,
   ) =>
@@ -1709,7 +1711,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #lte,
@@ -1719,10 +1721,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> like(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> like(
     String? column,
     String? pattern,
   ) =>
@@ -1734,7 +1736,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             pattern,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #like,
@@ -1744,7 +1746,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
   _i2.PostgrestFilterBuilder<dynamic> likeAllOf(
@@ -1797,7 +1799,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
       ) as _i2.PostgrestFilterBuilder<dynamic>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> ilike(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> ilike(
     String? column,
     String? pattern,
   ) =>
@@ -1809,7 +1811,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             pattern,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #ilike,
@@ -1819,7 +1821,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
   _i2.PostgrestFilterBuilder<dynamic> ilikeAllOf(
@@ -1872,7 +1874,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
       ) as _i2.PostgrestFilterBuilder<dynamic>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> isFilter(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> isFilter(
     String? column,
     bool? value,
   ) =>
@@ -1884,7 +1886,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #isFilter,
@@ -1894,10 +1896,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> inFilter(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> inFilter(
     String? column,
     List<dynamic>? values,
   ) =>
@@ -1909,7 +1911,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             values,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #inFilter,
@@ -1919,10 +1921,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> contains(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> contains(
     String? column,
     Object? value,
   ) =>
@@ -1934,7 +1936,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #contains,
@@ -1944,10 +1946,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> containedBy(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> containedBy(
     String? column,
     Object? value,
   ) =>
@@ -1959,7 +1961,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #containedBy,
@@ -1969,10 +1971,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> rangeLt(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> rangeLt(
     String? column,
     String? range,
   ) =>
@@ -1984,7 +1986,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             range,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #rangeLt,
@@ -1994,10 +1996,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> rangeGt(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> rangeGt(
     String? column,
     String? range,
   ) =>
@@ -2009,7 +2011,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             range,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #rangeGt,
@@ -2019,10 +2021,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> rangeGte(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> rangeGte(
     String? column,
     String? range,
   ) =>
@@ -2034,7 +2036,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             range,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #rangeGte,
@@ -2044,10 +2046,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> rangeLte(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> rangeLte(
     String? column,
     String? range,
   ) =>
@@ -2059,7 +2061,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             range,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #rangeLte,
@@ -2069,10 +2071,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> rangeAdjacent(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> rangeAdjacent(
     String? column,
     String? range,
   ) =>
@@ -2084,7 +2086,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             range,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #rangeAdjacent,
@@ -2094,10 +2096,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> overlaps(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> overlaps(
     String? column,
     Object? value,
   ) =>
@@ -2109,7 +2111,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #overlaps,
@@ -2119,10 +2121,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> textSearch(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> textSearch(
     String? column,
     String? query, {
     String? config,
@@ -2140,7 +2142,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             #type: type,
           },
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #textSearch,
@@ -2154,10 +2156,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             },
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> filter(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> filter(
     String? column,
     String? operator,
     Object? value,
@@ -2171,7 +2173,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #filter,
@@ -2182,26 +2184,27 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> match(Map<String, Object>? query) =>
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> match(
+          Map<String, Object>? query) =>
       (super.noSuchMethod(
         Invocation.method(
           #match,
           [query],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #match,
             [query],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestFilterBuilder<T> setHeader(
+  _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>> setHeader(
     String? key,
     String? value,
   ) =>
@@ -2213,7 +2216,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             value,
           ],
         ),
-        returnValue: _FakePostgrestFilterBuilder_7<T>(
+        returnValue: _FakePostgrestFilterBuilder_7<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #setHeader,
@@ -2223,7 +2226,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             ],
           ),
         ),
-      ) as _i2.PostgrestFilterBuilder<T>);
+      ) as _i2.PostgrestFilterBuilder<List<Map<String, dynamic>>>);
 
   @override
   _i2.PostgrestTransformBuilder<List<Map<String, dynamic>>> select(
@@ -2244,7 +2247,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
       ) as _i2.PostgrestTransformBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestTransformBuilder<T> order(
+  _i2.PostgrestTransformBuilder<List<Map<String, dynamic>>> order(
     String? column, {
     bool? ascending = false,
     bool? nullsFirst = false,
@@ -2260,7 +2263,8 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             #referencedTable: referencedTable,
           },
         ),
-        returnValue: _FakePostgrestTransformBuilder_22<T>(
+        returnValue:
+            _FakePostgrestTransformBuilder_22<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #order,
@@ -2272,10 +2276,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             },
           ),
         ),
-      ) as _i2.PostgrestTransformBuilder<T>);
+      ) as _i2.PostgrestTransformBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestTransformBuilder<T> limit(
+  _i2.PostgrestTransformBuilder<List<Map<String, dynamic>>> limit(
     int? count, {
     String? referencedTable,
   }) =>
@@ -2285,7 +2289,8 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
           [count],
           {#referencedTable: referencedTable},
         ),
-        returnValue: _FakePostgrestTransformBuilder_22<T>(
+        returnValue:
+            _FakePostgrestTransformBuilder_22<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #limit,
@@ -2293,10 +2298,10 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             {#referencedTable: referencedTable},
           ),
         ),
-      ) as _i2.PostgrestTransformBuilder<T>);
+      ) as _i2.PostgrestTransformBuilder<List<Map<String, dynamic>>>);
 
   @override
-  _i2.PostgrestTransformBuilder<T> range(
+  _i2.PostgrestTransformBuilder<List<Map<String, dynamic>>> range(
     int? from,
     int? to, {
     String? referencedTable,
@@ -2310,7 +2315,8 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
           ],
           {#referencedTable: referencedTable},
         ),
-        returnValue: _FakePostgrestTransformBuilder_22<T>(
+        returnValue:
+            _FakePostgrestTransformBuilder_22<List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #range,
@@ -2321,7 +2327,7 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
             {#referencedTable: referencedTable},
           ),
         ),
-      ) as _i2.PostgrestTransformBuilder<T>);
+      ) as _i2.PostgrestTransformBuilder<List<Map<String, dynamic>>>);
 
   @override
   _i2.PostgrestTransformBuilder<Map<String, dynamic>> single() =>
@@ -2371,22 +2377,30 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
       ) as _i2.PostgrestTransformBuilder<String>);
 
   @override
-  _i2.ResponsePostgrestBuilder<_i2.PostgrestResponse<T>, T, T> count(
+  _i2.ResponsePostgrestBuilder<
+      _i2.PostgrestResponse<List<Map<String, dynamic>>>,
+      List<Map<String, dynamic>>,
+      List<Map<String, dynamic>>> count(
           [_i2.CountOption? count = _i2.CountOption.exact]) =>
       (super.noSuchMethod(
         Invocation.method(
           #count,
           [count],
         ),
-        returnValue:
-            _FakeResponsePostgrestBuilder_23<_i2.PostgrestResponse<T>, T, T>(
+        returnValue: _FakeResponsePostgrestBuilder_23<
+            _i2.PostgrestResponse<List<Map<String, dynamic>>>,
+            List<Map<String, dynamic>>,
+            List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #count,
             [count],
           ),
         ),
-      ) as _i2.ResponsePostgrestBuilder<_i2.PostgrestResponse<T>, T, T>);
+      ) as _i2.ResponsePostgrestBuilder<
+          _i2.PostgrestResponse<List<Map<String, dynamic>>>,
+          List<Map<String, dynamic>>,
+          List<Map<String, dynamic>>>);
 
   @override
   _i2.PostgrestBuilder<void, void, void> head() => (super.noSuchMethod(
@@ -2459,21 +2473,21 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
       ) as _i2.PostgrestBuilder<String, String, String>);
 
   @override
-  _i2.PostgrestBuilder<U, U, T> withConverter<U>(
-          _i2.PostgrestConverter<U, T>? converter) =>
+  _i2.PostgrestBuilder<U, U, List<Map<String, dynamic>>> withConverter<U>(
+          _i2.PostgrestConverter<U, List<Map<String, dynamic>>>? converter) =>
       (super.noSuchMethod(
         Invocation.method(
           #withConverter,
           [converter],
         ),
-        returnValue: _FakePostgrestBuilder_19<U, U, T>(
+        returnValue: _FakePostgrestBuilder_19<U, U, List<Map<String, dynamic>>>(
           this,
           Invocation.method(
             #withConverter,
             [converter],
           ),
         ),
-      ) as _i2.PostgrestBuilder<U, U, T>);
+      ) as _i2.PostgrestBuilder<U, U, List<Map<String, dynamic>>>);
 
   @override
   Uri appendSearchParams(
@@ -2529,16 +2543,16 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
       ) as Uri);
 
   @override
-  _i3.Stream<T> asStream() => (super.noSuchMethod(
+  _i3.Stream<List<Map<String, dynamic>>> asStream() => (super.noSuchMethod(
         Invocation.method(
           #asStream,
           [],
         ),
-        returnValue: _i3.Stream<T>.empty(),
-      ) as _i3.Stream<T>);
+        returnValue: _i3.Stream<List<Map<String, dynamic>>>.empty(),
+      ) as _i3.Stream<List<Map<String, dynamic>>>);
 
   @override
-  _i3.Future<T> catchError(
+  _i3.Future<List<Map<String, dynamic>>> catchError(
     Function? onError, {
     bool Function(Object)? test,
   }) =>
@@ -2548,30 +2562,13 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
           [onError],
           {#test: test},
         ),
-        returnValue: _i4.ifNotNull(
-              _i4.dummyValueOrNull<T>(
-                this,
-                Invocation.method(
-                  #catchError,
-                  [onError],
-                  {#test: test},
-                ),
-              ),
-              (T v) => _i3.Future<T>.value(v),
-            ) ??
-            _FakeFuture_21<T>(
-              this,
-              Invocation.method(
-                #catchError,
-                [onError],
-                {#test: test},
-              ),
-            ),
-      ) as _i3.Future<T>);
+        returnValue: _i3.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i3.Future<List<Map<String, dynamic>>>);
 
   @override
   _i3.Future<U> then<U>(
-    _i3.FutureOr<U> Function(T)? onValue, {
+    _i3.FutureOr<U> Function(List<Map<String, dynamic>>)? onValue, {
     Function? onError,
   }) =>
       (super.noSuchMethod(
@@ -2602,9 +2599,9 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
       ) as _i3.Future<U>);
 
   @override
-  _i3.Future<T> timeout(
+  _i3.Future<List<Map<String, dynamic>>> timeout(
     Duration? timeLimit, {
-    _i3.FutureOr<T> Function()? onTimeout,
+    _i3.FutureOr<List<Map<String, dynamic>>> Function()? onTimeout,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -2612,50 +2609,19 @@ class MockPostgrestFilterBuilder<T> extends _i1.Mock
           [timeLimit],
           {#onTimeout: onTimeout},
         ),
-        returnValue: _i4.ifNotNull(
-              _i4.dummyValueOrNull<T>(
-                this,
-                Invocation.method(
-                  #timeout,
-                  [timeLimit],
-                  {#onTimeout: onTimeout},
-                ),
-              ),
-              (T v) => _i3.Future<T>.value(v),
-            ) ??
-            _FakeFuture_21<T>(
-              this,
-              Invocation.method(
-                #timeout,
-                [timeLimit],
-                {#onTimeout: onTimeout},
-              ),
-            ),
-      ) as _i3.Future<T>);
+        returnValue: _i3.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i3.Future<List<Map<String, dynamic>>>);
 
   @override
-  _i3.Future<T> whenComplete(_i3.FutureOr<void> Function()? action) =>
+  _i3.Future<List<Map<String, dynamic>>> whenComplete(
+          _i3.FutureOr<void> Function()? action) =>
       (super.noSuchMethod(
         Invocation.method(
           #whenComplete,
           [action],
         ),
-        returnValue: _i4.ifNotNull(
-              _i4.dummyValueOrNull<T>(
-                this,
-                Invocation.method(
-                  #whenComplete,
-                  [action],
-                ),
-              ),
-              (T v) => _i3.Future<T>.value(v),
-            ) ??
-            _FakeFuture_21<T>(
-              this,
-              Invocation.method(
-                #whenComplete,
-                [action],
-              ),
-            ),
-      ) as _i3.Future<T>);
+        returnValue: _i3.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i3.Future<List<Map<String, dynamic>>>);
 }

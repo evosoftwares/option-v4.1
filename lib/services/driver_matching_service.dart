@@ -38,6 +38,9 @@ class MatchingCriteria {
   const MatchingCriteria({
     required this.passengerLatitude,
     required this.passengerLongitude,
+    this.originNeighborhood,
+    this.originCity,
+    this.originState,
     this.destinationLatitude,
     this.destinationLongitude,
     this.destinationNeighborhood,
@@ -57,6 +60,9 @@ class MatchingCriteria {
 
   final double passengerLatitude;
   final double passengerLongitude;
+  final String? originNeighborhood;
+  final String? originCity;
+  final String? originState;
   final double? destinationLatitude;
   final double? destinationLongitude;
   final String? destinationNeighborhood;
@@ -72,6 +78,11 @@ class MatchingCriteria {
   final bool prioritizeRating;
   final bool prioritizeDistance;
   final bool prioritizeResponseTime;
+
+  @override
+  String toString() => 'MatchingCriteria(lat: $passengerLatitude, lon: $passengerLongitude, '
+        'category: $vehicleCategory, radius: ${maxRadiusKm}km, maxDrivers: $maxDrivers, '
+        'needsPet: $needsPet, needsGrocery: $needsGrocery, needsCondo: $needsCondo, needsAC: $needsAC)';
 }
 
 /// Serviço avançado de matching de motoristas
@@ -96,11 +107,11 @@ class DriverMatchingService {
     print('  📍 Origem: (${criteria.passengerLatitude}, ${criteria.passengerLongitude})');
     print('  🎯 Destino: ${criteria.destinationNeighborhood ?? "N/A"}, ${criteria.destinationCity ?? "N/A"}');
     print('  🚗 Categoria: ${criteria.vehicleCategory ?? "Qualquer"}');
-    print('  🐕 Pet: ${criteria.needsPet}');
-    print('  ❄️ AC: ${criteria.needsAC}');
-    print('  🛒 Mercado: ${criteria.needsGrocery}');
-    print('  🏢 Condomínio: ${criteria.needsCondo}');
-    print('  📏 Raio máximo: ${criteria.maxRadiusKm}km');
+      print('  🐕 Pet: ${criteria.needsPet}');
+      print('  ❄️ AC: ${criteria.needsAC}');
+      print('  🛒 Mercado: ${criteria.needsGrocery}');
+      print('  🏢 Condomínio: ${criteria.needsCondo}');
+      print('  📏 Raio máximo: ${criteria.maxRadiusKm}km');
 
     try {
       // 1. Buscar motoristas disponíveis na região
@@ -175,6 +186,14 @@ class DriverMatchingService {
       longitude: criteria.passengerLongitude,
       radiusKm: criteria.maxRadiusKm,
       category: criteria.vehicleCategory,
+      needsPet: criteria.needsPet,
+      needsGrocerySpace: criteria.needsGrocery,
+      isCondoOrigin: criteria.needsCondo,
+      isCondoDestination: criteria.needsCondo,
+      needsAc: criteria.needsAC,
+      destinationNeighborhood: criteria.destinationNeighborhood,
+      destinationCity: criteria.destinationCity,
+      destinationState: criteria.destinationState,
       limit: 50, // Buscar mais para ter opções após filtros
     );
 
@@ -214,29 +233,45 @@ class DriverMatchingService {
     }).toList();
 
   /// Filtra motoristas por zonas de exclusão
+  /// Remove condutores se a origem OU destino da viagem estiver em sua lista de bairros excluídos
   Future<List<Driver>> _filterByExclusionZones(List<Driver> drivers, MatchingCriteria criteria) async {
-    if (criteria.destinationNeighborhood == null || 
-        criteria.destinationCity == null || 
-        criteria.destinationState == null) {
-      return drivers; // Sem destino específico, não aplica filtro
-    }
-
     // Otimização: verificar zonas excluídas em lote
     final filteredDrivers = <Driver>[];
     final driverIds = drivers.map((d) => d.id).toList();
     
     try {
-      // Buscar todas as zonas excluídas dos motoristas de uma vez
-      final excludedZones = await _getExcludedZonesForDrivers(
-        driverIds,
-        criteria.destinationNeighborhood!,
-        criteria.destinationCity!,
-        criteria.destinationState!,
-      );
+      // Lista de IDs de motoristas que devem ser excluídos
+      final excludedDriverIds = <String>{};
 
-      // Filtrar motoristas que não têm a zona de destino excluída
+      // Filtrar por zona de ORIGEM (se disponível)
+      if (criteria.originNeighborhood != null && 
+          criteria.originCity != null && 
+          criteria.originState != null) {
+        final originExcludedDrivers = await _getExcludedZonesForDrivers(
+          driverIds,
+          criteria.originNeighborhood!,
+          criteria.originCity!,
+          criteria.originState!,
+        );
+        excludedDriverIds.addAll(originExcludedDrivers);
+      }
+
+      // Filtrar por zona de DESTINO (se disponível)
+      if (criteria.destinationNeighborhood != null && 
+          criteria.destinationCity != null && 
+          criteria.destinationState != null) {
+        final destinationExcludedDrivers = await _getExcludedZonesForDrivers(
+          driverIds,
+          criteria.destinationNeighborhood!,
+          criteria.destinationCity!,
+          criteria.destinationState!,
+        );
+        excludedDriverIds.addAll(destinationExcludedDrivers);
+      }
+
+      // Filtrar motoristas que não têm nem origem nem destino excluídos
       for (final driver in drivers) {
-        if (!excludedZones.contains(driver.id)) {
+        if (!excludedDriverIds.contains(driver.id)) {
           filteredDrivers.add(driver);
         }
       }

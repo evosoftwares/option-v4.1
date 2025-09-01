@@ -101,6 +101,9 @@ class EnhancedDataIntegrityService extends DataIntegrityService {
     // UUIDs mal formados ou placeholders
     if (RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_error$').hasMatch(data)) return true;
     
+    // Códigos alfanuméricos suspeitos com padrão de erro
+    if (RegExp(r'^[a-z0-9]{6}-[a-z0-9]{6}-[a-z0-9]{6}-[a-z0-9]{6}-[a-z0-9]{6}_error$').hasMatch(data)) return true;
+    
     return false;
   }
 
@@ -113,6 +116,9 @@ class EnhancedDataIntegrityService extends DataIntegrityService {
       r'error\s*\d+',     // "error 500"
       r'^\d+-\d{13}$',    // Telefones com timestamp "123-1640995123456"
       r'^PENDENTE_\w+',   // Dados placeholder como "PENDENTE_CADASTRO"
+      r'unable_to_\w+',   // Padrões como "unable_to_validate"
+      r'phone_error',     // Erros específicos de telefone
+      r'missing_phone',   // Telefone ausente
     ];
     
     return knownPatterns.any((pattern) => RegExp(pattern, caseSensitive: false).hasMatch(data));
@@ -159,7 +165,7 @@ class EnhancedDataIntegrityService extends DataIntegrityService {
     if (RegExp(r'\d+-164\d{10}').hasMatch(phone)) return true;
     
     // Outros padrões de telefone corrompido
-    if (phone.contains('error') || phone.contains('missing')) return true;
+    if (phone.contains('error') || phone.contains('missing') || phone.contains('unable_to')) return true;
     
     return false;
   }

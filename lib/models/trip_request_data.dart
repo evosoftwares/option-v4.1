@@ -9,8 +9,9 @@ class TripRequestData {
     required this.destinationLongitude,
     required this.vehicleCategory,
     required this.needsPet,
-    required this.needsGrocery,
-    required this.needsCondo,
+    required this.needsGrocerySpace,
+    required this.isCondoOrigin,
+    required this.isCondoDestination,
     required this.estimatedDistanceKm,
     required this.estimatedDurationMinutes,
     required this.estimatedFare,
@@ -30,9 +31,9 @@ class TripRequestData {
       destinationLongitude: (request['destination_longitude'] as num).toDouble(),
       vehicleCategory: request['vehicle_category'] as String,
       needsPet: request['needs_pet'] as bool? ?? false,
-      needsGrocery: request['needs_grocery_space'] as bool? ?? false,
-      needsCondo: (request['is_condo_origin'] as bool? ?? false) || 
-                  (request['is_condo_destination'] as bool? ?? false),
+      needsGrocerySpace: request['needs_grocery_space'] as bool? ?? false,
+      isCondoOrigin: request['is_condo_origin'] as bool? ?? false,
+      isCondoDestination: request['is_condo_destination'] as bool? ?? false,
       estimatedDistanceKm: (request['estimated_distance_km'] as num?)?.toDouble() ?? 0.0,
       estimatedDurationMinutes: request['estimated_duration_minutes'] as int? ?? 0,
       estimatedFare: (request['estimated_fare'] as num?)?.toDouble() ?? 0.0,
@@ -49,8 +50,9 @@ class TripRequestData {
   final double destinationLongitude;
   final String vehicleCategory;
   final bool needsPet;
-  final bool needsGrocery;
-  final bool needsCondo;
+  final bool needsGrocerySpace;
+  final bool isCondoOrigin;
+  final bool isCondoDestination;
   final double estimatedDistanceKm;
   final int estimatedDurationMinutes;
   final double estimatedFare;
@@ -58,6 +60,10 @@ class TripRequestData {
   final String? destinationNeighborhood;
   final bool needsAc;
   final int numberOfStops;
+
+  // Computed property for backward compatibility
+  bool get needsCondo => isCondoOrigin || isCondoDestination;
+  bool get needsGrocery => needsGrocerySpace;
 
   /// Converter para Map para inserção no database
   Map<String, dynamic> toDatabase({
@@ -78,9 +84,9 @@ class TripRequestData {
       'destination_neighborhood': destinationNeighborhood,
       'vehicle_category': vehicleCategory,
       'needs_pet': needsPet,
-      'needs_grocery_space': needsGrocery,
-      'is_condo_origin': needsCondo,
-      'is_condo_destination': needsCondo,
+      'needs_grocery_space': needsGrocerySpace,
+      'is_condo_origin': isCondoOrigin,
+      'is_condo_destination': isCondoDestination,
       'needs_ac': needsAc,
       'number_of_stops': numberOfStops,
       'estimated_distance_km': estimatedDistanceKm,
@@ -102,8 +108,9 @@ class TripRequestData {
     double? destinationLongitude,
     String? vehicleCategory,
     bool? needsPet,
-    bool? needsGrocery,
-    bool? needsCondo,
+    bool? needsGrocerySpace,
+    bool? isCondoOrigin,
+    bool? isCondoDestination,
     double? estimatedDistanceKm,
     int? estimatedDurationMinutes,
     double? estimatedFare,
@@ -120,8 +127,9 @@ class TripRequestData {
       destinationLongitude: destinationLongitude ?? this.destinationLongitude,
       vehicleCategory: vehicleCategory ?? this.vehicleCategory,
       needsPet: needsPet ?? this.needsPet,
-      needsGrocery: needsGrocery ?? this.needsGrocery,
-      needsCondo: needsCondo ?? this.needsCondo,
+      needsGrocerySpace: needsGrocerySpace ?? this.needsGrocerySpace,
+      isCondoOrigin: isCondoOrigin ?? this.isCondoOrigin,
+      isCondoDestination: isCondoDestination ?? this.isCondoDestination,
       estimatedDistanceKm: estimatedDistanceKm ?? this.estimatedDistanceKm,
       estimatedDurationMinutes: estimatedDurationMinutes ?? this.estimatedDurationMinutes,
       estimatedFare: estimatedFare ?? this.estimatedFare,

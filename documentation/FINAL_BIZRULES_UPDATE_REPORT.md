@@ -188,7 +188,7 @@ Vantagens da abordagem digital:
 
 ### Promoções e Descontos
 - **Cupons de Desconto**: Sistema de códigos promocionais
-- **Cashback**: Retorno em carteira digital
+
 - **Promoções Sazonais**: Campanhas especiais
 ```
 

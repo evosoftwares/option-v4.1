@@ -61,8 +61,9 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
     with TickerProviderStateMixin {
   VehicleCategory _selectedCategory = VehicleCategory.standard;
   bool _needsPet = false;
-  bool _needsGrocery = false;
-  bool _needsCondo = false;
+  bool _needsGrocerySpace = false;
+  bool _isCondoOrigin = false;
+  bool _isCondoDestination = false;
   List<VehicleCategoryData> _categoryData = [];
   bool _isLoading = true;
   late final DriverService _driverService;
@@ -220,13 +221,16 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
               ),
               _prefTile(
                 title: 'Espaço para compras',
-                value: _needsGrocery,
-                onChanged: (v) => setState(() => _needsGrocery = v),
+                value: _needsGrocerySpace,
+                    onChanged: (v) => setState(() => _needsGrocerySpace = v),
               ),
               _prefTile(
                 title: 'Condomínio (acesso facilitado)',
-                value: _needsCondo,
-                onChanged: (v) => setState(() => _needsCondo = v),
+                value: _isCondoOrigin || _isCondoDestination,
+                    onChanged: (v) => setState(() {
+                      _isCondoOrigin = v;
+                      _isCondoDestination = v;
+                    }),
               ),
               const SizedBox(height: 16),
               const _SectionTitle(title: 'Código promocional'),
@@ -596,8 +600,9 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
           'destination': widget.destination.toJson(),
           'vehicle_category': _selectedCategory.id,
           'needsPet': _needsPet,
-          'needsGrocery': _needsGrocery,
-          'needsCondo': _needsCondo,
+        'needsGrocerySpace': _needsGrocerySpace,
+        'isCondoOrigin': _isCondoOrigin,
+        'isCondoDestination': _isCondoDestination,
           // Removed invalid 'additionalStop': false (expects String?)
           'appliedPromoCode': _appliedPromoCode,
           'promoDiscount': _promoDiscount,

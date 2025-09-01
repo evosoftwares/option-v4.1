@@ -1,0 +1,266 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+import 'package:option/exceptions/app_exceptions.dart';
+import 'package:option/services/user_service.dart';
+import 'package:option/utils/supabase_helper.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+// Generate mocks
+@GenerateMocks([
+  SupabaseClient,
+  GoTrueClient,
+  SupabaseQueryBuilder,
+  PostgrestTransformBuilder,
+], customMocks: [
+  MockSpec<PostgrestFilterBuilder<List<Map<String, dynamic>>>>(),
+])
+import 'auth_error_handling_test.mocks.dart';
+
+void main() {
+  group('Authentication Error Handling Tests', () {
+    late MockSupabaseClient mockClient;
+    late MockGoTrueClient mockAuth;
+    late MockSupabaseQueryBuilder mockQuery;
+    late MockPostgrestFilterBuilder mockFilter;
+    late MockPostgrestTransformBuilder mockTransform;
+
+    setUp(() {
+      mockClient = MockSupabaseClient();
+      mockAuth = MockGoTrueClient();
+      mockQuery = MockSupabaseQueryBuilder();
+      mockFilter = MockPostgrestFilterBuilder();
+      mockTransform = MockPostgrestTransformBuilder();
+
+      // Setup basic mocks
+      when(mockClient.auth).thenReturn(mockAuth);
+      when(mockClient.from('users')).thenReturn(mockQuery);
+    });
+
+    group('Authentication Errors', () {
+      test('should handle invalid email format', () async {
+        when(mockAuth.signUp(
+          email: 'invalid-email',
+          password: 'password123',
+        )).thenThrow(AuthException(
+          'Invalid email format',
+          statusCode: '400',
+        ));
+
+        expect(
+          () => mockAuth.signUp(
+            email: 'invalid-email',
+            password: 'password123',
+          ),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should handle weak password', () async {
+        when(mockAuth.signUp(
+          email: 'test@example.com',
+          password: '123',
+        )).thenThrow(AuthException(
+          'Password should be at least 6 characters',
+          statusCode: '422',
+        ));
+
+        expect(
+          () => mockAuth.signUp(
+            email: 'test@example.com',
+            password: '123',
+          ),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should handle user already registered', () async {
+        when(mockAuth.signUp(
+          email: 'existing@example.com',
+          password: 'password123',
+        )).thenThrow(AuthException(
+          'User already registered',
+          statusCode: '422',
+        ));
+
+        expect(
+          () => mockAuth.signUp(
+            email: 'existing@example.com',
+            password: 'password123',
+          ),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should handle invalid login credentials', () async {
+        when(mockAuth.signInWithPassword(
+          email: 'test@example.com',
+          password: 'wrongpassword',
+        )).thenThrow(AuthException(
+          'Invalid login credentials',
+          statusCode: '400',
+        ));
+
+        expect(
+          () => mockAuth.signInWithPassword(
+            email: 'test@example.com',
+            password: 'wrongpassword',
+          ),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should handle email not confirmed', () async {
+        when(mockAuth.signInWithPassword(
+          email: 'unconfirmed@example.com',
+          password: 'password123',
+        )).thenThrow(AuthException(
+          'Email not confirmed',
+          statusCode: '400',
+        ));
+
+        expect(
+          () => mockAuth.signInWithPassword(
+            email: 'unconfirmed@example.com',
+            password: 'password123',
+          ),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should handle signup rate limit exceeded', () async {
+        when(mockAuth.signUp(
+          email: 'test@example.com',
+          password: 'password123',
+        )).thenThrow(AuthException(
+          'Signup rate limit exceeded',
+          statusCode: '429',
+        ));
+
+        expect(
+          () => mockAuth.signUp(
+            email: 'test@example.com',
+            password: 'password123',
+          ),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should handle password reset for non-existent user', () async {
+        when(mockAuth.resetPasswordForEmail(
+          'nonexistent@example.com',
+        )).thenThrow(AuthException(
+          'User not found',
+          statusCode: '400',
+        ));
+
+        expect(
+          () => mockAuth.resetPasswordForEmail('nonexistent@example.com'),
+          throwsA(isA<AuthException>()),
+        );
+      });
+
+      test('should handle network timeout during authentication', () async {
+        when(mockAuth.signUp(
+          email: 'test@example.com',
+          password: 'password123',
+        )).thenThrow(Exception('Connection timeout'));
+
+        expect(
+          () => mockAuth.signUp(
+            email: 'test@example.com',
+            password: 'password123',
+          ),
+          throwsA(predicate((e) => e.toString().contains('Connection timeout'))),
+        );
+      });
+    });
+
+    group('User Service Error Scenarios', () {
+      test('should throw UserAlreadyExistsException when user already exists by ID', () async {
+        // Arrange
+        const authUserId = 'existing-user-id';
+        const email = 'test@example.com';
+        const fullName = 'Test User';
+        const phone = '11999999999';
+        const userType = 'passenger';
+
+        // Mock existing user found by ID
+        final existingUserData = {
+          'id': authUserId,
+          'email': email,
+          'full_name': fullName,
+          'phone': phone,
+          'user_type': userType,
+          'status': 'active',
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+
+        // Mock UserService.getUserById to return existing user
+        // This will be called internally by createUser
+        when(mockClient.from('app_users')).thenReturn(mockQuery);
+        when(mockQuery.select()).thenReturn(mockFilter);
+        when(mockFilter.eq('id', authUserId)).thenReturn(mockFilter);
+        when(mockFilter.single()).thenReturn(mockTransform);
+        when(mockTransform.then(any)).thenAnswer((_) async => existingUserData);
+
+        // Act & Assert
+        expect(
+          () async => UserService.createUser(
+            authUserId: authUserId,
+            email: email,
+            fullName: fullName,
+            phone: phone,
+            userType: userType,
+          ),
+          throwsA(isA<UserAlreadyExistsException>()),
+        );
+      });
+
+      test('should throw UserAlreadyExistsException when user already exists by email', () async {
+        // Arrange
+        const authUserId = 'new-user-id';
+        const email = 'existing@example.com';
+        const fullName = 'Test User';
+        const phone = '11999999999';
+        const userType = 'passenger';
+
+        // Mock getUserById to return null (user not found by ID)
+        when(mockClient.from('app_users')).thenReturn(mockQuery);
+        when(mockQuery.select()).thenReturn(mockFilter);
+        when(mockFilter.eq('id', authUserId)).thenReturn(mockFilter);
+        when(mockFilter.single()).thenReturn(mockTransform);
+        when(mockTransform.then(any)).thenThrow(
+          const PostgrestException(message: 'User not found', code: 'PGRST116')
+        );
+
+        // Mock getUserByEmail to return existing user
+        when(mockFilter.eq('email', email)).thenReturn(mockFilter);
+        when(mockFilter.single()).thenReturn(mockTransform);
+        when(mockTransform.then(any)).thenAnswer((_) async => {
+          'id': 'different-user-id',
+          'email': email,
+          'full_name': 'Existing User',
+          'phone': '11888888888',
+          'user_type': 'driver',
+          'status': 'active',
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+
+        // Act & Assert
+        expect(
+          () async => UserService.createUser(
+            authUserId: authUserId,
+            email: email,
+            fullName: fullName,
+            phone: phone,
+            userType: userType,
+          ),
+          throwsA(isA<UserAlreadyExistsException>()),
+        );
+      });
+    });
+  });
+}

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/user.dart' as app_user;
+import '../../services/driver_wallet_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
@@ -18,11 +19,20 @@ class DriverMenuScreen extends StatefulWidget {
 class _DriverMenuScreenState extends State<DriverMenuScreen> {
   bool _isOnline = false; // Local state for now (integration later)
   Future<app_user.User?>? _userFuture;
+  Future<Map<String, dynamic>>? _walletStatsFuture;
 
   @override
   void initState() {
     super.initState();
     _userFuture = UserService.getCurrentUser();
+    _loadWalletStats();
+  }
+
+  void _loadWalletStats() {
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    if (currentUser != null) {
+      _walletStatsFuture = DriverWalletService.getDriverWalletStats(currentUser.id);
+    }
   }
 
   Future<void> _logout() async {
@@ -151,6 +161,11 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
                 onTap: () => Navigator.pushNamed(context, '/custom_pricing'),
               ),
               _MenuTile(
+                icon: Icons.ac_unit_outlined,
+                label: 'Política de ar-condicionado',
+                onTap: () => Navigator.pushNamed(context, '/ac_policy'),
+              ),
+              _MenuTile(
                 icon: Icons.map_outlined,
                 label: 'Áreas de atuação',
                 onTap: () => Navigator.pushNamed(context, '/driver_operation_zones'),
@@ -171,7 +186,16 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               _MenuTile(
                 icon: Icons.account_balance_wallet_outlined,
                 label: 'Carteira',
-                trailing: const _WalletPill(amountText: r'R$ 0,00'),
+                trailing: FutureBuilder<Map<String, dynamic>>(
+                  future: _walletStatsFuture,
+                  builder: (context, walletSnapshot) {
+                    final stats = walletSnapshot.data;
+                    final availableBalance = stats?['available_balance'] as double? ?? 0.0;
+                    return _WalletPill(
+                      amountText: 'R\$ ${availableBalance.toStringAsFixed(2).replaceAll('.', ',')}',
+                    );
+                  },
+                ),
                 onTap: () => Navigator.pushNamed(context, '/wallet'),
               ),
 

@@ -39,7 +39,7 @@ class TripPaymentService {
     required double totalAmount,
     String? promoCodeId,
     double? discountApplied,
-    bool applyCashback = true,
+
   }) async {
     try {
       print('💳 [${DateTime.now()}] Delegando processamento para PaymentProcessorService');
@@ -52,7 +52,7 @@ class TripPaymentService {
          totalAmount: totalAmount,
          promoCodeId: promoCodeId,
          discountApplied: discountApplied,
-         applyCashback: applyCashback,
+   
        );
        
        return result;

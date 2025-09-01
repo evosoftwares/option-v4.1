@@ -36,7 +36,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _onSubmit() async {
     final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) return;
+    if (!isValid) {
+      // Force rebuild to show validation errors
+      setState(() {});
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 

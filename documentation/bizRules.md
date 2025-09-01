@@ -235,7 +235,7 @@ A plataforma utiliza uma abordagem focada em pagamentos digitais, oferecendo doi
 **Fluxo de Pagamento:**
 1. **Recarga da Carteira**: Passageiros podem adicionar créditos via PIX
 2. **Pagamento de Viagens**: Débito automático da carteira digital
-3. **Cashback**: Retorno automático em créditos na carteira
+
 4. **Transparência**: Histórico completo de todas as transações
 
 **Vantagens da Abordagem Digital:**

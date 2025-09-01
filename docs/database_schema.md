@@ -396,7 +396,7 @@ This document provides a comprehensive overview of all tables and their columns 
 - **available_balance**: number (Available balance)
 - **pending_balance**: number (Pending balance)
 - **total_spent**: number (Total money spent)
-- **total_cashback**: number (Total cashback earned)
+
 - **created_at**: string (Wallet creation timestamp)
 - **updated_at**: string (Last update timestamp)
 
@@ -721,7 +721,7 @@ All tables implement Row Level Security (RLS) with appropriate policies to ensur
 
 Based on the `passenger_wallet_migration.sql` file, the passenger wallet system was recently implemented with:
 - Multi-balance system (available/pending)
-- Cashback tracking and management
+
 - Payment method integration with Asaas payment processor
 - Promotional codes with various types (percentage, fixed, free_ride)
 - Comprehensive indexing for performance optimization

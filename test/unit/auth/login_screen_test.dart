@@ -24,9 +24,6 @@ void main() {
       mockGoTrueClient = MockGoTrueClient();
 
       when(mockSupabaseClient.auth).thenReturn(mockGoTrueClient);
-
-      // Mock Supabase.instance
-      Supabase.instance = Supabase._internal();
     });
 
     testWidgets('should render all form fields and buttons', (tester) async {
@@ -121,7 +118,7 @@ void main() {
       );
 
       // Initially password should be obscured
-      var passwordWidget = tester.widget(obscureTextFinder);
+      var passwordWidget = tester.widget(obscureTextFinder) as TextField;
       expect(passwordWidget.obscureText, isTrue);
 
       // Tap visibility toggle
@@ -129,7 +126,7 @@ void main() {
       await tester.pump();
 
       // Password should now be visible
-      passwordWidget = tester.widget(obscureTextFinder);
+      passwordWidget = tester.widget(obscureTextFinder) as TextField;
       expect(passwordWidget.obscureText, isFalse);
 
       // Tap again to hide
@@ -137,7 +134,7 @@ void main() {
       await tester.pump();
 
       // Password should be obscured again
-      passwordWidget = tester.widget(obscureTextFinder);
+      passwordWidget = tester.widget(obscureTextFinder) as TextField;
       expect(passwordWidget.obscureText, isTrue);
     });
 

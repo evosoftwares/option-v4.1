@@ -179,84 +179,11 @@ class PassengerPromoService {
     }
   }
 
-  /// Calculate dynamic cashback percentage based on user activity
-  double calculateDynamicCashback(int tripsThisMonth, double totalSpent) {
-    // Base cashback rate
-    var baseRate = 0.02; // 2%
 
-    // Bonus for frequent users
-    if (tripsThisMonth >= 20) {
-      baseRate += 0.01; // +1% for 20+ trips
-    } else if (tripsThisMonth >= 10) {
-      baseRate += 0.005; // +0.5% for 10+ trips
-    }
 
-    // Bonus for high spenders (over R$ 200 this month)
-    if (totalSpent >= 200.0) {
-      baseRate += 0.005; // +0.5% for high spenders
-    }
 
-    // Cap at 4%
-    return baseRate > 0.04 ? 0.04 : baseRate;
-  }
 
-  /// Get user's cashback statistics
-  Future<Map<String, dynamic>> getCashbackStats(String userId) async {
-    try {
-      // Get current month data
-      final now = DateTime.now();
-      final firstDayOfMonth = DateTime(now.year, now.month);
-      
-      // Count trips this month
-      final tripsData = await _supabase
-          .from('trips')
-          .select('id, total_fare')
-          .eq('passenger_id', userId)
-          .gte('created_at', firstDayOfMonth.toIso8601String())
-          .eq('payment_status', 'completed');
 
-      final tripsThisMonth = (tripsData as List).length;
-      final totalSpentThisMonth = (tripsData as List)
-          .fold<double>(0, (sum, trip) => sum + ((trip['total_fare'] as num?)?.toDouble() ?? 0.0));
-
-      // Get total cashback earned
-      final cashbackData = await _supabase
-          .from('passenger_wallet_transactions')
-          .select('amount')
-          .eq('passenger_id', userId)
-          .eq('type', 'cashback');
-
-      final totalCashbackEarned = (cashbackData as List)
-          .fold<double>(0, (sum, tx) => sum + ((tx['amount'] as num?)?.toDouble() ?? 0.0));
-
-      final currentCashbackRate = calculateDynamicCashback(tripsThisMonth, totalSpentThisMonth);
-
-      return {
-        'trips_this_month': tripsThisMonth,
-        'total_spent_this_month': totalSpentThisMonth,
-        'total_cashback_earned': totalCashbackEarned,
-        'current_cashback_rate': currentCashbackRate,
-        'next_tier_trips': _getNextTierTrips(tripsThisMonth),
-        'next_tier_bonus': _getNextTierBonus(tripsThisMonth),
-      };
-    } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar estatísticas de cashback', e.code);
-    } catch (e) {
-      throw DatabaseException('Erro inesperado ao buscar estatísticas de cashback: $e');
-    }
-  }
-
-  int? _getNextTierTrips(int currentTrips) {
-    if (currentTrips < 10) return 10;
-    if (currentTrips < 20) return 20;
-    return null; // Already at max tier
-  }
-
-  double? _getNextTierBonus(int currentTrips) {
-    if (currentTrips < 10) return 0.005; // +0.5%
-    if (currentTrips < 20) return 0.01; // +1%
-    return null; // Already at max tier
-  }
 
   /// Create a welcome promo code for new users
   Future<void> createWelcomePromoForUser(app_user.User user) async {

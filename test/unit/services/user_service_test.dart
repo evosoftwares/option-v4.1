@@ -11,7 +11,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
   SupabaseClient,
   GoTrueClient,
   SupabaseQueryBuilder,
-  PostgrestFilterBuilder,
+], customMocks: [
+  MockSpec<PostgrestFilterBuilder<List<Map<String, dynamic>>>>(),
 ])
 import 'user_service_test.mocks.dart';
 
@@ -20,13 +21,13 @@ void main() {
     late MockSupabaseClient mockSupabaseClient;
     late MockGoTrueClient mockGoTrueClient;
     late MockSupabaseQueryBuilder mockQueryBuilder;
-    late MockPostgrestFilterBuilder mockFilterBuilder;
+    late MockPostgrestFilterBuilder<List<Map<String, dynamic>>> mockFilterBuilder;
 
     setUp(() {
       mockSupabaseClient = MockSupabaseClient();
       mockGoTrueClient = MockGoTrueClient();
       mockQueryBuilder = MockSupabaseQueryBuilder();
-      mockFilterBuilder = MockPostgrestFilterBuilder();
+      mockFilterBuilder = MockPostgrestFilterBuilder<List<Map<String, dynamic>>>();
 
       // Setup SupabaseHelper mock
       SupabaseHelper.testClient = mockSupabaseClient;

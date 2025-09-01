@@ -21,7 +21,7 @@ class TripService {
     required double destinationLongitude,
     required String vehicleCategory,
     required bool needsPet,
-    required bool needsGrocery,
+    required bool needsGrocerySpace,
     required bool isCondoDestination,
     required bool isCondoOrigin,
     required bool needsAc,
@@ -47,7 +47,7 @@ class TripService {
             'destination_neighborhood': destinationNeighborhood,
             'vehicle_category': vehicleCategory,
             'needs_pet': needsPet,
-            'needs_grocery_space': needsGrocery,
+            'needs_grocery_space': needsGrocerySpace,
             'is_condo_destination': isCondoDestination,
             'is_condo_origin': isCondoOrigin,
             'needs_ac': needsAc,
@@ -268,40 +268,109 @@ class TripService {
     int limit = 20,
   }) async {
     try {
+      print('🔍 [DEBUG] getTripHistory chamado - passengerId: $passengerId, driverId: $driverId');
+      
       var selectQuery = '''
         id, trip_code, status, origin_address, destination_address,
         actual_distance_km, base_fare, additional_fees, requested_at, completed_at,
-        cancelled_at, cancellation_reason, payment_status,
-        ratings(driver_rating, passenger_rating)
+        cancelled_at, cancellation_reason, payment_status, created_at
       ''';
-
-      // Add driver/passenger info based on who is requesting
-      if (passengerId != null) {
-        selectQuery += ', drivers!inner(app_users!inner(full_name, photo_url))';
-      } else if (driverId != null) {
-        selectQuery += ', passengers!inner(app_users!inner(full_name, photo_url))';
-      }
 
       dynamic query = _supabase.from('trips').select(selectQuery);
 
       if (passengerId != null) {
         query = query.eq('passenger_id', passengerId);
+        print('🔍 [DEBUG] Filtrando por passenger_id: $passengerId');
       }
 
       if (driverId != null) {
         query = query.eq('driver_id', driverId);
+        print('🔍 [DEBUG] Filtrando por driver_id: $driverId');
       }
 
       final response = await query
           .order('created_at', ascending: false)
           .limit(limit);
 
-      return response.map((json) => TripHistoryModel.fromJson(json, 
-          isForPassenger: passengerId != null,),).toList();
-    } on PostgrestException {
+      print('🔍 [DEBUG] Query executada com sucesso. Retornados ${response.length} registros');
+      
+      if (response.isEmpty) {
+        print('⚠️ [DEBUG] Nenhuma viagem encontrada no banco de dados');
+        return [];
+      }
+
+      // Para cada viagem, buscar informações do outro usuário
+      final List<TripHistoryModel> trips = [];
+      
+      for (final json in response) {
+        print('🔍 [DEBUG] Processando viagem: ${json['id']}');
+        
+        String? otherUserName;
+        String? otherUserPhotoUrl;
+        
+        try {
+          // Se é passageiro, buscar info do motorista
+          if (passengerId != null && json['driver_id'] != null) {
+            final driverData = await _supabase
+                .from('drivers')
+                .select('app_users!inner(full_name, photo_url)')
+                .eq('id', json['driver_id'])
+                .maybeSingle();
+                
+            if (driverData != null && driverData['app_users'] != null) {
+              otherUserName = driverData['app_users']['full_name'];
+              otherUserPhotoUrl = driverData['app_users']['photo_url'];
+            }
+          }
+          // Se é motorista, buscar info do passageiro  
+          else if (driverId != null && json['passenger_id'] != null) {
+            final passengerData = await _supabase
+                .from('passengers')
+                .select('app_users!inner(full_name, photo_url)')
+                .eq('id', json['passenger_id'])
+                .maybeSingle();
+                
+            if (passengerData != null && passengerData['app_users'] != null) {
+              otherUserName = passengerData['app_users']['full_name'];
+              otherUserPhotoUrl = passengerData['app_users']['photo_url'];
+            }
+          }
+        } catch (e) {
+          print('⚠️ [DEBUG] Erro ao buscar dados do outro usuário: $e');
+          // Continua sem os dados do outro usuário
+        }
+
+        final trip = TripHistoryModel(
+          id: json['id'],
+          tripCode: json['trip_code'],
+          status: json['status'] ?? 'unknown',
+          originAddress: json['origin_address'] ?? '',
+          destinationAddress: json['destination_address'] ?? '',
+          actualDistanceKm: json['actual_distance_km']?.toDouble(),
+          baseFare: (json['base_fare'] ?? 0).toDouble(),
+          additionalFees: (json['additional_fees'] ?? 0).toDouble(),
+          requestedAt: DateTime.parse(json['requested_at'] ?? json['created_at']),
+          completedAt: json['completed_at'] != null ? DateTime.parse(json['completed_at']) : null,
+          cancelledAt: json['cancelled_at'] != null ? DateTime.parse(json['cancelled_at']) : null,
+          cancellationReason: json['cancellation_reason'],
+          paymentStatus: json['payment_status'] ?? 'pending',
+          driverRating: null, // Removeremos ratings por enquanto para simplificar
+          passengerRating: null,
+          otherUserName: otherUserName,
+          otherUserPhotoUrl: otherUserPhotoUrl,
+        );
+        
+        trips.add(trip);
+      }
+
+      print('✅ [DEBUG] ${trips.length} viagens processadas com sucesso');
+      return trips;
+    } on PostgrestException catch (e) {
+      print('❌ [DEBUG] PostgrestException: ${e.message}');
       throw const DatabaseException(
           'Erro ao buscar histórico de viagens. Tente novamente.',);
     } catch (e) {
+      print('❌ [DEBUG] Erro geral: $e');
       throw const DatabaseException(
           'Erro inesperado ao buscar histórico. Tente novamente.',);
     }
@@ -660,54 +729,6 @@ class TripHistoryModel {
     this.otherUserPhotoUrl,
   });
 
-  factory TripHistoryModel.fromJson(Map<String, dynamic> json, {required bool isForPassenger}) {
-    String? otherUserName;
-    String? otherUserPhotoUrl;
-
-    // Extract driver or passenger info
-    if (isForPassenger && json['drivers'] != null) {
-      final driver = json['drivers'];
-      if (driver['users'] != null) {
-        otherUserName = driver['users']['full_name'];
-        otherUserPhotoUrl = driver['users']['photo_url'];
-      }
-    } else if (!isForPassenger && json['passengers'] != null) {
-      final passenger = json['passengers'];
-      if (passenger['users'] != null) {
-        otherUserName = passenger['users']['full_name'];
-        otherUserPhotoUrl = passenger['users']['photo_url'];
-      }
-    }
-
-    // Extract ratings from ratings table
-    double? driverRating;
-    double? passengerRating;
-    if (json['ratings'] != null && json['ratings'].isNotEmpty) {
-      final ratings = json['ratings'][0]; // First rating entry
-      driverRating = ratings['driver_rating']?.toDouble();
-      passengerRating = ratings['passenger_rating']?.toDouble();
-    }
-
-    return TripHistoryModel(
-      id: json['id'],
-      tripCode: json['trip_code'],
-      status: json['status'] ?? 'unknown',
-      originAddress: json['origin_address'] ?? '',
-      destinationAddress: json['destination_address'] ?? '',
-      actualDistanceKm: json['actual_distance_km']?.toDouble(),
-      baseFare: (json['base_fare'] ?? 0).toDouble(),
-      additionalFees: (json['additional_fees'] ?? 0).toDouble(),
-      requestedAt: DateTime.parse(json['requested_at']),
-      completedAt: json['completed_at'] != null ? DateTime.parse(json['completed_at']) : null,
-      cancelledAt: json['cancelled_at'] != null ? DateTime.parse(json['cancelled_at']) : null,
-      cancellationReason: json['cancellation_reason'],
-      paymentStatus: json['payment_status'] ?? 'pending',
-      driverRating: driverRating,
-      passengerRating: passengerRating,
-      otherUserName: otherUserName,
-      otherUserPhotoUrl: otherUserPhotoUrl,
-    );
-  }
   final String id;
   final String? tripCode;
   final String status;

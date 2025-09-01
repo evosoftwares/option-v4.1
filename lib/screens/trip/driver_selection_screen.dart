@@ -72,8 +72,9 @@ class DriverSelectionScreen extends StatefulWidget {
         destinationLongitude: _safeToDouble(destination['longitude']),
         vehicleCategory: args['vehicle_category'] ?? 'standard',
         needsPet: args['needsPet'] ?? false,
-        needsGrocery: args['needsGrocery'] ?? false,
-        needsCondo: args['needsCondo'] ?? false,
+        needsGrocerySpace: args['needsGrocerySpace'] ?? false,
+        isCondoOrigin: args['isCondoOrigin'] ?? false,
+        isCondoDestination: args['isCondoDestination'] ?? false,
         needsAc: false,
         numberOfStops: 0,
         estimatedDistanceKm: 0.0, // Será calculado
@@ -194,8 +195,8 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
           vehicleCategory: widget.tripRequestData.vehicleCategory,
           needsPet: widget.tripRequestData.needsPet,
           needsAC: widget.tripRequestData.needsAc,
-          needsGrocery: widget.tripRequestData.needsGrocery,
-          needsCondo: widget.tripRequestData.needsCondo,
+          needsGrocery: widget.tripRequestData.needsGrocerySpace,
+          needsCondo: widget.tripRequestData.isCondoOrigin || widget.tripRequestData.isCondoDestination,
         );
         
       print('🔍 Criteria criado: $criteria');
@@ -228,8 +229,9 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
                ),
               preferences: TripPreferences(
                 needsPet: widget.tripRequestData.needsPet,
-                needsGrocery: widget.tripRequestData.needsGrocery,
-                needsCondo: widget.tripRequestData.needsCondo,
+                needsGrocerySpace: widget.tripRequestData.needsGrocerySpace,
+                isCondoOrigin: widget.tripRequestData.isCondoOrigin,
+                isCondoDestination: widget.tripRequestData.isCondoDestination,
               ),
               numberOfStops: widget.tripRequestData.numberOfStops,
             );

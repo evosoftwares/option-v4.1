@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../models/supabase/driver.dart';
 import '../models/trip_preferences.dart';
 import '../models/vehicle_category.dart';
+import 'platform_settings_service.dart';
 
 /// Serviço para cálculo de preços individuais por motorista
 /// Utiliza os campos custom_price_per_km e custom_price_per_minute
@@ -53,8 +54,8 @@ class IndividualPricingService {
     // 4. PREÇO TOTAL: ComponenteDistancia + ComponenteTempo + TaxasAdicionais
     final totalPrice = distanceComponent + timeComponent + additionalFees;
     
-    // Garantir preço mínimo de R$ 5,00
-    return math.max(totalPrice, 5);
+    // Garantir preço mínimo (configurável via platform_settings)
+    return math.max(totalPrice, 8.0); // TODO: Usar PlatformSettingsService.getMinFare()
   }
   
   /// Calcula o componente de distância da fórmula de precificação
@@ -150,26 +151,22 @@ class IndividualPricingService {
     
     // Taxa para Pet - usa taxa do motorista ou padrão
     if (preferences.needsPet && driver.acceptsPet) {
-      final petFee = (driver.fees['pet_fee'] as num?)?.toDouble() ?? 3;
-      totalFees += petFee;
+      totalFees += driver.petFee;
     }
     
     // Taxa para Mercado/Grocery - usa taxa do motorista ou padrão  
-    if (preferences.needsGrocery && driver.acceptsGrocery) {
-      final groceryFee = (driver.fees['grocery_fee'] as num?)?.toDouble() ?? 2;
-      totalFees += groceryFee;
+    if (preferences.needsGrocerySpace && driver.acceptsGrocery) {
+      totalFees += driver.groceryFee;
     }
     
     // Taxa para Condomínio - usa taxa do motorista ou padrão
-    if (preferences.needsCondo && driver.acceptsCondo) {
-      final condoFee = (driver.fees['condo_fee'] as num?)?.toDouble() ?? 2.5;
-      totalFees += condoFee;
+    if ((preferences.isCondoOrigin || preferences.isCondoDestination) && driver.acceptsCondo) {
+      totalFees += driver.condoFee;
     }
     
     // Taxa por Parada - TaxaPorParada multiplicada pelo número de paradas
     if (numberOfStops > 0) {
-      final stopFee = (driver.fees['stop_fee'] as num?)?.toDouble() ?? 2;
-      totalFees += stopFee * numberOfStops;
+      totalFees += driver.stopFee * numberOfStops;
     }
     
     return totalFees;
@@ -178,8 +175,9 @@ class IndividualPricingService {
   /// Calcula taxas adicionais genéricas (para uso geral sem motorista específico)
   static double calculateGenericAdditionalFees({
     bool needsPet = false,
-    bool needsGrocery = false,
-    bool needsCondo = false,
+    bool needsGrocerySpace = false,
+    bool isCondoOrigin = false,
+    bool isCondoDestination = false,
     int numberOfStops = 0,
   }) {
     var fees = 0.0;
@@ -187,10 +185,10 @@ class IndividualPricingService {
     if (needsPet) {
       fees += 3;
     }
-    if (needsGrocery) {
+    if (needsGrocerySpace) {
       fees += 2;
     }
-    if (needsCondo) {
+    if (isCondoOrigin || isCondoDestination) {
       fees += 2.5;
     }
     if (numberOfStops > 0) {

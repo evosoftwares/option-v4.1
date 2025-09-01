@@ -93,7 +93,7 @@ class PassengerWalletTransaction {
       processedAt: processedAt ?? this.processedAt,
     );
 
-  bool get isCredit => type == TransactionType.credit || type == TransactionType.cashback || type == TransactionType.refund;
+  bool get isCredit => type == TransactionType.credit || type == TransactionType.refund;
   bool get isDebit => type == TransactionType.tripPayment || type == TransactionType.cancellationFee;
 
   String get formattedAmount {
@@ -141,7 +141,7 @@ class PassengerWalletTransaction {
 enum TransactionType {
   credit('credit'),
   tripPayment('trip_payment'),
-  cashback('cashback'),
+
   refund('refund'),
   cancellationFee('cancellation_fee');
 
@@ -159,8 +159,7 @@ enum TransactionType {
         return 'Recarga';
       case TransactionType.tripPayment:
         return 'Pagamento de viagem';
-      case TransactionType.cashback:
-        return 'Cashback';
+
       case TransactionType.refund:
         return 'Reembolso';
       case TransactionType.cancellationFee:

@@ -2431,14 +2431,7 @@
     "column_default": "0.00",
     "column_comment": null
   },
-  {
-    "table_name": "passenger_wallets",
-    "column_name": "total_cashback",
-    "data_type": "numeric",
-    "is_nullable": "NO",
-    "column_default": "0.00",
-    "column_comment": null
-  },
+
   {
     "table_name": "passenger_wallets",
     "column_name": "created_at",

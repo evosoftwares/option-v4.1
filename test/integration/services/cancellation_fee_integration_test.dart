@@ -12,12 +12,13 @@ void main() {
     late CancellationFeeService cancellationService;
     
     setUpAll(() async {
-      supabase = await SupabaseTestHelper.initialize();
+      await SupabaseTestHelper.initialize();
+      supabase = SupabaseTestHelper.client;
       cancellationService = CancellationFeeService(supabase);
     });
 
     tearDownAll(() async {
-      await SupabaseTestHelper.cleanup();
+      await SupabaseTestHelper.cleanDatabase();
     });
 
     group('Cálculo de Taxa de Cancelamento', () {
@@ -33,7 +34,7 @@ void main() {
           destinationLongitude: -46.6433,
           vehicleCategory: 'economico',
           needsPet: false,
-          needsGrocery: false,
+          needsGrocerySpace: false,
           isCondoDestination: false,
           isCondoOrigin: false,
           needsAc: false,
@@ -70,7 +71,7 @@ void main() {
           destinationLongitude: -46.6433,
           vehicleCategory: 'economico',
           needsPet: false,
-          needsGrocery: false,
+          needsGrocerySpace: false,
           isCondoDestination: false,
           isCondoOrigin: false,
           needsAc: false,
@@ -94,11 +95,11 @@ void main() {
         // Assert
         expect(result.shouldChargeFee, isTrue);
         expect(result.feeAmount, greaterThan(0.0));
-        expect(result.baseFee, equals(4.0)); // 20% de R$ 20,00 = R$ 4,00
+        expect(result.baseFee, equals(4.0)); // 20% de R\$ 20,00 = R\$ 4,00
       });
 
-      test('Deve aplicar taxa máxima de R$ 10,00', () async {
-        // Arrange - Viagem cara de R$ 100,00
+      test('Deve aplicar taxa máxima de R\$ 10,00', () async {
+        // Arrange - Viagem cara de R\$ 100,00
         final tripRequest = TripRequest(
           passengerId: 'passenger-1',
           originAddress: 'Rua A, 123',
@@ -109,7 +110,7 @@ void main() {
           destinationLongitude: -46.6433,
           vehicleCategory: 'executivo',
           needsPet: false,
-          needsGrocery: false,
+          needsGrocerySpace: false,
           isCondoDestination: false,
           isCondoOrigin: false,
           needsAc: false,
@@ -132,7 +133,7 @@ void main() {
 
         // Assert
         expect(result.shouldChargeFee, isTrue);
-        expect(result.baseFee, equals(10.0)); // Máximo de R$ 10,00
+        expect(result.baseFee, equals(10.0)); // Máximo de R\$ 10,00
       });
 
       test('Deve cobrar 100% da taxa em caso de No-Show', () async {
@@ -147,7 +148,7 @@ void main() {
           destinationLongitude: -46.6433,
           vehicleCategory: 'economico',
           needsPet: false,
-          needsGrocery: false,
+          needsGrocerySpace: false,
           isCondoDestination: false,
           isCondoOrigin: false,
           needsAc: false,
@@ -187,7 +188,7 @@ void main() {
           destinationLongitude: -46.6433,
           vehicleCategory: 'economico',
           needsPet: false,
-          needsGrocery: false,
+          needsGrocerySpace: false,
           isCondoDestination: false,
           isCondoOrigin: false,
           needsAc: false,
@@ -234,9 +235,12 @@ void main() {
           approvalStatus: 'approved',
           isOnline: true,
           acceptsPet: false,
+          petFee: 0.0,
           acceptsGrocery: false,
+          groceryFee: 0.0,
           acceptsCondo: false,
-          fees: {},
+          condoFee: 0.0,
+          stopFee: 0.0,
           currentLatitude: -23.5525, // Posição atual mais próxima do destino
           currentLongitude: -46.6353,
           ratings: 4.5,
@@ -253,7 +257,7 @@ void main() {
           originLongitude: -46.6333,
           vehicleCategory: 'economico',
           needsPet: false,
-          needsGrocery: false,
+          needsGrocerySpace: false,
           isCondoDestination: false,
           isCondoOrigin: false,
           needsAc: false,
@@ -317,7 +321,7 @@ void main() {
           destinationLongitude: 0,
           vehicleCategory: 'economico',
           needsPet: false,
-          needsGrocery: false,
+          needsGrocerySpace: false,
           isCondoDestination: false,
           isCondoOrigin: false,
           needsAc: false,
@@ -356,7 +360,7 @@ void main() {
           destinationLongitude: -46.6433,
           vehicleCategory: 'economico',
           needsPet: false,
-          needsGrocery: false,
+          needsGrocerySpace: false,
           isCondoDestination: false,
           isCondoOrigin: false,
           needsAc: false,

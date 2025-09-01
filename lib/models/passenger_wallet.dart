@@ -6,7 +6,7 @@ class PassengerWallet {
     required this.availableBalance,
     required this.pendingBalance,
     required this.totalSpent,
-    required this.totalCashback,
+
     required this.createdAt,
     required this.updatedAt,
   });
@@ -18,7 +18,7 @@ class PassengerWallet {
       availableBalance: (map['available_balance'] as num).toDouble(),
       pendingBalance: (map['pending_balance'] as num).toDouble(),
       totalSpent: (map['total_spent'] as num).toDouble(),
-      totalCashback: (map['total_cashback'] as num).toDouble(),
+  
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
     );
@@ -29,7 +29,7 @@ class PassengerWallet {
   final double availableBalance;
   final double pendingBalance;
   final double totalSpent;
-  final double totalCashback;
+
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -40,7 +40,7 @@ class PassengerWallet {
       'available_balance': availableBalance,
       'pending_balance': pendingBalance,
       'total_spent': totalSpent,
-      'total_cashback': totalCashback,
+  
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -52,7 +52,7 @@ class PassengerWallet {
     double? availableBalance,
     double? pendingBalance,
     double? totalSpent,
-    double? totalCashback,
+
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => PassengerWallet(
@@ -62,7 +62,7 @@ class PassengerWallet {
       availableBalance: availableBalance ?? this.availableBalance,
       pendingBalance: pendingBalance ?? this.pendingBalance,
       totalSpent: totalSpent ?? this.totalSpent,
-      totalCashback: totalCashback ?? this.totalCashback,
+  
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -78,7 +78,7 @@ class PassengerWallet {
         other.availableBalance == availableBalance &&
         other.pendingBalance == pendingBalance &&
         other.totalSpent == totalSpent &&
-        other.totalCashback == totalCashback &&
+    
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt;
   }
@@ -90,10 +90,10 @@ class PassengerWallet {
         availableBalance.hashCode ^
         pendingBalance.hashCode ^
         totalSpent.hashCode ^
-        totalCashback.hashCode ^
+    
         createdAt.hashCode ^
         updatedAt.hashCode;
 
   @override
-  String toString() => 'PassengerWallet(id: $id, passengerId: $passengerId, userId: $userId, availableBalance: $availableBalance, pendingBalance: $pendingBalance, totalSpent: $totalSpent, totalCashback: $totalCashback, createdAt: $createdAt, updatedAt: $updatedAt)';
+  String toString() => 'PassengerWallet(id: $id, passengerId: $passengerId, userId: $userId, availableBalance: $availableBalance, pendingBalance: $pendingBalance, totalSpent: $totalSpent, createdAt: $createdAt, updatedAt: $updatedAt)';
 }

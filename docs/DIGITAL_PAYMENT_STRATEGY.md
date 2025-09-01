@@ -130,7 +130,7 @@ Este documento detalha a decisão estratégica de focar exclusivamente em métod
 
 ### Curto Prazo (3-6 meses)
 - Otimização da experiência PIX
-- Implementação de cashback
+
 - Programa de fidelidade na carteira
 
 ### Médio Prazo (6-12 meses)

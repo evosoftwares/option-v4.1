@@ -5,4 +5,11 @@ class TestConstants {
 
   // New: optional Service Role key for privileged test operations (cleanup/seed)
   static const String supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsYndhY21hdm5ndG9uYXV4bnRlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcwODcxNjMzMiwiZXhwIjoyMDI0MjkyMzMyfQ.F9hqR7khKEprPzy72MoipXfrq5tympkIHYkiuf8efNk';
+  
+  // Test entity IDs for consistent testing
+  static const String testTripId = 'test-trip-001';
+  static const String testTripRequestId = 'test-trip-request-001';
+  static const String testDriverId = 'test-driver-001';
+  static const String testPassengerId = 'test-passenger-001';
+  static const String testUserId = 'test-user-001';
 }

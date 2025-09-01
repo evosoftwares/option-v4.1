@@ -151,7 +151,7 @@ class WalletService {
         'available_balance': 0.0,
         'pending_balance': 0.0,
         'total_spent': 0.0,
-        'total_cashback': 0.0,
+
       };
       final data = await _supabase
           .from('passenger_wallets')
@@ -274,49 +274,7 @@ class WalletService {
     }
   }
 
-  Future<PassengerWalletTransaction> addCashback({
-    required String passengerId,
-    required double amount,
-    String description = 'Cashback',
-    String? tripId,
-    Map<String, dynamic>? metadata,
-  }) async {
-    try {
-      final walletId = passengerId; // Assuming wallet_id is same as passenger_id
-      final payload = {
-        'wallet_id': walletId,
-        'passenger_id': passengerId,
-        'type': TransactionType.cashback.value,
-        'amount': amount,
-        'description': description,
-        'trip_id': tripId,
-        'status': TransactionStatus.completed.value,
-        'metadata': metadata,
-        'processed_at': DateTime.now().toIso8601String(),
-      };
 
-      final transactionData = await _supabase
-          .from('passenger_wallet_transactions')
-          .insert(payload)
-          .select()
-          .single();
-
-      // Update wallet balance and total cashback
-      await _supabase
-          .from('passenger_wallets')
-          .update({
-            'available_balance': 'available_balance + $amount',
-            'total_cashback': 'total_cashback + $amount',
-          })
-          .eq('passenger_id', passengerId);
-
-      return PassengerWalletTransaction.fromMap(transactionData);
-    } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao adicionar cashback. Por favor, tente novamente mais tarde.', e.code);
-    } catch (e) {
-      throw const DatabaseException('Erro inesperado ao adicionar cashback. Por favor, tente novamente mais tarde.');
-    }
-  }
 
   Future<List<PaymentMethod>> getPaymentMethods(String userId) async {
     try {
@@ -397,7 +355,7 @@ class WalletService {
         'available_balance': wallet.availableBalance,
         'pending_balance': wallet.pendingBalance,
         'total_spent': wallet.totalSpent,
-        'total_cashback': wallet.totalCashback,
+
         'recent_transactions_count': recentTransactions.length,
       };
     } on PostgrestException catch (e) {

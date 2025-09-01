@@ -10,11 +10,13 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/user_type_screen.dart';
 import 'screens/debug/supabase_debug_screen.dart';
+import 'screens/driver/ac_policy_screen.dart';
 import 'screens/driver/custom_pricing_screen.dart';
 import 'screens/driver/driver_documents_screen.dart';
 import 'screens/driver/driver_excluded_zones_screen.dart';
 import 'screens/driver/driver_home_screen.dart';
 import 'screens/driver/driver_operation_zones_screen.dart';
+import 'screens/driver/driver_requests_screen.dart';
 import 'screens/driver/driver_trip_screen.dart';
 import 'screens/driver/statistics_screen.dart';
 import 'screens/driver/vehicle_screen.dart';
@@ -37,9 +39,13 @@ import 'screens/trip/trip_options_screen.dart';
 import 'screens/trip/waiting_driver_screen.dart';
 import 'screens/trips/trip_history_screen.dart';
 import 'screens/wallet/wallet_screen.dart';
+import 'screens/rating/trip_rating_screen.dart';
 import 'services/onesignal_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/supabase_helper.dart';
+
+// Global navigator key for navigation from services
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -125,6 +131,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) => ChangeNotifierProvider<StepperController>(
       create: (_) => StepperController(),
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         title: 'Option',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme.copyWith(
@@ -156,6 +163,7 @@ class MyApp extends StatelessWidget {
           '/profile_edit': (context) => const ProfileEditScreen(),
           '/driver_menu': (context) => const DriverMenuScreen(),
           '/driver_home': (context) => const DriverHomeScreen(),
+          '/driver-requests': (context) => const DriverRequestsScreen(),
           '/driver_trip': (context) => const DriverTripScreen(),
           '/user_menu': (context) => const UserMenuScreen(),
           '/wallet': (context) => const WalletScreen(),
@@ -168,6 +176,7 @@ class MyApp extends StatelessWidget {
           '/vehicle': (context) => const VehicleScreen(),
           '/working_hours': (context) => const WorkingHoursScreen(),
           '/custom_pricing': (context) => const CustomPricingScreen(),
+          '/ac_policy': (context) => const AcPolicyScreen(),
           '/statistics': (context) => const StatisticsScreen(),
           '/driver_operation_zones': (context) => const DriverOperationZonesScreen(),
           '/payments': (context) => const PaymentsScreen(),
@@ -197,6 +206,9 @@ class MyApp extends StatelessWidget {
             case PassengerTripScreen.routeName:
               final args = settings.arguments as Map<String, dynamic>?;
               return _createSlideRoute(PassengerTripScreen.fromArgs(args), settings);
+            case TripRatingScreen.routeName:
+              final args = settings.arguments as Map<String, dynamic>?;
+              return _createSlideRoute(TripRatingScreen.fromArgs(args), settings);
           }
           return null;
         },

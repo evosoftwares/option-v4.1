@@ -296,7 +296,7 @@ class TripRequestCard extends StatelessWidget {
     );
 
   bool get _hasSpecialRequirements => request.needsPet || 
-           request.needsGrocery || 
+           request.needsGrocerySpace || 
            request.needsAc;
 
   Widget _buildSpecialRequirements(BuildContext context) => Container(
@@ -325,7 +325,7 @@ class TripRequestCard extends StatelessWidget {
                   icon: Icons.pets,
                   label: 'Pet',
                 ),
-              if (request.needsGrocery)
+              if (request.needsGrocerySpace)
                 Row(
                   children: const [
                     Icon(Icons.local_grocery_store, size: 16),

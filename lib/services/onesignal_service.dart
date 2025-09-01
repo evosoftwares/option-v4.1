@@ -4,12 +4,14 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../main.dart';
 import 'local_notification_service.dart';
 
 /// Serviço completo para gerenciamento de OneSignal
@@ -29,6 +31,10 @@ class OneSignalService {
   
   // OneSignal App ID - configurar no seu dashboard
   static const String _appId = '117ec6b9-5a4b-411d-96bd-dd3eb7009600';
+  
+  // OneSignal REST API constants
+  static const String _baseUrl = 'https://onesignal.com/api/v1';
+  static const String _restApiKey = 'os_v2_app_cf7mnok2jnar3fv53u7loaewaaaxjc6lppnulmu4pjlen2vkwujlae3m2c4xioyszq7opy7vqvwlh34s5pcx4uv2vtfmrapilf7q6ni';
   
   /// Inicializa o serviço OneSignal
   Future<void> initialize() async {
@@ -386,10 +392,82 @@ class OneSignalService {
     }
   }
   
+  /// Navega para tela de solicitações do motorista
+  void _navigateToDriverRequests(BuildContext context, Map<String, dynamic> data) {
+    try {
+      _logger.i('Navegando para tela de solicitações do motorista');
+      
+      // Navegar para rota de solicitações
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/driver-requests',
+        (route) => route.settings.name == '/driver-home' || route.isFirst,
+      );
+    } catch (e) {
+      _logger.e('Erro ao navegar para solicitações: $e');
+    }
+  }
+  
+  /// Salva solicitação de navegação para execução posterior
+  Future<void> _saveNavigationRequest(String route, Map<String, dynamic> data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('pending_navigation_route', route);
+      await prefs.setString('pending_navigation_data', jsonEncode(data));
+      await prefs.setString('pending_navigation_timestamp', DateTime.now().toIso8601String());
+      _logger.i('Solicitação de navegação salva: $route');
+    } catch (e) {
+      _logger.e('Erro ao salvar solicitação de navegação: $e');
+    }
+  }
+  
+  /// Verifica e executa navegação pendente
+  Future<void> checkPendingNavigation(BuildContext context) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final route = prefs.getString('pending_navigation_route');
+      final dataString = prefs.getString('pending_navigation_data');
+      final timestampString = prefs.getString('pending_navigation_timestamp');
+      
+      if (route != null && dataString != null && timestampString != null) {
+        final timestamp = DateTime.parse(timestampString);
+        final now = DateTime.now();
+        
+        // Navegar apenas se a solicitação for recente (até 5 minutos)
+        if (now.difference(timestamp).inMinutes <= 5) {
+          final data = jsonDecode(dataString) as Map<String, dynamic>;
+          
+          switch (route) {
+            case 'driver_requests':
+              _navigateToDriverRequests(context, data);
+              break;
+            default:
+              _logger.w('Rota de navegação desconhecida: $route');
+          }
+        }
+        
+        // Limpar dados de navegação pendente
+        await prefs.remove('pending_navigation_route');
+        await prefs.remove('pending_navigation_data');
+        await prefs.remove('pending_navigation_timestamp');
+      }
+    } catch (e) {
+      _logger.e('Erro ao verificar navegação pendente: $e');
+    }
+  }
+
   /// Manipula notificação de solicitação de viagem
   void _handleTripRequestNotification(Map<String, dynamic> data) {
-    // Implementar navegação para tela de solicitações
-    _logger.i('Processando notificação de solicitação de viagem');
+    _logger.i('Processando notificação de solicitação de viagem: $data');
+    
+    // Tentar obter contexto do navigator global
+    final context = navigatorKey.currentContext;
+    if (context != null && context.mounted) {
+      _navigateToDriverRequests(context, data);
+    } else {
+      _logger.w('Context não disponível para navegação automática');
+      // Salvar dados para navegação posterior
+      _saveNavigationRequest('driver_requests', data);
+    }
   }
   
   /// Manipula notificação de atualização de viagem
@@ -451,7 +529,20 @@ class OneSignalService {
     }
   }
   
-  /// Envia notificação para um Player ID específico
+  /// Valida se o Player ID tem formato válido do OneSignal
+  bool _isValidPlayerId(String playerId) {
+    if (playerId.isEmpty) return false;
+    
+    // OneSignal Player IDs são UUIDs de 36 caracteres com hífens
+    // Exemplo: 12345678-1234-1234-1234-123456789012
+    final playerIdRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+    );
+    
+    return playerIdRegex.hasMatch(playerId);
+  }
+
+  /// Envia notificação para um Player ID específico usando OneSignal REST API
   Future<bool> sendNotificationToPlayerId({
     required String playerId,
     required String title,
@@ -460,26 +551,98 @@ class OneSignalService {
     String? imageUrl,
   }) async {
     try {
-      // Com OneSignal, normalmente você usa a REST API do seu backend
-      // Aqui está um exemplo usando tags para segmentação
+      // Validar Player ID primeiro
+      if (!_isValidPlayerId(playerId)) {
+        _logger.w('Player ID inválido: $playerId');
+        return false;
+      }
       
-      final notificationData = {
+      // Preparar payload da notificação
+      final payload = {
+        'app_id': _appId,
+        'include_player_ids': [playerId],
+        'headings': {'en': title, 'pt': title},
+        'contents': {'en': body, 'pt': body},
+        'data': data ?? {},
+      };
+      
+      // Adicionar imagem se fornecida
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        payload['large_icon'] = imageUrl;
+        payload['big_picture'] = imageUrl;
+      }
+      
+      // Configurar som personalizado para motoristas (detectado pelos dados)
+      if (data != null && data['type'] == 'trip_request') {
+        payload['android_sound'] = 'chegoucorridaoption';
+        payload['ios_sound'] = 'chegoucorridaOption.mp3';
+        payload['priority'] = 10; // Alta prioridade
+        payload['android_channel_id'] = 'ride_offers';
+      }
+      
+      _logger.i('Enviando notificação OneSignal para: ${playerId.substring(0, 8)}...');
+      _logger.d('Payload: ${jsonEncode(payload)}');
+      
+      // Fazer chamada HTTP para OneSignal REST API
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic $_restApiKey',
+        },
+        body: jsonEncode(payload),
+      );
+      
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final notificationId = responseData['id'];
+        
+        _logger.i('✅ OneSignal notification sent successfully');
+        _logger.i('   Notification ID: $notificationId');
+        _logger.i('   Recipients: ${responseData['recipients']}');
+        
+        // Registrar no histórico com sucesso
+        await _logNotificationSent({
+          'player_id': playerId,
+          'notification_id': notificationId,
+          'title': title,
+          'body': body,
+          'data': data ?? {},
+          'image': imageUrl,
+          'status': 'sent',
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+        
+        return true;
+      } else {
+        _logger.e('❌ OneSignal API Error: ${response.statusCode}');
+        _logger.e('   Response: ${response.body}');
+        
+        // Registrar falha no histórico
+        await _logNotificationSent({
+          'player_id': playerId,
+          'title': title,
+          'body': body,
+          'status': 'failed',
+          'error': 'HTTP ${response.statusCode}: ${response.body}',
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+        
+        return false;
+      }
+    } catch (e, stackTrace) {
+      _logger.e('❌ Erro ao enviar notificação OneSignal', error: e, stackTrace: stackTrace);
+      
+      // Registrar falha no histórico
+      await _logNotificationSent({
         'player_id': playerId,
         'title': title,
         'body': body,
-        'data': data ?? {},
-        'image': imageUrl,
+        'status': 'error',
+        'error': e.toString(),
         'timestamp': DateTime.now().toIso8601String(),
-      };
+      });
       
-      // Registrar no histórico
-      await _logNotificationSent(notificationData);
-      
-      _logger.i('Notificação enviada com sucesso para Player ID: ${playerId.substring(0, 20)}...');
-      return true;
-      
-    } catch (e) {
-      _logger.e('Erro ao enviar notificação', error: e);
       return false;
     }
   }
@@ -523,7 +686,10 @@ class OneSignalService {
         'sent_at': notificationData['timestamp'],
         'sender_id': Supabase.instance.client.auth.currentUser?.id,
         'platform': 'onesignal',
-        'status': 'sent',
+        'status': notificationData['status'] ?? 'sent',
+        'notification_id': notificationData['notification_id'],
+        'player_id': notificationData['player_id'],
+        'error_message': notificationData['error'],
       });
     } catch (e) {
       _logger.e('Erro ao registrar notificação enviada', error: e);

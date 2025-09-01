@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:option/main.dart';
 import 'package:option/screens/passenger/passenger_home_screen.dart';
 import 'package:option/screens/trip/trip_options_screen.dart';
 

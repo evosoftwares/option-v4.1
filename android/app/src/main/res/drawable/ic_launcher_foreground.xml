@@ -20,9 +20,11 @@
                              C 35,50 30,45 30,40
                              L 30,30 Z"/>
         <!-- Círculo interno da letra O -->
-        <circle android:fillColor="#2196F3"
-                android:cx="40"
-                android:cy="35"
-                android:r="8"/>
+        <path android:fillColor="#2196F3"
+              android:pathData="M 40,27 
+                               C 44.4,27 48,30.6 48,35
+                               C 48,39.4 44.4,43 40,43
+                               C 35.6,43 32,39.4 32,35
+                               C 32,30.6 35.6,27 40,27 Z"/>
     </group>
 </vector>

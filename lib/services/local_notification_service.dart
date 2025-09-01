@@ -26,7 +26,9 @@ class LocalNotificationService {
 
     const initializationSettingsIOS =
         DarwinInitializationSettings(
-      
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
 
     const initializationSettings = InitializationSettings(
@@ -53,7 +55,6 @@ class LocalNotificationService {
         'Ofertas de Corrida',
         description: 'Notificações quando uma nova corrida está disponível',
         importance: Importance.high,
-        // vibrationPattern removed to avoid const factory usage in const context
       );
 
       await _flutterLocalNotificationsPlugin
@@ -100,8 +101,15 @@ class LocalNotificationService {
     }
 
     // Configurar som baseado no tipo de usuário
+    // Para motoristas: som personalizado, para passageiros: som padrão
     final androidSound = isDriver ? 'chegoucorridaoption' : null;
-    final iOSSound = isDriver ? 'chegoucorridaoption.mp3' : null;
+    final iOSSound = isDriver ? 'chegoucorridaOption.mp3' : null;
+    
+    if (kDebugMode && isDriver) {
+      print('🔔 LocalNotificationService: Som personalizado para motorista');
+      print('  Android: $androidSound');
+      print('  iOS: $iOSSound');
+    }
 
     final androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
@@ -111,9 +119,14 @@ class LocalNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       sound: androidSound != null ? RawResourceAndroidNotificationSound(androidSound) : null,
-      // vibrationPattern removed to avoid const factory usage in const context
+      playSound: androidSound != null,
+      enableVibration: true,
       category: AndroidNotificationCategory.call,
       fullScreenIntent: true,
+      ticker: 'Nova solicitação de viagem',
+      autoCancel: false,
+      ongoing: isDriver, // Para motoristas, não auto-cancelar
+      timeoutAfter: isDriver ? 30000 : null, // 30 segundos timeout para motoristas
     );
 
     final iOSPlatformChannelSpecifics =

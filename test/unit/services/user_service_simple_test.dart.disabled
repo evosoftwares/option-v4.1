@@ -11,8 +11,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
   SupabaseClient,
   GoTrueClient,
   SupabaseQueryBuilder,
-  PostgrestFilterBuilder,
   PostgrestTransformBuilder,
+], customMocks: [
+  MockSpec<PostgrestFilterBuilder<List<Map<String, dynamic>>>>(),
 ])
 import 'user_service_simple_test.mocks.dart';
 
