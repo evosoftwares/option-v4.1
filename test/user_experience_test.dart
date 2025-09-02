@@ -5,11 +5,11 @@ import 'package:option/screens/trip/trip_options_screen.dart';
 
 void main() {
   group('User Experience Tests - Feedback Visual', () {
-    testWidgets('PassengerHomeScreen deve ter feedback visual adequado', (WidgetTester tester) async {
+    testWidgets('PassengerHomeScreen deve ter feedback visual adequado', (tester) async {
       print('🧪 === TESTANDO FEEDBACK VISUAL PASSANGER HOME ===');
       
-      await tester.pumpWidget(MaterialApp(
-        home: const PassengerHomeScreen(),
+      await tester.pumpWidget(const MaterialApp(
+        home: PassengerHomeScreen(),
       ));
       
       // Verificar estado inicial
@@ -30,7 +30,7 @@ void main() {
       print('✅ Botão está desabilitado quando origem/destino não preenchidos');
     });
     
-    testWidgets('TripOptionsScreen deve mostrar indicadores de loading', (WidgetTester tester) async {
+    testWidgets('TripOptionsScreen deve mostrar indicadores de loading', (tester) async {
       print('🧪 === TESTANDO FEEDBACK VISUAL TRIP OPTIONS ===');
       
       // Dados de teste

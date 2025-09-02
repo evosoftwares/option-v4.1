@@ -1,5 +1,6 @@
 /// Sistema de notificação de erros para o usuário
 /// Integrado com o sistema de tratamento de erros da aplicação
+library;
 
 import 'package:flutter/material.dart';
 import 'app_error.dart';
@@ -14,9 +15,9 @@ abstract class ErrorNotifier {
 
 /// Notificador que usa SnackBar
 class SnackBarErrorNotifier implements ErrorNotifier {
-  final GlobalKey<ScaffoldMessengerState>? scaffoldMessengerKey;
 
   SnackBarErrorNotifier({this.scaffoldMessengerKey});
+  final GlobalKey<ScaffoldMessengerState>? scaffoldMessengerKey;
 
   @override
   void showError(AppError error) {
@@ -89,9 +90,7 @@ class SnackBarErrorNotifier implements ErrorNotifier {
           action: SnackBarAction(
             label: 'Fechar',
             textColor: Colors.white,
-            onPressed: () {
-              scaffoldMessenger.hideCurrentSnackBar();
-            },
+            onPressed: scaffoldMessenger.hideCurrentSnackBar,
           ),
         ),
       );
@@ -123,9 +122,9 @@ class SnackBarErrorNotifier implements ErrorNotifier {
 
 /// Notificador que usa Dialog
 class DialogErrorNotifier implements ErrorNotifier {
-  final GlobalKey<NavigatorState>? navigatorKey;
 
   DialogErrorNotifier({this.navigatorKey});
+  final GlobalKey<NavigatorState>? navigatorKey;
 
   @override
   void showError(AppError error) {
@@ -136,15 +135,12 @@ class DialogErrorNotifier implements ErrorNotifier {
       iconColor: Colors.red,
       actions: [
         TextButton(
-          onPressed: () => _closeDialog(),
+          onPressed: _closeDialog,
           child: const Text('OK'),
         ),
         if (error.severity == ErrorSeverity.critical)
           TextButton(
-            onPressed: () {
-              _closeDialog();
-              // TODO: Implementar envio de relatório de erro
-            },
+            onPressed: _closeDialog,
             child: const Text('Reportar'),
           ),
       ],
@@ -160,7 +156,7 @@ class DialogErrorNotifier implements ErrorNotifier {
       iconColor: Colors.green,
       actions: [
         TextButton(
-          onPressed: () => _closeDialog(),
+          onPressed: _closeDialog,
           child: const Text('OK'),
         ),
       ],
@@ -176,7 +172,7 @@ class DialogErrorNotifier implements ErrorNotifier {
       iconColor: Colors.orange,
       actions: [
         TextButton(
-          onPressed: () => _closeDialog(),
+          onPressed: _closeDialog,
           child: const Text('OK'),
         ),
       ],
@@ -192,7 +188,7 @@ class DialogErrorNotifier implements ErrorNotifier {
       iconColor: Colors.blue,
       actions: [
         TextButton(
-          onPressed: () => _closeDialog(),
+          onPressed: _closeDialog,
           child: const Text('OK'),
         ),
       ],
@@ -251,9 +247,9 @@ class DialogErrorNotifier implements ErrorNotifier {
 
 /// Notificador composto que pode usar múltiplos notificadores
 class CompositeErrorNotifier implements ErrorNotifier {
-  final List<ErrorNotifier> _notifiers;
 
   CompositeErrorNotifier(this._notifiers);
+  final List<ErrorNotifier> _notifiers;
 
   @override
   void showError(AppError error) {
@@ -286,13 +282,13 @@ class CompositeErrorNotifier implements ErrorNotifier {
 
 /// Singleton para gerenciar o sistema de notificação de erros
 class ErrorNotificationService {
+
+  ErrorNotificationService._internal();
   static ErrorNotificationService? _instance;
   static ErrorNotificationService get instance {
     _instance ??= ErrorNotificationService._internal();
     return _instance!;
   }
-
-  ErrorNotificationService._internal();
 
   ErrorNotifier? _notifier;
 

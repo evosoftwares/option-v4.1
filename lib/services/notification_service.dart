@@ -113,7 +113,7 @@ class NotificationService {
         .from('notifications')
         .stream(primaryKey: ['id'])
         .eq('user_id', userId)
-        .order('sent_at', ascending: false) // Corrigido: usar 'sent_at' do banco com ordem descendente
+        .order('sent_at') // Corrigido: usar 'sent_at' do banco com ordem descendente
         .map((data) => data.map(NotificationModel.fromJson).toList());
 
   // Stream unread count
@@ -184,7 +184,7 @@ class NotificationService {
     const maxRetries = 3;
     const retryDelay = Duration(seconds: 2);
     
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+    for (var attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         print('🔔 Tentativa $attempt/$maxRetries - Enviando notificação para motorista $driverId');
         
@@ -202,8 +202,8 @@ class NotificationService {
               .single(),
         ]);
         
-        final driverData = results[0] as Map<String, dynamic>;
-        final requestData = results[1] as Map<String, dynamic>;
+        final driverData = results[0];
+        final requestData = results[1];
         
         // 2. Extrair dados necessários
         final playerId = driverData['onesignal_player_id'] as String?;
@@ -223,8 +223,8 @@ class NotificationService {
           'expires_at': requestData['expires_at'],
         };
         
-        bool notificationSent = false;
-        String failureReason = '';
+        var notificationSent = false;
+        var failureReason = '';
         
         // 4. Tentar OneSignal primeiro (método preferido)
         if (playerId != null && playerId.isNotEmpty) {

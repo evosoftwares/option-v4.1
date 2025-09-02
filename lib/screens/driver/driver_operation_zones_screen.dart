@@ -139,7 +139,7 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
         Marker(
           markerId: MarkerId('point_${_currentPolygonPoints.length}'),
           position: point,
-          icon: BitmapDescriptor.defaultMarkerWithHue(0.0),
+          icon: BitmapDescriptor.defaultMarkerWithHue(0),
         ),
       );
     });

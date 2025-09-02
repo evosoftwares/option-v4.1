@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/screens/rating/trip_rating_screen.dart';
+import 'package:option/screens/rating/trip_rating_screen.dart';
 
 /// Testes unitários simples para validar nossa implementação
 void main() {

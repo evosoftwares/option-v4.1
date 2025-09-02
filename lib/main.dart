@@ -14,6 +14,7 @@ import 'screens/driver/ac_policy_screen.dart';
 import 'screens/driver/custom_pricing_screen.dart';
 import 'screens/driver/driver_documents_screen.dart';
 import 'screens/driver/driver_excluded_zones_screen.dart';
+import 'screens/driver/driver_unavailable_neighborhoods_screen.dart';
 import 'screens/driver/driver_home_screen.dart';
 import 'screens/driver/driver_operation_zones_screen.dart';
 import 'screens/driver/driver_requests_screen.dart';
@@ -30,7 +31,9 @@ import 'screens/passenger/passenger_home_screen.dart';
 import 'screens/passenger/passenger_trip_screen.dart';
 import 'screens/payments/payments_screen.dart';
 import 'screens/profile/profile_edit_screen.dart';
+import 'screens/rating/trip_rating_screen.dart';
 import 'screens/saved_places_screen.dart';
+import 'screens/stepper/driver_stepper.dart';
 import 'screens/stepper/stepper_demo_screen.dart';
 import 'screens/stepper/user_registration_stepper.dart';
 import 'screens/trip/additional_stop_screen.dart';
@@ -39,7 +42,6 @@ import 'screens/trip/trip_options_screen.dart';
 import 'screens/trip/waiting_driver_screen.dart';
 import 'screens/trips/trip_history_screen.dart';
 import 'screens/wallet/wallet_screen.dart';
-import 'screens/rating/trip_rating_screen.dart';
 import 'services/onesignal_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/supabase_helper.dart';
@@ -160,6 +162,7 @@ class MyApp extends StatelessWidget {
           '/home': (context) => const PassengerHomeScreen(),
           '/stepper_demo': (context) => const StepperDemoScreen(),
           '/registration_stepper': (context) => const UserRegistrationStepper(),
+          '/driver_stepper': (context) => const DriverStepper(),
           '/profile_edit': (context) => const ProfileEditScreen(),
           '/driver_menu': (context) => const DriverMenuScreen(),
           '/driver_home': (context) => const DriverHomeScreen(),
@@ -172,6 +175,7 @@ class MyApp extends StatelessWidget {
           '/saved_places': (context) => const SavedPlacesScreen(),
           '/about': (context) => const AboutScreen(),
           '/driver_excluded_zones': (context) => const DriverExcludedZonesScreen(),
+          '/driver_unavailable_neighborhoods': (context) => const DriverUnavailableNeighborhoodsScreen(),
           '/driver_documents': (context) => const DriverDocumentsScreen(),
           '/vehicle': (context) => const VehicleScreen(),
           '/working_hours': (context) => const WorkingHoursScreen(),

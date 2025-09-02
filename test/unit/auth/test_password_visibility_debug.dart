@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:option/screens/auth/register_screen.dart';
 
 void main() {
-  testWidgets('Debug password visibility icons', (WidgetTester tester) async {
+  testWidgets('Debug password visibility icons', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: RegisterScreen(),
@@ -22,7 +22,7 @@ void main() {
     final allIcons = find.byType(Icon);
     print('Total icons found: ${allIcons.evaluate().length}');
     
-    for (int i = 0; i < allIcons.evaluate().length; i++) {
+    for (var i = 0; i < allIcons.evaluate().length; i++) {
       final icon = tester.widget<Icon>(allIcons.at(i));
       print('Icon $i: ${icon.icon} (${icon.icon?.codePoint.toRadixString(16)})');
       

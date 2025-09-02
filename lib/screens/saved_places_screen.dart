@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/app_card.dart';
 import '../widgets/logo_branding.dart';
+import '../widgets/feedback/index.dart';
 
 class SavedPlacesScreen extends StatefulWidget {
   const SavedPlacesScreen({super.key});
@@ -97,18 +98,12 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                     ),
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton.icon(
+                      child: AppButton(
                         onPressed: _showAddPlaceScreen,
-                        icon: const Icon(Icons.add_location),
-                        label: const Text('Adicionar local'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
+                        text: 'Adicionar local',
+                        icon: Icons.add_location,
+                        type: AppButtonType.primary,
+                        size: AppButtonSize.large,
                       ),
                     ),
                   ],

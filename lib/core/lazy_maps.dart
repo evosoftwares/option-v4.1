@@ -107,7 +107,7 @@ class LazyMaps {
   }) => maps.GoogleMap(
       initialCameraPosition: maps.CameraPosition(
         target: initialLocation,
-        zoom: 14.0,
+        zoom: 14,
       ),
       markers: markers ?? <maps.Marker>{},
       onMapCreated: onMapCreated,

@@ -355,7 +355,7 @@ void main() {
         when(mockGoTrueClient.signUp(
           email: anyNamed('email'),
           password: anyNamed('password'),
-        )).thenThrow(const AuthException('Email already exists'));
+        )).thenThrow(const AuthException('Email já existe'));
 
         await tester.pumpWidget(
           const MaterialApp(
@@ -375,7 +375,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Should show error message
-        expect(find.text('Erro de autenticação: Email already exists'), findsOneWidget);
+        expect(find.text('Erro de autenticação: Email já existe'), findsOneWidget);
       });
 
       testWidgets('should handle generic errors', (tester) async {

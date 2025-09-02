@@ -198,24 +198,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                ),
                              ),
                              const SizedBox(height: AppSpacing.sm),
-                             // Botão temporário para debug do Supabase
-                             SizedBox(
-                               width: double.infinity,
-                               height: 40,
-                               child: OutlinedButton(
-                                 onPressed: () => Navigator.of(context).pushNamed('/debug_supabase'),
-                                 style: OutlinedButton.styleFrom(
-                                   foregroundColor: colorScheme.secondary,
-                                   side: BorderSide(color: colorScheme.secondary),
-                                 ),
-                                 child: Text(
-                                   '🔧 Debug Supabase',
-                                   style: textTheme.labelSmall?.copyWith(
-                                     color: colorScheme.secondary,
-                                   ),
-                                 ),
-                               ),
-                             ),
+                             // Debug button hidden in production
+                             // SizedBox(
+                             //   width: double.infinity,
+                             //   height: 40,
+                             //   child: OutlinedButton(
+                             //     onPressed: () => Navigator.of(context).pushNamed('/debug_supabase'),
+                             //     style: OutlinedButton.styleFrom(
+                             //       foregroundColor: colorScheme.secondary,
+                             //       side: BorderSide(color: colorScheme.secondary),
+                             //     ),
+                             //     child: Text(
+                             //       '🔧 Debug Supabase',
+                             //       style: textTheme.labelSmall?.copyWith(
+                             //         color: colorScheme.secondary,
+                             //       ),
+                             //     ),
+                             //   ),
+                             // ),
                            ],
                        ),
                      ),

@@ -149,7 +149,7 @@ enum PromoCodeType {
 
   static PromoCodeType fromString(String value) => values.firstWhere(
       (type) => type.value == value,
-      orElse: () => throw ArgumentError('Unknown promo code type: $value'),
+      orElse: () => throw ArgumentError('Tipo de código promocional desconhecido: $value'),
     );
 
   String get displayName {

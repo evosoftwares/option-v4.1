@@ -1,5 +1,6 @@
 /// Sistema de logging de erros para monitoramento e debugging
 /// Integrado com o sistema de tratamento de erros da aplicação
+library;
 
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
@@ -80,14 +81,14 @@ class ConsoleErrorLogger implements ErrorLogger {
 
 /// Logger que envia erros para o Supabase para monitoramento
 class SupabaseErrorLogger implements ErrorLogger {
-  final SupabaseClient _supabase;
-  final String _tableName;
 
   SupabaseErrorLogger({
     required SupabaseClient supabase,
     String tableName = 'error_logs',
   }) : _supabase = supabase,
        _tableName = tableName;
+  final SupabaseClient _supabase;
+  final String _tableName;
 
   @override
   Future<void> logError(AppError error) async {
@@ -184,9 +185,9 @@ class SupabaseErrorLogger implements ErrorLogger {
 
 /// Logger composto que pode usar múltiplos loggers
 class CompositeErrorLogger implements ErrorLogger {
-  final List<ErrorLogger> _loggers;
 
   CompositeErrorLogger(this._loggers);
+  final List<ErrorLogger> _loggers;
 
   @override
   Future<void> logError(AppError error) async {
@@ -212,13 +213,13 @@ class CompositeErrorLogger implements ErrorLogger {
 
 /// Singleton para gerenciar o sistema de logging
 class ErrorLoggingService {
+
+  ErrorLoggingService._internal();
   static ErrorLoggingService? _instance;
   static ErrorLoggingService get instance {
     _instance ??= ErrorLoggingService._internal();
     return _instance!;
   }
-
-  ErrorLoggingService._internal();
 
   ErrorLogger? _logger;
 

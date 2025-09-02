@@ -194,8 +194,7 @@ class _AcPolicyScreenState extends State<AcPolicyScreen> {
     );
   }
 
-  Widget _buildPolicyOptions() {
-    return Column(
+  Widget _buildPolicyOptions() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
@@ -211,7 +210,6 @@ class _AcPolicyScreenState extends State<AcPolicyScreen> {
         )),
       ],
     );
-  }
 
   Widget _buildPolicyOption({
     required String value,
@@ -236,7 +234,7 @@ class _AcPolicyScreenState extends State<AcPolicyScreen> {
       child: RadioListTile<String>(
         value: value,
         groupValue: _selectedPolicy,
-        onChanged: (String? newValue) {
+        onChanged: (newValue) {
           setState(() {
             _selectedPolicy = newValue;
           });

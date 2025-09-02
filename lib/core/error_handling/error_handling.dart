@@ -44,6 +44,7 @@
 ///   );
 /// }
 /// ```
+library;
 
 export 'app_error.dart';
 export 'error_logger.dart';
@@ -147,75 +148,62 @@ class ErrorUtils {
     String? message,
     String? userMessage,
     Map<String, dynamic>? context,
-  }) {
-    return AppError(
+  }) => AppError(
       type: AppErrorType.networkUnavailable,
       message: message ?? 'Network error',
       userMessage: userMessage ?? ErrorConstants.defaultNetworkError,
       context: context,
-      severity: ErrorSeverity.medium,
     );
-  }
   
   /// Cria um erro de servidor
   static AppError serverError({
     String? message,
     String? userMessage,
     Map<String, dynamic>? context,
-  }) {
-    return AppError(
+  }) => AppError(
       type: AppErrorType.serverError,
       message: message ?? 'Server error',
       userMessage: userMessage ?? ErrorConstants.defaultServerError,
       context: context,
       severity: ErrorSeverity.high,
     );
-  }
   
   /// Cria um erro de validação
   static AppError validationError({
     String? message,
     String? userMessage,
     Map<String, dynamic>? context,
-  }) {
-    return AppError(
+  }) => AppError(
       type: AppErrorType.validationFailed,
       message: message ?? 'Validation error',
       userMessage: userMessage ?? ErrorConstants.defaultValidationError,
       context: context,
-      severity: ErrorSeverity.medium,
     );
-  }
   
   /// Cria um erro de autenticação
   static AppError authError({
     String? message,
     String? userMessage,
     Map<String, dynamic>? context,
-  }) {
-    return AppError(
+  }) => AppError(
       type: AppErrorType.authenticationFailed,
-      message: message ?? 'Authentication error',
+      message: message ?? 'Erro de autenticação',
       userMessage: userMessage ?? 'Falha na autenticação. Verifique suas credenciais.',
       context: context,
       severity: ErrorSeverity.high,
     );
-  }
   
   /// Cria um erro de permissão
   static AppError permissionError({
     String? message,
     String? userMessage,
     Map<String, dynamic>? context,
-  }) {
-    return AppError(
+  }) => AppError(
       type: AppErrorType.authorizationDenied,
       message: message ?? 'Permission denied',
       userMessage: userMessage ?? 'Você não tem permissão para realizar esta ação.',
       context: context,
-      severity: ErrorSeverity.medium,
     );
-  }
   
   /// Verifica se um erro é recuperável (pode ser tentado novamente)
   static bool isRecoverable(AppError error) {

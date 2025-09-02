@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../config/app_config.dart';
 import '../../exceptions/app_exceptions.dart';
 import '../../models/supabase/driver_excluded_zone.dart';
+import '../../services/location_service.dart';
 import '../../services/secure_driver_excluded_zones_service.dart';
 import '../../services/user_service.dart';
 import '../../services/zone_validation_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/logo_branding.dart';
+import '../stepper/place_search_screen.dart';
 
 class DriverExcludedZonesScreen extends StatefulWidget {
   const DriverExcludedZonesScreen({super.key});
@@ -21,6 +24,7 @@ class DriverExcludedZonesScreen extends StatefulWidget {
 
 class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
   late final SecureDriverExcludedZonesService _service;
+  late final LocationService _locationService;
   final TextEditingController _neighborhoodController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
@@ -35,6 +39,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
   void initState() {
     super.initState();
     _service = SecureDriverExcludedZonesService(Supabase.instance.client);
+    _locationService = LocationService(apiKey: AppConfig.googleMapsApiKey);
     _loadDriverData();
   }
 
@@ -163,11 +168,68 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
     );
   }
 
-  void _showAddZoneDialog() {
+  Future<void> _showAddZoneDialog() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PlaceSearchScreen(
+          locationService: _locationService,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      // Extrair informações do local selecionado
+      final address = result['address'] as String? ?? '';
+      final addressParts = _parseAddress(address);
+      
+      _neighborhoodController.text = addressParts['neighborhood'] ?? '';
+      _cityController.text = addressParts['city'] ?? '';
+      _stateController.text = addressParts['state'] ?? '';
+      
+      // Adicionar a zona automaticamente se todas as informações estiverem disponíveis
+      if (_neighborhoodController.text.isNotEmpty && 
+          _cityController.text.isNotEmpty && 
+          _stateController.text.isNotEmpty) {
+        await _addExcludedZone();
+      } else {
+        // Se não conseguir extrair todas as informações, mostrar o dialog de confirmação
+        _showConfirmZoneDialog();
+      }
+    }
+  }
+
+  Map<String, String> _parseAddress(String address) {
+    final parts = address.split(',');
+    final result = <String, String>{};
+    
+    if (parts.isNotEmpty) {
+      // Tentar extrair estado (últimas 2-3 letras)
+      final lastPart = parts.last.trim();
+      final stateMatch = RegExp(r'\b([A-Z]{2})\b').firstMatch(lastPart);
+      if (stateMatch != null) {
+        result['state'] = stateMatch.group(1)!;
+      }
+      
+      // Tentar extrair cidade (penúltima parte)
+      if (parts.length >= 2) {
+        result['city'] = parts[parts.length - 2].trim();
+      }
+      
+      // Tentar extrair bairro (primeira parte)
+      if (parts.isNotEmpty) {
+        result['neighborhood'] = parts.first.trim();
+      }
+    }
+    
+    return result;
+  }
+
+  void _showConfirmZoneDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Adicionar Zona Excluída'),
+        title: const Text('Confirmar Zona Excluída'),
         content: Form(
           key: _formKey,
           child: Column(

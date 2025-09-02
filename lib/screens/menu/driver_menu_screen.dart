@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../controllers/driver_status_manager.dart';
 import '../../models/user.dart' as app_user;
 import '../../services/driver_wallet_service.dart';
 import '../../services/user_service.dart';
@@ -17,7 +18,6 @@ class DriverMenuScreen extends StatefulWidget {
 }
 
 class _DriverMenuScreenState extends State<DriverMenuScreen> {
-  bool _isOnline = false; // Local state for now (integration later)
   Future<app_user.User?>? _userFuture;
   Future<Map<String, dynamic>>? _walletStatsFuture;
 
@@ -31,7 +31,15 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
   void _loadWalletStats() {
     final currentUser = Supabase.instance.client.auth.currentUser;
     if (currentUser != null) {
-      _walletStatsFuture = DriverWalletService.getDriverWalletStats(currentUser.id);
+      _walletStatsFuture = DriverWalletService.getDriverWalletStats(currentUser.id)
+          .catchError((e) {
+        // Return default stats if driver doesn't exist yet
+        return {
+          'available_balance': 0.0,
+          'pending_earnings': 0.0,
+          'total_earnings': 0.0,
+        };
+      });
     }
   }
 
@@ -111,12 +119,15 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
           return ListView(
             padding: AppSpacing.paddingLg,
             children: [
-              _HeaderCard(
-                name: UserUtils.getSafeName(user?.fullName, email: user?.email, fallback: 'Motorista'),
-                email: user?.email ?? '',
-                isOnline: _isOnline,
-                onToggleOnline: (val) => setState(() => _isOnline = val),
-                photoUrl: user?.photoUrl,
+              ListenableBuilder(
+                listenable: DriverStatusManager().controller,
+                builder: (context, _) => _HeaderCard(
+                  name: UserUtils.getSafeName(user?.fullName, email: user?.email, fallback: 'Motorista'),
+                  email: user?.email ?? '',
+                  isOnline: DriverStatusManager().controller.isOnline,
+                  onToggleOnline: (val) => DriverStatusManager().controller.toggleOnlineStatus(),
+                  photoUrl: user?.photoUrl,
+                ),
               ),
               const SizedBox(height: AppSpacing.sectionSpacing),
 
@@ -154,6 +165,11 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
                 icon: Icons.remove_circle_outline,
                 label: 'Zonas excluídas',
                 onTap: () => Navigator.pushNamed(context, '/driver_excluded_zones'),
+              ),
+              _MenuTile(
+                icon: Icons.location_off_outlined,
+                label: 'Bairros indisponíveis',
+                onTap: () => Navigator.pushNamed(context, '/driver_unavailable_neighborhoods'),
               ),
               _MenuTile(
                 icon: Icons.price_change_outlined,
@@ -249,7 +265,7 @@ class _HeaderCard extends StatelessWidget {
   final String name;
   final String email;
   final bool isOnline;
-  final ValueChanged<bool> onToggleOnline;
+  final Future<void> Function(bool) onToggleOnline;
   final String? photoUrl;
 
   @override

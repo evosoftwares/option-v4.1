@@ -3,17 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Visual Feedback Validation', () {
-    testWidgets('Botão deve ter estado desabilitado/habilitado visualmente claro', (WidgetTester tester) async {
+    testWidgets('Botão deve ter estado desabilitado/habilitado visualmente claro', (tester) async {
       print('🧪 === TESTANDO ESTADOS VISUAIS DO BOTÃO ===');
       
-      bool isEnabled = false;
-      bool isLoading = false;
+      var isEnabled = false;
+      var isLoading = false;
       
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
           body: StatefulBuilder(
-            builder: (context, setState) {
-              return Column(
+            builder: (context, setState) => Column(
                 children: [
                   // Botão de teste que simula o comportamento do app real
                   ElevatedButton(
@@ -22,7 +21,7 @@ void main() {
                         isLoading = true;
                       });
                       // Simular operação
-                      Future.delayed(Duration(milliseconds: 100), () {
+                      Future.delayed(const Duration(milliseconds: 100), () {
                         setState(() {
                           isLoading = false;
                         });
@@ -37,9 +36,9 @@ void main() {
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : Row(
+                      : const Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: const [
+                          children: [
                             Icon(Icons.directions_car),
                             SizedBox(width: 8),
                             Text('Vamos'),
@@ -57,8 +56,7 @@ void main() {
                     },
                   ),
                 ],
-              );
-            },
+              ),
           ),
         ),
       ));
@@ -85,7 +83,7 @@ void main() {
       expect(find.text('Vamos'), findsNothing);
       
       print('✅ Aguardando fim do loading...');
-      await tester.pump(Duration(milliseconds: 150));
+      await tester.pump(const Duration(milliseconds: 150));
       
       // Loading deve ter terminado
       expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -94,7 +92,7 @@ void main() {
       print('✅ Estados visuais do botão funcionando corretamente');
     });
     
-    testWidgets('SnackBar de erro deve ser visível e clara', (WidgetTester tester) async {
+    testWidgets('SnackBar de erro deve ser visível e clara', (tester) async {
       print('🧪 === TESTANDO FEEDBACK DE ERRO ===');
       
       await tester.pumpWidget(MaterialApp(
@@ -130,13 +128,13 @@ void main() {
       print('✅ SnackBar de erro funcionando corretamente');
     });
     
-    testWidgets('Loading indicators devem ter cores contrastantes', (WidgetTester tester) async {
+    testWidgets('Loading indicators devem ter cores contrastantes', (tester) async {
       print('🧪 === TESTANDO CONTRASTE DE LOADING ===');
       
-      await tester.pumpWidget(MaterialApp(
+      await tester.pumpWidget(const MaterialApp(
         home: Scaffold(
           backgroundColor: Colors.blue,
-          body: const Center(
+          body: Center(
             child: CircularProgressIndicator(
               strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),

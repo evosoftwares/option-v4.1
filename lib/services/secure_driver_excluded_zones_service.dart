@@ -101,15 +101,21 @@ class SecureDriverExcludedZonesService {
         // Custom validation error from database triggers
         throw ValidationException(e.message);
       }
+      if (e.code == '23514') {
+        // Check constraint violation (invalid state, city, etc.)
+        throw const ValidationException(
+          'Dados inválidos fornecidos. Verifique se o estado, cidade e bairro estão corretos.',
+        );
+      }
       throw DatabaseException(
-        'Erro ao adicionar zona excluída. Por favor, tente novamente mais tarde.',
+        'Erro ao adicionar zona excluída: ${e.message}',
         e.code,
       );
     } on ValidationException {
       rethrow;
     } catch (e) {
-      throw const DatabaseException(
-        'Erro inesperado ao adicionar zona excluída. Por favor, tente novamente mais tarde.',
+      throw DatabaseException(
+        'Erro inesperado ao adicionar zona excluída: $e',
       );
     }
   }
@@ -425,6 +431,23 @@ class SecureDriverExcludedZonesService {
       throw const DatabaseException(
         'Erro inesperado ao buscar estatísticas das zonas. Por favor, tente novamente mais tarde.',
       );
+    }
+  }
+
+  /// Stream para atualizações em tempo real das zonas excluídas do motorista
+  Stream<List<DriverExcludedZone>> streamDriverExcludedZones(String driverId) {
+    try {
+      return _supabase
+          .from('driver_excluded_zones')
+          .stream(primaryKey: ['id'])
+          .eq('driver_id', driverId)
+          .order('created_at', ascending: false)
+          .map((data) => (data as List<dynamic>)
+              .map((json) => DriverExcludedZone.fromJson(json as Map<String, dynamic>))
+              .toList());
+    } catch (e) {
+      // Em caso de erro, retorna um stream vazio
+      return Stream.value(<DriverExcludedZone>[]);
     }
   }
 

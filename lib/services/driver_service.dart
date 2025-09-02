@@ -1,16 +1,21 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../exceptions/app_exceptions.dart';
 import '../models/supabase/driver.dart';
 import '../models/supabase/driver_offer.dart';
+import '../models/supabase/driver_effective_status.dart';
+import '../models/supabase/working_hours.dart';
 import '../models/supabase/trip.dart';
 import '../models/vehicle_category.dart';
 import '../validators/database_constraints_validator.dart';
 import 'driver_document_service.dart';
 import 'driver_excluded_zones_service.dart';
+import 'driver_status_service.dart';
+import 'working_hours_service.dart';
 
 /// Classe auxiliar para armazenar motorista com sua distância calculada
 class DriverWithDistance {
@@ -25,8 +30,13 @@ class DriverWithDistance {
 
 class DriverService {
 
-  DriverService(this._supabase);
+  DriverService(this._supabase) :
+    _driverStatusService = DriverStatusService(_supabase),
+    _workingHoursService = WorkingHoursService(_supabase);
+  
   final SupabaseClient _supabase;
+  final DriverStatusService _driverStatusService;
+  final WorkingHoursService _workingHoursService;
 
   // Get driver profile
   Future<Driver?> getDriver(String driverId) async {
@@ -58,41 +68,39 @@ class DriverService {
             .eq('driver_id', driverId)
             .single();
         
-        if (response != null) {
-          // Reformatar resposta para manter compatibilidade
-          return {
-            'id': response['driver_id'],
-            'user_id': response['user_id'],
-            'vehicle_brand': response['vehicle_brand'],
-            'vehicle_model': response['vehicle_model'],
-            'vehicle_year': response['vehicle_year'],
-            'vehicle_color': response['vehicle_color'],
-            'vehicle_category': response['vehicle_category'],
-            'is_online': response['is_online'],
-            'accepts_pet': response['accepts_pet'],
-            'accepts_grocery': response['accepts_grocery'],
-            'accepts_condo': response['accepts_condo'],
-            'ac_policy': response['ac_policy'],
-            'custom_price_per_km': response['custom_price_per_km'],
-            'custom_price_per_minute': response['custom_price_per_minute'],
-            'pet_fee': response['pet_fee'],
-            'grocery_fee': response['grocery_fee'],
-            'condo_fee': response['condo_fee'],
-            'stop_fee': response['stop_fee'],
-            'total_trips': response['total_trips'],
-            'average_rating': response['average_rating'],
-            'current_latitude': response['current_latitude'],
-            'current_longitude': response['current_longitude'],
-            'last_location_update': response['last_location_update'],
-            'user_name': response['full_name'], // Campo compatível
-            'user_photo_url': response['photo_url'], // Campo compatível
-            'app_users': { // Para manter compatibilidade com código existente
-              'full_name': response['full_name'],
-              'photo_url': response['photo_url'],
-            },
-          };
-        }
-      } catch (e) {
+        // Reformatar resposta para manter compatibilidade
+        return {
+          'id': response['driver_id'],
+          'user_id': response['user_id'],
+          'vehicle_brand': response['vehicle_brand'],
+          'vehicle_model': response['vehicle_model'],
+          'vehicle_year': response['vehicle_year'],
+          'vehicle_color': response['vehicle_color'],
+          'vehicle_category': response['vehicle_category'],
+          'is_online': response['is_online'],
+          'accepts_pet': response['accepts_pet'],
+          'accepts_grocery': response['accepts_grocery'],
+          'accepts_condo': response['accepts_condo'],
+          'ac_policy': response['ac_policy'],
+          'custom_price_per_km': response['custom_price_per_km'],
+          'custom_price_per_minute': response['custom_price_per_minute'],
+          'pet_fee': response['pet_fee'],
+          'grocery_fee': response['grocery_fee'],
+          'condo_fee': response['condo_fee'],
+          'stop_fee': response['stop_fee'],
+          'total_trips': response['total_trips'],
+          'average_rating': response['average_rating'],
+          'current_latitude': response['current_latitude'],
+          'current_longitude': response['current_longitude'],
+          'last_location_update': response['last_location_update'],
+          'user_name': response['full_name'], // Campo compatível
+          'user_photo_url': response['photo_url'], // Campo compatível
+          'app_users': { // Para manter compatibilidade com código existente
+            'full_name': response['full_name'],
+            'photo_url': response['photo_url'],
+          },
+        };
+            } catch (e) {
         print('⚠️ View otimizada não disponível para getDriverWithUserData, usando fallback: $e');
       }
 
@@ -301,7 +309,11 @@ class DriverService {
         }
       }
       
-      if (isOnline != null) updates['is_online'] = isOnline;
+      // Usar novo sistema de status ao invés de atualizar is_online diretamente
+      if (isOnline != null) {
+        await _driverStatusService.updateOnlineIntent(driverId, isOnline);
+        // Não atualizar is_online na tabela drivers - será calculado pela view
+      }
 
       if (acceptsPet != null) updates['accepts_pet'] = acceptsPet;
       if (acceptsGrocery != null) updates['accepts_grocery'] = acceptsGrocery;
@@ -619,7 +631,7 @@ class DriverService {
 
       // Tentar usar a view available_drivers_view otimizada primeiro
       dynamic response;
-      bool usedOptimizedView = false;
+      var usedOptimizedView = false;
       
       try {
         print('🚀 [${DateTime.now()}] Tentando usar available_drivers_view otimizada...');
@@ -759,7 +771,7 @@ class DriverService {
       
       if (usedOptimizedView) {
         // Converter dados da view para objetos Driver
-        for (final json in response as List) {
+        for (final json in response) {
           final driverData = json as Map<String, dynamic>;
           // Mapear campos da view para campos esperados pelo modelo Driver
           final mappedData = {
@@ -806,7 +818,7 @@ class DriverService {
         }
       } else {
         // Dados já no formato esperado da tabela drivers
-        drivers = (response as List)
+        drivers = response
             .map((json) => Driver.fromJson(json as Map<String, dynamic>))
             .toList();
       }
@@ -1158,5 +1170,60 @@ class DriverService {
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     
     return earthRadius * c;
+  }
+
+  // === Métodos para o novo sistema de status ===
+  
+  /// Obtém o status efetivo do motorista (calculado pela view)
+  Future<DriverEffectiveStatus?> getDriverEffectiveStatus(String driverId) async {
+    return await _driverStatusService.getDriverEffectiveStatus(driverId);
+  }
+  
+  /// Verifica se o motorista pode ficar online baseado nos horários de trabalho
+  Future<bool> canDriverGoOnline(String driverId) async {
+    return await _driverStatusService.canDriverGoOnlineNow(driverId);
+  }
+  
+  /// Obtém a intenção de ficar online do motorista
+  Future<bool> getDriverOnlineIntent(String driverId) async {
+    final status = await _driverStatusService.getDriverStatus(driverId);
+    return status?.onlineIntent ?? false;
+  }
+  
+  /// Obtém os horários de trabalho do motorista
+  Future<List<WorkingHours>> getDriverWorkingHours(String driverId) async {
+    return await _workingHoursService.getWorkingHours(driverId);
+  }
+  
+  /// Atualiza os horários de trabalho do motorista
+  Future<void> updateDriverWorkingHours(String driverId, List<Map<String, dynamic>> workingHours) async {
+    // Remove horários existentes
+    await _workingHoursService.deleteAllWorkingHours(driverId);
+    
+    // Adiciona novos horários
+    for (final hours in workingHours) {
+      await _workingHoursService.createWorkingHours(
+        driverId: driverId,
+        dayOfWeek: hours['dayOfWeek'] as int,
+        startTime: TimeOfDay(
+          hour: int.parse(hours['startTime'].toString().split(':')[0]),
+          minute: int.parse(hours['startTime'].toString().split(':')[1]),
+        ),
+        endTime: TimeOfDay(
+          hour: int.parse(hours['endTime'].toString().split(':')[0]),
+          minute: int.parse(hours['endTime'].toString().split(':')[1]),
+        ),
+      );
+    }
+  }
+  
+  /// Obtém lista de motoristas efetivamente online
+  Future<List<DriverEffectiveStatus>> getEffectivelyOnlineDrivers() async {
+    return await _driverStatusService.getOnlineDrivers();
+  }
+  
+  /// Obtém estatísticas de status dos motoristas
+  Future<Map<String, int>> getDriverStatusStats() async {
+    return await _driverStatusService.getDriverStatusStats();
   }
 }

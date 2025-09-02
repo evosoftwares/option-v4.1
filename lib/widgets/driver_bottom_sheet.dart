@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../controllers/driver_status_controller.dart';
 import '../models/driver_status.dart';
 import '../theme/app_colors.dart';
+import 'working_hours_dialog.dart';
 
 class DriverBottomSheet extends StatefulWidget {
 
@@ -91,7 +92,27 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
       _scaleController.reverse();
     });
 
-    await widget.statusController.toggleOnlineStatus();
+    final status = widget.statusController.status;
+    
+    // Se está online, vai offline diretamente
+    if (status.isOnline) {
+      await widget.statusController.toggleOnlineStatus();
+      return;
+    }
+    
+    // Se está offline, verifica horário de trabalho antes de ficar online
+    final canGoOnline = await widget.statusController.tryGoOnlineWithValidation();
+    
+    if (!canGoOnline && mounted) {
+      // Mostrar diálogo de horário de trabalho
+      await showWorkingHoursDialog(
+        context: context,
+        statusController: widget.statusController,
+        onWorkingHoursUpdated: () {
+          // Callback quando horários são atualizados
+        },
+      );
+    }
   }
 
   void _toggleExpansion() {

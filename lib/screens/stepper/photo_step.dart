@@ -134,6 +134,8 @@ class _PhotoStepState extends State<PhotoStep> {
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: colors.onSurfaceVariant,
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
               const SizedBox(height: AppSpacing.xl),
               Center(

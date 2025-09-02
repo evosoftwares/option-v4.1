@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+
 import '../../models/emergency.dart';
 import '../../services/emergency_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/app_card.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../widgets/emergency_button.dart';
 import '../../utils/snackbar_utils.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/emergency_button.dart';
 import 'emergency_contacts_screen.dart';
 
 /// Tela principal de emergência

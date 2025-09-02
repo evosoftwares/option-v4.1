@@ -99,6 +99,8 @@ class _PhoneStepState extends State<PhoneStep> {
               style: textTheme.bodyLarge?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
             ),
             const SizedBox(height: AppSpacing.xl),
             TextFormField(

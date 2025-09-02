@@ -94,7 +94,7 @@ class PassengerWalletTransaction {
     );
 
   bool get isCredit => type == TransactionType.credit || type == TransactionType.refund;
-  bool get isDebit => type == TransactionType.tripPayment || type == TransactionType.cancellationFee;
+  bool get isDebit => type == TransactionType.tripPayment || type == TransactionType.cancellationFee || type == TransactionType.withdrawal;
 
   String get formattedAmount {
     final prefix = isCredit ? r'+ R$ ' : r'- R$ ';
@@ -141,7 +141,7 @@ class PassengerWalletTransaction {
 enum TransactionType {
   credit('credit'),
   tripPayment('trip_payment'),
-
+  withdrawal('withdrawal'),
   refund('refund'),
   cancellationFee('cancellation_fee');
 
@@ -150,7 +150,7 @@ enum TransactionType {
 
   static TransactionType fromString(String value) => values.firstWhere(
       (type) => type.value == value,
-      orElse: () => throw ArgumentError('Unknown transaction type: $value'),
+      orElse: () => throw ArgumentError('Tipo de transação desconhecido: $value'),
     );
 
   String get displayName {
@@ -159,7 +159,8 @@ enum TransactionType {
         return 'Recarga';
       case TransactionType.tripPayment:
         return 'Pagamento de viagem';
-
+      case TransactionType.withdrawal:
+        return 'Saque';
       case TransactionType.refund:
         return 'Reembolso';
       case TransactionType.cancellationFee:
@@ -180,7 +181,7 @@ enum TransactionStatus {
 
   static TransactionStatus fromString(String value) => values.firstWhere(
       (status) => status.value == value,
-      orElse: () => throw ArgumentError('Unknown transaction status: $value'),
+      orElse: () => throw ArgumentError('Status de transação desconhecido: $value'),
     );
 
   String get displayName {

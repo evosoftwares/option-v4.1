@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../exceptions/user_registration_exception.dart';
 import '../models/favorite_location.dart';
+import '../models/user.dart';
 import '../services/app_logger.dart';
 import '../services/file_upload_service.dart';
 import '../services/real_saved_places_service.dart' as places_service show ValidationException;
@@ -40,6 +41,9 @@ class StepperController extends ChangeNotifier {
   String? get uploadedPhotoUrl => _uploadedPhotoUrl;
   bool get isUploadingPhoto => _isUploadingPhoto;
   List<FavoriteLocation> get favoriteLocations => _favoriteLocations;
+  
+  // Alias para compatibilidade com add_location_modal
+  List<FavoriteLocation> get locations => _favoriteLocations;
 
   void setUserType(String type) {
     _userType = type;
@@ -207,6 +211,14 @@ class StepperController extends ChangeNotifier {
       notifyListeners();
     }
   }
+  
+  // Método para atualizar toda a lista de locations
+  void updateLocations(List<FavoriteLocation> locations) {
+    _favoriteLocations = List<FavoriteLocation>.from(locations);
+    notifyListeners();
+    // Auto-save do estado
+    _saveState();
+  }
 
   Future<void> saveFavoriteLocations(List<FavoriteLocation> locations) async {
     try {
@@ -338,6 +350,32 @@ class StepperController extends ChangeNotifier {
           userType: _userType!,
         );
         print('✅ Usuário criado com sucesso!');
+        
+        // Criar perfil de motorista automaticamente se o tipo for 'driver'
+        if (_userType == 'driver') {
+          print('🚗 Criando perfil de motorista automaticamente...');
+          try {
+            // Criar objeto User do modelo local
+            final user = User(
+              id: authUser.id,
+              email: email,
+              fullName: _fullName!.trim(),
+              phone: _phone!.trim(),
+              photoUrl: photoUrl,
+              userType: _userType!,
+              status: 'active',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            );
+            await UserService.createDriverRecord(user);
+            print('✅ Perfil de motorista criado com sucesso!');
+          } catch (e) {
+            print('⚠️ Erro ao criar perfil de motorista: $e');
+            AppLogger.error('Erro ao criar perfil de motorista', error: e);
+            // Não falha o registro se a criação do perfil de motorista falhar
+            // O usuário pode completar o perfil posteriormente
+          }
+        }
       } else {
         print('ℹ️ Usuário já existe, pulando criação');
         // Se já existe e temos uma foto nova, atualiza o usuário com a nova URL
@@ -355,8 +393,8 @@ class StepperController extends ChangeNotifier {
         }
       }
 
-      // Locais favoritos foram removidos do fluxo de registro
-      print('ℹ️ Registro concluído sem coleta de locais favoritos');
+      // Locais favoritos foram removidos do fluxo de registro obrigatório
+      print('ℹ️ Registro concluído - locais favoritos não são obrigatórios para motoristas');
 
       // Limpar dados persistidos após sucesso
       await StepperPersistenceService.clearStepperState();
@@ -408,24 +446,14 @@ class StepperController extends ChangeNotifier {
         
         // Só carrega dados persistidos se os valores atuais estão vazios
         // Isso evita sobrescrever dados corretos vindos do user_type_screen
-        if (_userType == null) {
-          _userType = _sanitizeStringValue(state['userType']);
-        }
-        if (_phone == null) {
-          _phone = _sanitizeStringValue(state['phone']);
-        }
-        if (_fullName == null) {
-          _fullName = _sanitizeStringValue(state['fullName']);
-        }
-        if (_email == null) {
-          _email = _sanitizeStringValue(state['email']);
-        }
+        _userType ??= _sanitizeStringValue(state['userType']);
+        _phone ??= _sanitizeStringValue(state['phone']);
+        _fullName ??= _sanitizeStringValue(state['fullName']);
+        _email ??= _sanitizeStringValue(state['email']);
         
         _currentStep = state['currentStep'] ?? 0;
-        // Favorite locations removed from registration flow
-        if (_uploadedPhotoUrl == null) {
-          _uploadedPhotoUrl = _sanitizeStringValue(state['uploadedPhotoUrl']);
-        }
+        // Favorite locations are no longer part of mandatory registration flow
+        _uploadedPhotoUrl ??= _sanitizeStringValue(state['uploadedPhotoUrl']);
         
         AppLogger.persistence('Estado do stepper recuperado da persistência (apenas campos vazios)');
       }

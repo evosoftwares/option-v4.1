@@ -98,7 +98,6 @@ class ProfilePhotoUploadService {
             uploadPath,
             imageFile,
             fileOptions: const FileOptions(
-              upsert: false, // Não sobrescrever
               contentType: 'image/jpeg',
             ),
           );
@@ -184,20 +183,19 @@ class ProfilePhotoUploadService {
 // =============================================
 
 class ProfilePhotoWidget extends StatelessWidget {
+  
+  const ProfilePhotoWidget({
+    super.key,
+    this.photoUrl,
+    this.size = 80,
+    this.onTap,
+  });
   final String? photoUrl;
   final double size;
   final VoidCallback? onTap;
   
-  const ProfilePhotoWidget({
-    Key? key,
-    this.photoUrl,
-    this.size = 80,
-    this.onTap,
-  }) : super(key: key);
-  
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Container(
         width: size,
@@ -214,7 +212,6 @@ class ProfilePhotoWidget extends StatelessWidget {
         ),
       ),
     );
-  }
   
   Widget _buildImage() {
     if (photoUrl != null && photoUrl!.isNotEmpty) {
@@ -236,8 +233,7 @@ class ProfilePhotoWidget extends StatelessWidget {
     return _buildPlaceholder();
   }
   
-  Widget _buildPlaceholder() {
-    return Container(
+  Widget _buildPlaceholder() => ColoredBox(
       color: Colors.grey.shade200,
       child: Icon(
         Icons.account_circle,
@@ -245,7 +241,6 @@ class ProfilePhotoWidget extends StatelessWidget {
         color: Colors.grey.shade400,
       ),
     );
-  }
 }
 
 // =============================================
@@ -253,6 +248,8 @@ class ProfilePhotoWidget extends StatelessWidget {
 // =============================================
 
 class ProfilePhotoExample extends StatefulWidget {
+  const ProfilePhotoExample({super.key});
+
   @override
   _ProfilePhotoExampleState createState() => _ProfilePhotoExampleState();
 }
@@ -335,8 +332,7 @@ class _ProfilePhotoExampleState extends State<ProfilePhotoExample> {
   }
   
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('Foto de Perfil'),
       ),
@@ -384,7 +380,6 @@ class _ProfilePhotoExampleState extends State<ProfilePhotoExample> {
         ),
       ),
     );
-  }
 }
 
 // =============================================

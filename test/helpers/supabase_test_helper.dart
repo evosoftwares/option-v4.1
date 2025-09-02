@@ -258,9 +258,7 @@ class SupabaseTestHelper {
     _mockDataStore[table]!.add(data);
   }
   
-  static List<Map<String, dynamic>> getMockData(String table) {
-    return _mockDataStore[table] ?? [];
-  }
+  static List<Map<String, dynamic>> getMockData(String table) => _mockDataStore[table] ?? [];
   
   static void clearMockData() {
     _mockDataStore.clear();

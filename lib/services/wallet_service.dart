@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../exceptions/app_exceptions.dart';
+import '../exceptions/wallet_exceptions.dart';
 import '../models/passenger_wallet.dart';
 import '../models/passenger_wallet_transaction.dart';
 import '../models/payment_method.dart';
 import '../models/user.dart' as app_user;
 import 'asaas_service.dart';
+import 'security_service.dart';
 
 class WalletService {
 
@@ -17,16 +20,30 @@ class WalletService {
 
   Future<String?> getDriverIdForUser(String userId) async {
     try {
+      // Add timeout to prevent hanging
       final data = await _supabase
           .from('drivers')
           .select('id')
           .eq('user_id', userId)
-          .maybeSingle();
-      return data != null ? (data['id'] as String) : null;
+          .maybeSingle()
+          .timeout(const Duration(seconds: 10));
+      
+      if (data != null) {
+        return data['id'] as String;
+      }
+      
+      // If no driver record found, try to create one automatically with timeout
+      return await _autoCreateDriverRecord(userId)
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      print('❌ Timeout ao buscar/criar motorista para usuário: $userId');
+      throw const DatabaseException('Operação demorou muito para completar. Verifique sua conexão e tente novamente.');
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar motorista do usuário. Por favor, tente novamente mais tarde.', e.code);
+      print('❌ Erro PostgreSQL ao buscar motorista: ${e.code} - ${e.message}');
+      throw DatabaseException('Erro ao buscar motorista do usuário. Código: ${e.code}', e.code);
     } catch (e) {
-      throw const DatabaseException('Erro inesperado ao buscar motorista do usuário. Por favor, tente novamente mais tarde.');
+      print('❌ Erro inesperado ao buscar motorista: $e');
+      throw DatabaseException('Erro inesperado ao buscar motorista: $e');
     }
   }
 
@@ -42,6 +59,81 @@ class WalletService {
       throw DatabaseException('Erro ao buscar carteira. Por favor, tente novamente mais tarde.', e.code);
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao buscar carteira. Por favor, tente novamente mais tarde.');
+    }
+  }
+
+  /// Automatically creates a driver record if user is a driver but doesn't have one
+  Future<String?> _autoCreateDriverRecord(String userId) async {
+    try {
+      // First check if user is actually a driver
+      final userData = await _supabase
+          .from('app_users')
+          .select('user_type, email, full_name')
+          .eq('id', userId)
+          .maybeSingle();
+      
+      if (userData == null || userData['user_type']?.toLowerCase() != 'driver') {
+        return null; // User is not a driver, so no driver record needed
+      }
+      
+      print('🔧 Criando registro de motorista automaticamente para usuário: $userId');
+      
+      // Create basic driver record with placeholder values
+      final driverData = {
+        'user_id': userId,
+        'cnh_number': 'PENDENTE_CADASTRO',
+        'cnh_expiry_date': DateTime.now().add(const Duration(days: 365)).toIso8601String().split('T')[0],
+        'cnh_photo_url': '',
+        'vehicle_brand': 'PENDENTE',
+        'vehicle_model': 'PENDENTE', 
+        'vehicle_year': 2020,
+        'vehicle_color': 'PENDENTE',
+        'vehicle_plate': 'PENDENTE',
+        'vehicle_category': 'standard',
+        'crlv_photo_url': '',
+        'approval_status': 'pending',
+        'approved_by': null,
+        'approved_at': null,
+        'is_online': false,
+        'accepts_pet': false,
+        'pet_fee': 0.0,
+        'accepts_grocery': false,
+        'grocery_fee': 0.0,
+        'accepts_condo': false,
+        'condo_fee': 0.0,
+        'stop_fee': 0.0,
+        'ac_policy': 'on_request',
+        'custom_price_per_km': 0.0,
+        'custom_price_per_minute': 0.0,
+        'bank_account_type': null,
+        'bank_code': null,
+        'bank_agency': null,
+        'bank_account': null,
+        'pix_key': '',
+        'pix_key_type': 'email',
+        'consecutive_cancellations': 0,
+        'total_trips': 0,
+        'average_rating': null,
+        'current_latitude': null,
+        'current_longitude': null,
+        'last_location_update': null,
+      };
+
+      final result = await _supabase
+          .from('drivers')
+          .insert(driverData)
+          .select('id')
+          .single();
+          
+      print('✅ Registro de motorista criado automaticamente com ID: ${result['id']}');
+      return result['id'] as String;
+      
+    } on PostgrestException catch (e) {
+      print('❌ Erro ao criar registro de motorista automaticamente: ${e.code} - ${e.message}');
+      return null; // Return null instead of throwing to allow graceful fallback
+    } catch (e) {
+      print('❌ Erro inesperado ao criar registro de motorista: $e');
+      return null;
     }
   }
 
@@ -107,24 +199,31 @@ class WalletService {
 
   Future<String?> getPassengerIdForUser(String userId) async {
     try {
-      // First, try to find existing passenger record
+      // First, try to find existing passenger record with timeout
       final data = await _supabase
           .from('passengers')
           .select('id')
           .eq('user_id', userId)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(const Duration(seconds: 10));
           
       if (data != null) {
         return data['id'] as String;
       }
       
       // If no passenger record exists, check if this is a passenger-type user
-      // and auto-create the missing passenger record
-      return await _autoCreateMissingPassengerRecord(userId);
+      // and auto-create the missing passenger record with timeout
+      return await _autoCreateMissingPassengerRecord(userId)
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      print('❌ Timeout ao buscar/criar passageiro para usuário: $userId');
+      throw const DatabaseException('Operação demorou muito para completar. Verifique sua conexão e tente novamente.');
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar passageiro do usuário. Por favor, tente novamente mais tarde.', e.code);
+      print('❌ Erro PostgreSQL ao buscar passageiro: ${e.code} - ${e.message}');
+      throw DatabaseException('Erro ao buscar passageiro do usuário. Código: ${e.code}', e.code);
     } catch (e) {
-      throw const DatabaseException('Erro inesperado ao buscar passageiro do usuário. Por favor, tente novamente mais tarde.');
+      print('❌ Erro inesperado ao buscar passageiro: $e');
+      throw DatabaseException('Erro inesperado ao buscar passageiro: $e');
     }
   }
 
@@ -169,14 +268,16 @@ class WalletService {
   Future<List<PassengerWalletTransaction>> getPassengerWalletTransactions(
     String passengerId, {
     int limit = 50,
+    int page = 0,
   }) async {
     try {
+      final offset = page * limit;
       final data = await _supabase
           .from('passenger_wallet_transactions')
           .select()
           .eq('passenger_id', passengerId)
           .order('created_at', ascending: false)
-          .limit(limit);
+          .range(offset, offset + limit - 1);
       return (data as List)
           .map((item) => PassengerWalletTransaction.fromMap(item as Map<String, dynamic>))
           .toList();
@@ -434,5 +535,152 @@ class WalletService {
       print('❌ Unexpected error auto-creating passenger record: $e');
       return null;
     }
+  }
+
+  /// Processa um saque para passageiro
+  Future<PassengerWalletTransaction> requestPassengerWithdrawal({
+    required String passengerId,
+    required double amount,
+    required String pixKey,
+    String? description,
+  }) async {
+    final securityService = SecurityService();
+    
+    try {
+      // Verificações de segurança (rate limiting)
+      final securityCheck = await securityService.canPerformWithdrawal(passengerId);
+      if (!securityCheck.allowed) {
+        await securityService.logAuditEvent(
+          passengerId: passengerId,
+          eventType: 'WITHDRAWAL_BLOCKED',
+          description: 'Tentativa de saque bloqueada: ${securityCheck.reason}',
+          metadata: {
+            'amount': amount,
+            'pix_key': pixKey,
+            'block_type': securityCheck.type.name,
+          },
+        );
+        
+        throw WithdrawalException(
+          type: WalletErrorType.rateLimitExceeded,
+          details: securityCheck.reason,
+          amount: amount,
+          pixKey: pixKey,
+        );
+      }
+      
+      // Detectar atividade suspeita
+      final isSuspicious = await securityService.detectSuspiciousActivity(passengerId);
+      if (isSuspicious) {
+        throw const WithdrawalException(
+          type: WalletErrorType.suspiciousActivity,
+          details: 'Atividade suspeita detectada. Tente novamente mais tarde.',
+        );
+      }
+      
+      // Validações básicas
+      if (amount <= 0) {
+        throw const WithdrawalException(
+          type: WalletErrorType.invalidAmount,
+          details: 'O valor deve ser maior que zero',
+        );
+      }
+
+      // Verificar se o passageiro tem saldo suficiente
+      final wallet = await getPassengerWallet(passengerId);
+      if (wallet == null) {
+        throw const WithdrawalException(
+          type: WalletErrorType.walletNotFound,
+          details: 'Carteira do passageiro não encontrada',
+        );
+      }
+
+      if (wallet.availableBalance < amount) {
+        throw WithdrawalException(
+          type: WalletErrorType.insufficientBalance,
+          details: 'Saldo disponível: R\$ ${wallet.availableBalance.toStringAsFixed(2)}',
+          amount: amount,
+          pixKey: pixKey,
+        );
+      }
+
+      // Criar transação de saque
+      final transactionData = {
+        'id': _generateUuid(),
+        'wallet_id': wallet.id,
+        'passenger_id': passengerId,
+        'type': TransactionType.withdrawal.value,
+        'amount': amount,
+        'description': description ?? 'Saque via PIX para $pixKey',
+        'status': TransactionStatus.pending.value,
+        'metadata': {
+          'pix_key': pixKey,
+          'withdrawal_method': 'pix',
+          'requested_at': DateTime.now().toIso8601String(),
+        },
+        'created_at': DateTime.now().toIso8601String(),
+      };
+
+      final response = await _supabase
+          .from('passenger_wallet_transactions')
+          .insert(transactionData)
+          .select()
+          .single();
+
+      // Atualizar saldo da carteira (debitar o valor)
+      final newBalance = wallet.availableBalance - amount;
+      await _supabase
+          .from('passenger_wallets')
+          .update({'available_balance': newBalance})
+          .eq('id', wallet.id);
+
+      // Registrar tentativa de saque para rate limiting
+      await securityService.recordWithdrawalAttempt(passengerId);
+      
+      // Log de auditoria para saque bem-sucedido
+      await securityService.logAuditEvent(
+        passengerId: passengerId,
+        eventType: 'WITHDRAWAL_SUCCESS',
+        description: 'Saque processado com sucesso',
+        metadata: {
+          'amount': amount,
+          'pix_key': pixKey,
+          'transaction_id': response['id'],
+          'wallet_id': wallet.id,
+        },
+      );
+      
+      print('✅ Saque processado com sucesso: R\$ ${amount.toStringAsFixed(2)} para $pixKey');
+      return PassengerWalletTransaction.fromMap(response);
+    } catch (e) {
+      print('❌ Erro ao processar saque do passageiro: $e');
+      
+      // Log de auditoria para erro
+      await securityService.logAuditEvent(
+        passengerId: passengerId,
+        eventType: 'WITHDRAWAL_ERROR',
+        description: 'Erro ao processar saque: ${e.toString()}',
+        metadata: {
+          'amount': amount,
+          'pix_key': pixKey,
+          'error_type': e.runtimeType.toString(),
+        },
+      );
+      
+      // Se já é uma WalletException, apenas relança
+      if (e is WalletException) {
+        rethrow;
+      }
+      
+      // Converte outros erros em WalletException
+      throw WalletErrorHandler.handleError(e);
+    }
+  }
+
+  /// Gera um UUID simples para transações
+  String _generateUuid() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = (timestamp * 1000 + (timestamp % 1000)).toString();
+    return 'txn_$random';
   }
 }

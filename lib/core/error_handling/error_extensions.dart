@@ -1,11 +1,14 @@
 /// Extensões úteis para o sistema de tratamento de erros
 /// Facilita o uso do sistema de erros em toda a aplicação
+library;
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import 'app_error.dart';
-import 'global_error_handler.dart';
 import 'error_notifier.dart';
+import 'global_error_handler.dart';
 
 /// Extensão para Future com tratamento de erro automático
 extension FutureErrorHandling<T> on Future<T> {
@@ -73,7 +76,7 @@ extension FutureErrorHandling<T> on Future<T> {
     String? operationName,
     bool Function(Object error)? shouldRetry,
   }) async {
-    int attempts = 0;
+    var attempts = 0;
     
     while (attempts < maxRetries) {
       try {
@@ -101,7 +104,7 @@ extension FutureErrorHandling<T> on Future<T> {
       }
     }
     
-    throw StateError('Should not reach here');
+    throw StateError('Não deveria chegar aqui');
   }
 }
 
@@ -190,8 +193,7 @@ extension BuildContextErrorHandling on BuildContext {
   }
 
   /// Mostra um dialog de erro
-  Future<void> showErrorDialog(AppError error) async {
-    return showDialog(
+  Future<void> showErrorDialog(AppError error) async => showDialog(
       context: this,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
@@ -222,7 +224,6 @@ extension BuildContextErrorHandling on BuildContext {
         ),
       ),
     );
-  }
 }
 
 /// Extensão para Exception com conversão para AppError
@@ -233,15 +234,13 @@ extension ExceptionToAppError on Exception {
     String? userMessage,
     Map<String, dynamic>? context,
     ErrorSeverity severity = ErrorSeverity.medium,
-  }) {
-    return AppError.fromException(
+  }) => AppError.fromException(
       this,
       type: type,
       userMessage: userMessage,
       context: context,
       severity: severity,
     );
-  }
 }
 
 /// Extensão para String com validações comuns
@@ -286,7 +285,7 @@ extension StringValidation on String {
   /// Valida se é um telefone válido (formato brasileiro)
   AppError? validatePhone() {
     final phoneRegex = RegExp(r'^\(?[1-9]{2}\)?\s?9?[0-9]{4}-?[0-9]{4}$');
-    if (!phoneRegex.hasMatch(replaceAll(RegExp(r'[^0-9]'), ''))) {
+    if (!phoneRegex.hasMatch(replaceAll(RegExp('[^0-9]'), ''))) {
       return AppError(
         type: AppErrorType.validationFailed,
         message: 'Telefone inválido: $this',

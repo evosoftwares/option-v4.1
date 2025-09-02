@@ -1,5 +1,6 @@
 /// Sistema de tratamento de erros consistente para toda a aplicação
 /// Baseado nos requisitos de negócio e integração com Supabase
+library;
 
 import 'package:flutter/foundation.dart';
 
@@ -48,14 +49,6 @@ enum ErrorSeverity {
 
 /// Classe base para todos os erros da aplicação
 class AppError implements Exception {
-  final AppErrorType type;
-  final String message;
-  final String? userMessage;
-  final String? technicalDetails;
-  final ErrorSeverity severity;
-  final Map<String, dynamic>? context;
-  final DateTime timestamp;
-  final StackTrace? stackTrace;
 
   AppError({
     required this.type,
@@ -67,6 +60,37 @@ class AppError implements Exception {
     StackTrace? stackTrace,
   }) : timestamp = DateTime.now(),
        stackTrace = stackTrace ?? StackTrace.current;
+
+  /// Cria um AppError a partir de uma exceção genérica
+  factory AppError.fromException(Exception exception, {
+    AppErrorType? type,
+    String? userMessage,
+    Map<String, dynamic>? context,
+    ErrorSeverity severity = ErrorSeverity.medium,
+  }) {
+    final errorMessage = exception.toString();
+    
+    // Detectar tipo de erro baseado na mensagem
+    var detectedType = type ?? _detectErrorType(errorMessage);
+    
+    return AppError(
+      type: detectedType,
+      message: errorMessage,
+      userMessage: userMessage,
+      technicalDetails: errorMessage,
+      severity: severity,
+      context: context,
+      stackTrace: StackTrace.current,
+    );
+  }
+  final AppErrorType type;
+  final String message;
+  final String? userMessage;
+  final String? technicalDetails;
+  final ErrorSeverity severity;
+  final Map<String, dynamic>? context;
+  final DateTime timestamp;
+  final StackTrace? stackTrace;
 
   /// Mensagem amigável para o usuário
   String get displayMessage {
@@ -120,8 +144,7 @@ class AppError implements Exception {
   }
 
   /// Converte o erro para um mapa para logging
-  Map<String, dynamic> toMap() {
-    return {
+  Map<String, dynamic> toMap() => {
       'type': type.name,
       'message': message,
       'userMessage': userMessage,
@@ -131,30 +154,6 @@ class AppError implements Exception {
       'timestamp': timestamp.toIso8601String(),
       'stackTrace': stackTrace?.toString(),
     };
-  }
-
-  /// Cria um AppError a partir de uma exceção genérica
-  factory AppError.fromException(Exception exception, {
-    AppErrorType? type,
-    String? userMessage,
-    Map<String, dynamic>? context,
-    ErrorSeverity severity = ErrorSeverity.medium,
-  }) {
-    final errorMessage = exception.toString();
-    
-    // Detectar tipo de erro baseado na mensagem
-    AppErrorType detectedType = type ?? _detectErrorType(errorMessage);
-    
-    return AppError(
-      type: detectedType,
-      message: errorMessage,
-      userMessage: userMessage,
-      technicalDetails: errorMessage,
-      severity: severity,
-      context: context,
-      stackTrace: StackTrace.current,
-    );
-  }
 
   /// Detecta o tipo de erro baseado na mensagem
   static AppErrorType _detectErrorType(String errorMessage) {
@@ -205,7 +204,5 @@ class AppError implements Exception {
   }
 
   @override
-  int get hashCode {
-    return type.hashCode ^ message.hashCode ^ severity.hashCode;
-  }
+  int get hashCode => type.hashCode ^ message.hashCode ^ severity.hashCode;
 }

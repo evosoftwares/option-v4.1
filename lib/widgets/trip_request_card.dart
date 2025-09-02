@@ -326,8 +326,8 @@ class TripRequestCard extends StatelessWidget {
                   label: 'Pet',
                 ),
               if (request.needsGrocerySpace)
-                Row(
-                  children: const [
+                const Row(
+                  children: [
                     Icon(Icons.local_grocery_store, size: 16),
                     SizedBox(width: 4),
                     Text('Espaço para compras'),

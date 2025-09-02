@@ -4,10 +4,7 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Fundo azul do ícone OPTION -->
-    <path android:fillColor="#2196F3"
+    <!-- Fundo azul escuro do ícone OPTION oficial -->
+    <path android:fillColor="#232FA2"
           android:pathData="M0,0h108v108h-108z"/>
-    <!-- Círculo decorativo -->
-    <path android:fillColor="#1976D2"
-          android:pathData="M54,54m-45,0a45,45 0,1 1,90 0a45,45 0,1 1,-90 0"/>
 </vector>

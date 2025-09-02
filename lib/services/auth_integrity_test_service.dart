@@ -1,8 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/feature_flags.dart';
-import '../exceptions/app_exceptions.dart';
-import '../models/user.dart';
 import '../utils/supabase_helper.dart';
 import 'enhanced_data_integrity_service.dart';
 import 'user_service.dart';

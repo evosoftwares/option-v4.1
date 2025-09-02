@@ -167,7 +167,7 @@ enum DocumentType {
 
   static DocumentType fromString(String value) => DocumentType.values.firstWhere(
       (type) => type.value == value,
-      orElse: () => throw ArgumentError('Invalid document type: $value'),
+      orElse: () => throw ArgumentError('Tipo de documento inválido: $value'),
     );
 }
 
@@ -183,6 +183,6 @@ enum DocumentStatus {
 
   static DocumentStatus fromString(String value) => DocumentStatus.values.firstWhere(
       (status) => status.value == value,
-      orElse: () => throw ArgumentError('Invalid document status: $value'),
+      orElse: () => throw ArgumentError('Status de documento inválido: $value'),
     );
 }

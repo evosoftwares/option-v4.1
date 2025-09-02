@@ -4,14 +4,14 @@ import 'package:option/screens/trip/waiting_driver_screen.dart';
 
 void main() {
   group('WaitingDriverScreen - Construção de Widgets', () {
-    testWidgets('deve construir widget básico sem crash', (WidgetTester tester) async {
+    testWidgets('deve construir widget básico sem crash', (tester) async {
       // Arrange
       const tripRequestId = 'widget-construction-id';
-      bool hasFatalCrash = false;
+      var hasFatalCrash = false;
 
       // Act
       try {
-        final widget = WaitingDriverScreen(tripRequestId: tripRequestId);
+        const widget = WaitingDriverScreen(tripRequestId: tripRequestId);
         expect(widget, isNotNull);
         expect(widget.tripRequestId, equals(tripRequestId));
       } catch (e) {
@@ -23,10 +23,10 @@ void main() {
       expect(hasFatalCrash, isFalse, reason: 'Widget deve construir sem crash fatal');
     });
 
-    testWidgets('deve construir com diferentes estados simulados', (WidgetTester tester) async {
+    testWidgets('deve construir com diferentes estados simulados', (tester) async {
       // Arrange
       const stateIds = ['searching-state', 'contacting-state', 'accepted-state', 'expired-state'];
-      bool hasFatalCrash = false;
+      var hasFatalCrash = false;
 
       // Act
       try {
@@ -44,15 +44,15 @@ void main() {
       expect(hasFatalCrash, isFalse, reason: 'Widget deve construir com diferentes estados');
     });
 
-    testWidgets('deve manter integridade durante múltiplas construções', (WidgetTester tester) async {
+    testWidgets('deve manter integridade durante múltiplas construções', (tester) async {
       // Arrange
       const baseId = 'integrity-test';
-      bool hasFatalCrash = false;
+      var hasFatalCrash = false;
 
       // Act
       try {
         // Múltiplas construções para testar integridade
-        for (int i = 0; i < 10; i++) {
+        for (var i = 0; i < 10; i++) {
           final widget = WaitingDriverScreen(tripRequestId: '$baseId-$i');
           expect(widget, isNotNull);
           expect(widget.tripRequestId, equals('$baseId-$i'));
@@ -67,14 +67,14 @@ void main() {
       expect(hasFatalCrash, isFalse, reason: 'Widget deve manter integridade durante múltiplas construções');
     });
 
-    testWidgets('deve validar propriedades de construção', (WidgetTester tester) async {
+    testWidgets('deve validar propriedades de construção', (tester) async {
       // Arrange
       const tripRequestId = 'property-validation-id';
-      bool hasFatalCrash = false;
+      var hasFatalCrash = false;
 
       // Act
       try {
-        final widget = WaitingDriverScreen(tripRequestId: tripRequestId);
+        const widget = WaitingDriverScreen(tripRequestId: tripRequestId);
         
         // Validar propriedades de construção
         expect(widget, isA<StatefulWidget>());

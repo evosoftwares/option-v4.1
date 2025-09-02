@@ -24,12 +24,10 @@ class TripRatingScreen extends StatefulWidget {
   final bool isDriver; // true = motorista avaliando passageiro
   final VoidCallback? onRatingCompleted;
 
-  static TripRatingScreen fromArgs(Map<String, dynamic>? args) {
-    return TripRatingScreen(
+  static TripRatingScreen fromArgs(Map<String, dynamic>? args) => TripRatingScreen(
       tripId: args?['tripId'] as String? ?? '',
       isDriver: args?['isDriver'] as bool? ?? false,
     );
-  }
 
   @override
   State<TripRatingScreen> createState() => _TripRatingScreenState();
@@ -139,8 +137,7 @@ class _TripRatingScreenState extends State<TripRatingScreen> {
     });
   }
 
-  Widget _buildRatingStars() {
-    return Row(
+  Widget _buildRatingStars() => Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(5, (index) {
         final starIndex = index + 1;
@@ -159,7 +156,6 @@ class _TripRatingScreenState extends State<TripRatingScreen> {
         );
       }),
     );
-  }
 
   String get _ratingText {
     switch (_selectedRating) {
@@ -178,11 +174,9 @@ class _TripRatingScreenState extends State<TripRatingScreen> {
     }
   }
 
-  String get _questionText {
-    return widget.isDriver 
+  String get _questionText => widget.isDriver 
         ? 'Como foi sua experiência com o passageiro?'
         : 'Como foi sua experiência com o motorista?';
-  }
 
   @override
   Widget build(BuildContext context) {

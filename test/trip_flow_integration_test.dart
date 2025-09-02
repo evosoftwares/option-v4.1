@@ -1,9 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:option/screens/trip/trip_options_screen.dart';
-import 'package:option/screens/trip/driver_selection_screen.dart';
-import 'package:option/models/favorite_location.dart';
-import 'package:option/models/trip_request_data.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:option/models/trip_request_data.dart';
+import 'package:option/screens/trip/driver_selection_screen.dart';
+import 'package:option/screens/trip/trip_options_screen.dart';
 
 void main() {
   group('Trip Flow Integration Tests', () {
@@ -63,7 +62,8 @@ void main() {
       print('🔍 Args para DriverSelectionScreen:');
       driverSelectionArgs.forEach((key, value) {
         if (key == 'origin' || key == 'destination') {
-          print('  $key: ${(value as Map)['name']} - ${(value as Map)['address']}');
+          final mapValue = value as Map<String, dynamic>?;
+          print('  $key: ${mapValue?['name']} - ${mapValue?['address']}');
         } else {
           print('  $key: $value');
         }

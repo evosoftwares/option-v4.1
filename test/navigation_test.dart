@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:option/screens/trip/trip_options_screen.dart';
-import 'package:option/screens/trip/driver_selection_screen.dart';
 import 'package:option/models/favorite_location.dart';
+import 'package:option/screens/trip/driver_selection_screen.dart';
+import 'package:option/screens/trip/trip_options_screen.dart';
 
 void main() {
   group('Navigation Tests', () {

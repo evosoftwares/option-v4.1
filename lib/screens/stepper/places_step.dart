@@ -287,22 +287,13 @@ class _PlacesStepState extends State<PlacesStep> {
   Future<void> _submitPlaces() async {
     final controller = Provider.of<StepperController>(context, listen: false);
     
-    if (controller.favoriteLocations.isEmpty) {
-      final colorScheme = Theme.of(context).colorScheme;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Por favor, adicione pelo menos um local favorito para continuar.'),
-          backgroundColor: colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
-      widget.onSave?.call(controller.favoriteLocations);
+      // Salvar locais favoritos apenas se houver algum
+      if (controller.favoriteLocations.isNotEmpty) {
+        widget.onSave?.call(controller.favoriteLocations);
+      }
       
       await Future.delayed(const Duration(milliseconds: 500));
       
@@ -348,7 +339,7 @@ class _PlacesStepState extends State<PlacesStep> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Adicione seus locais favoritos para viagens rápidas',
+                'Adicione locais favoritos para viagens rápidas (opcional)',
                 style: textTheme.bodyLarge?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -481,7 +472,7 @@ class _PlacesStepState extends State<PlacesStep> {
                           ),
                         )
                       : const Text(
-                          'Finalizar cadastro',
+                          'Continuar',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

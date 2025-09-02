@@ -220,7 +220,7 @@ class DriverScheduleService {
       }
 
       // Se não encontrou hoje, procura nos próximos dias
-      for (int i = 1; i <= 7; i++) {
+      for (var i = 1; i <= 7; i++) {
         final targetDay = (currentDayOfWeek + i) % 7;
         for (final schedule in schedules) {
           if (schedule.dayOfWeek == targetDay) {
@@ -255,12 +255,12 @@ class DriverScheduleService {
     final endMinutes = endTime.hour * 60 + endTime.minute;
 
     for (final scheduleJson in existingSchedules) {
-      final schedule = DriverSchedule.fromJson(scheduleJson as Map<String, dynamic>);
+      final schedule = DriverSchedule.fromJson(scheduleJson);
       final existingStartMinutes = schedule.startTime.hour * 60 + schedule.startTime.minute;
       final existingEndMinutes = schedule.endTime.hour * 60 + schedule.endTime.minute;
 
       // Verifica sobreposição
-      final hasOverlap = (startMinutes < existingEndMinutes && endMinutes > existingStartMinutes);
+      final hasOverlap = startMinutes < existingEndMinutes && endMinutes > existingStartMinutes;
 
       if (hasOverlap) {
         throw ValidationException(
@@ -275,7 +275,7 @@ class DriverScheduleService {
     final schedules = <DriverSchedule>[];
 
     // Segunda a sexta-feira (1-5), das 8h às 17h
-    for (int day = 1; day <= 5; day++) {
+    for (var day = 1; day <= 5; day++) {
       try {
         final schedule = await createSchedule(
           driverId: driverId,
@@ -299,7 +299,7 @@ class DriverScheduleService {
       final schedules = await getDriverSchedules(driverId);
       final activeSchedules = schedules.where((s) => s.isActive).toList();
 
-      int totalHoursPerWeek = 0;
+      var totalHoursPerWeek = 0;
       final daysWithSchedule = <int>{};
 
       for (final schedule in activeSchedules) {

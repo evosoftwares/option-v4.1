@@ -9,8 +9,7 @@ class TripPreferences {
     this.numberOfStops = 0,
   });
 
-  factory TripPreferences.fromJson(Map<String, dynamic> json) {
-    return TripPreferences(
+  factory TripPreferences.fromJson(Map<String, dynamic> json) => TripPreferences(
       needsPet: json['needs_pet'] as bool? ?? false,
       needsGrocerySpace: json['needs_grocery_space'] as bool? ?? false,
       isCondoOrigin: json['is_condo_origin'] as bool? ?? false,
@@ -18,7 +17,6 @@ class TripPreferences {
       needsAc: json['needs_ac'] as bool? ?? false,
       numberOfStops: json['number_of_stops'] as int? ?? 0,
     );
-  }
 
   final bool needsPet;
   final bool needsGrocerySpace;
@@ -37,8 +35,7 @@ class TripPreferences {
     bool? isCondoDestination,
     bool? needsAc,
     int? numberOfStops,
-  }) {
-    return TripPreferences(
+  }) => TripPreferences(
       needsPet: needsPet ?? this.needsPet,
       needsGrocerySpace: needsGrocerySpace ?? this.needsGrocerySpace,
       isCondoOrigin: isCondoOrigin ?? this.isCondoOrigin,
@@ -46,10 +43,8 @@ class TripPreferences {
       needsAc: needsAc ?? this.needsAc,
       numberOfStops: numberOfStops ?? this.numberOfStops,
     );
-  }
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'needs_pet': needsPet,
       'needs_grocery_space': needsGrocerySpace,
       'is_condo_origin': isCondoOrigin,
@@ -57,10 +52,7 @@ class TripPreferences {
       'needs_ac': needsAc,
       'number_of_stops': numberOfStops,
     };
-  }
 
   @override
-  String toString() {
-    return 'TripPreferences(pet: $needsPet, grocery: $needsGrocerySpace, condoOrigin: $isCondoOrigin, condoDestination: $isCondoDestination, AC: $needsAc, stops: $numberOfStops)';
-  }
+  String toString() => 'TripPreferences(pet: $needsPet, grocery: $needsGrocerySpace, condoOrigin: $isCondoOrigin, condoDestination: $isCondoDestination, AC: $needsAc, stops: $numberOfStops)';
 }

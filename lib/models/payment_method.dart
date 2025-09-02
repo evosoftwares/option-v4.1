@@ -258,7 +258,7 @@ enum PaymentMethodType {
       case 'cash':
         return PaymentMethodType.cash;
       default:
-        throw ArgumentError('Unknown payment method type: $value');
+        throw ArgumentError('Tipo de método de pagamento desconhecido: $value');
     }
   }
 
@@ -305,7 +305,7 @@ enum PixKeyType {
 
   static PixKeyType fromString(String value) => values.firstWhere(
       (type) => type.value == value,
-      orElse: () => throw ArgumentError('Unknown PIX key type: $value'),
+      orElse: () => throw ArgumentError('Tipo de chave PIX desconhecido: $value'),
     );
 
   String get displayName {

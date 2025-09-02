@@ -270,7 +270,7 @@ class TripService {
     try {
       print('🔍 [DEBUG] getTripHistory chamado - passengerId: $passengerId, driverId: $driverId');
       
-      var selectQuery = '''
+      const selectQuery = '''
         id, trip_code, status, origin_address, destination_address,
         actual_distance_km, base_fare, additional_fees, requested_at, completed_at,
         cancelled_at, cancellation_reason, payment_status, created_at
@@ -300,7 +300,7 @@ class TripService {
       }
 
       // Para cada viagem, buscar informações do outro usuário
-      final List<TripHistoryModel> trips = [];
+      final trips = <TripHistoryModel>[];
       
       for (final json in response) {
         print('🔍 [DEBUG] Processando viagem: ${json['id']}');
@@ -354,8 +354,6 @@ class TripService {
           cancelledAt: json['cancelled_at'] != null ? DateTime.parse(json['cancelled_at']) : null,
           cancellationReason: json['cancellation_reason'],
           paymentStatus: json['payment_status'] ?? 'pending',
-          driverRating: null, // Removeremos ratings por enquanto para simplificar
-          passengerRating: null,
           otherUserName: otherUserName,
           otherUserPhotoUrl: otherUserPhotoUrl,
         );

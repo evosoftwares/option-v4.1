@@ -82,10 +82,20 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
   }
 
   Future<void> _loadCustomMarkers() async {
-    // Usando ícones padrão pretos para todos os marcadores
-    _driverMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(0.0);
-    _originMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(0.0);
-    _destinationMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(0.0);
+    try {
+      // Carrega ícone personalizado do carrinho para o motorista
+      _driverMarkerIcon = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/images/car_marker.png',
+      );
+    } catch (e) {
+      // Fallback para o ícone padrão se houver erro
+      _driverMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+    }
+    
+    // Usando ícones padrão para origem e destino
+    _originMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+    _destinationMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
   }
 
 
@@ -150,7 +160,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
           _currentTrip!.originLatitude,
           _currentTrip!.originLongitude,
         ),
-        icon: _originMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(0.0),
+        icon: _originMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(0),
         infoWindow: InfoWindow(
           title: 'Origem',
           snippet: _currentTrip!.originAddress,
@@ -166,7 +176,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
           _currentTrip!.destinationLatitude,
           _currentTrip!.destinationLongitude,
         ),
-        icon: _destinationMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(0.0),
+        icon: _destinationMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(0),
         infoWindow: InfoWindow(
           title: 'Destino',
           snippet: _currentTrip!.destinationAddress,
@@ -197,7 +207,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
         _currentDriver!.currentLatitude!,
         _currentDriver!.currentLongitude!,
       ),
-      icon: _driverMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(0.0),
+      icon: _driverMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(0),
       infoWindow: InfoWindow(
         title: 'Seu motorista',
         snippet: '${_currentDriver!.brand} ${_currentDriver!.model} - ${_currentDriver!.plate}',

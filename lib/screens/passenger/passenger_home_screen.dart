@@ -76,8 +76,8 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
   Future<void> _loadCustomMarkers() async {
     try {
       // Usando ícones padrão pretos para origem e destino
-      _originIcon = BitmapDescriptor.defaultMarkerWithHue(0.0);
-    _destinationIcon = BitmapDescriptor.defaultMarkerWithHue(0.0);
+      _originIcon = BitmapDescriptor.defaultMarkerWithHue(0);
+    _destinationIcon = BitmapDescriptor.defaultMarkerWithHue(0);
       debugPrint('✅ Standard black markers loaded successfully');
     } catch (e) {
       debugPrint('❌ Markers failed to load, using defaults: $e');
@@ -138,7 +138,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
     );
     if (result is FavoriteLocation) {
       setState(() => _origin = result);
-      _setMarker('origin', result.latitude, result.longitude, _originIcon ?? BitmapDescriptor.defaultMarkerWithHue(0.0));
+      _setMarker('origin', result.latitude, result.longitude, _originIcon ?? BitmapDescriptor.defaultMarkerWithHue(0));
       await _fitBounds();
       await _tryBuildRoute();
     }
@@ -151,7 +151,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
     );
     if (result is FavoriteLocation) {
       setState(() => _destination = result);
-      _setMarker('destination', result.latitude, result.longitude, _destinationIcon ?? BitmapDescriptor.defaultMarkerWithHue(0.0));
+      _setMarker('destination', result.latitude, result.longitude, _destinationIcon ?? BitmapDescriptor.defaultMarkerWithHue(0));
       await RecentDestinationsService.instance.addRecentDestination(result);
       await _loadRecentDestinations();
       await _fitBounds();
@@ -161,7 +161,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
 
   Future<void> _selectRecentDestination(FavoriteLocation destination) async {
     setState(() => _destination = destination);
-    _setMarker('destination', destination.latitude, destination.longitude, _destinationIcon ?? BitmapDescriptor.defaultMarkerWithHue(0.0));
+    _setMarker('destination', destination.latitude, destination.longitude, _destinationIcon ?? BitmapDescriptor.defaultMarkerWithHue(0));
     await RecentDestinationsService.instance.addRecentDestination(destination);
     await _loadRecentDestinations();
     await _fitBounds();

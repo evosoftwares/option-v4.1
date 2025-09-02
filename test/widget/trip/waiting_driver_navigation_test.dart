@@ -3,14 +3,14 @@ import 'package:option/screens/trip/waiting_driver_screen.dart';
 
 void main() {
   group('WaitingDriverScreen - Testes de Navegação', () {
-    testWidgets('deve instanciar para navegação sem crash fatal', (WidgetTester tester) async {
+    testWidgets('deve instanciar para navegação sem crash fatal', (tester) async {
       // Arrange
       const tripRequestId = 'navigation-test-id';
-      bool hasFatalCrash = false;
+      var hasFatalCrash = false;
 
       // Act
       try {
-        final widget = WaitingDriverScreen(tripRequestId: tripRequestId);
+        const widget = WaitingDriverScreen(tripRequestId: tripRequestId);
         expect(widget, isNotNull);
         expect(widget.tripRequestId, equals(tripRequestId));
       } catch (e) {
@@ -22,10 +22,10 @@ void main() {
       expect(hasFatalCrash, isFalse, reason: 'Widget deve instanciar para navegação sem crash');
     });
 
-    testWidgets('deve aceitar IDs de navegação diferentes', (WidgetTester tester) async {
+    testWidgets('deve aceitar IDs de navegação diferentes', (tester) async {
       // Arrange
       const navigationIds = ['nav-1', 'nav-2', 'back-navigation', 'forward-nav'];
-      bool hasFatalCrash = false;
+      var hasFatalCrash = false;
 
       // Act
       try {
@@ -43,15 +43,15 @@ void main() {
       expect(hasFatalCrash, isFalse, reason: 'Widget deve aceitar diferentes IDs de navegação');
     });
 
-    testWidgets('deve manter consistência durante múltiplas instanciações', (WidgetTester tester) async {
+    testWidgets('deve manter consistência durante múltiplas instanciações', (tester) async {
       // Arrange
       const tripRequestId = 'consistency-test-id';
-      bool hasFatalCrash = false;
+      var hasFatalCrash = false;
 
       // Act
       try {
         // Múltiplas instanciações
-        for (int i = 0; i < 5; i++) {
+        for (var i = 0; i < 5; i++) {
           final widget = WaitingDriverScreen(tripRequestId: '$tripRequestId-$i');
           expect(widget, isNotNull);
           expect(widget.tripRequestId, equals('$tripRequestId-$i'));

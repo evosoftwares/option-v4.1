@@ -35,9 +35,9 @@ class _SimpleMapsWidgetState extends State<SimpleMapsWidget> {
           : _buildStaticMap(),
     );
   
-  Widget _buildLoadingMap() => SizedBox(
+  Widget _buildLoadingMap() => const SizedBox(
       height: 200,
-      child: const Center(
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -215,7 +215,7 @@ class _SimpleMapsWidgetState extends State<SimpleMapsWidget> {
                   ],
                 ),
                 Expanded(
-                  child: Container(
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: Colors.green[50],
                       border: Border.all(color: Colors.green[200]!),

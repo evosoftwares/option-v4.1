@@ -10,6 +10,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../config/app_config.dart';
 import '../../controllers/driver_status_controller.dart';
+import '../../widgets/working_hours_dialog.dart';
+import '../../controllers/driver_status_manager.dart';
 import '../../models/driver_status.dart';
 import '../../models/supabase/trip.dart';
 import '../../services/driver_service.dart';
@@ -21,6 +23,8 @@ import '../../services/wallet_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/driver_earnings_widget.dart';
+import '../../widgets/feedback/index.dart';
 
 /// Production-ready main driver screen with enhanced UI and Uber-like design
 class DriverHomeScreen extends StatefulWidget {
@@ -37,12 +41,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
+  BitmapDescriptor? _carIcon;
 
   late final LocationService _locationService;
   late final DriverStatusController _statusController;
-  late final AnimationController _pulseController;
   late final AnimationController _buttonController;
-  late final Animation<double> _pulseAnimation;
   late final Animation<double> _buttonScaleAnimation;
 
   StreamSubscription<Position>? _positionSub;
@@ -50,6 +53,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   String? _currentTripId;
   String? _driverId;
   bool _revertingOnlineDueToPermission = false;
+  bool _isProcessingStatusChange = false;
 
   DateTime? _lastLocationSentAt;
   LatLng? _lastSentLatLng;
@@ -66,57 +70,57 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     super.initState();
     _initControllers();
     _initServices();
+    _loadCarIcon();
     _initLocation();
     _initActiveTrips();
   }
 
-  void _initControllers() {
-    _statusController = DriverStatusController();
-    _statusController.addListener(_onStatusChanged);
+  Future<void> _loadCarIcon() async {
+    try {
+      _carIcon = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/images/car_marker.png',
+      );
+    } catch (e) {
+      // Fallback para o ícone padrão se houver erro
+      _carIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+    }
+  }
 
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
+  void _initControllers() {
+    _statusController = DriverStatusManager().controller;
+    _statusController.addListener(_onStatusChanged);
 
     _buttonController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
 
-    _pulseAnimation = Tween<double>(
-      begin: 1,
-      end: 1.15,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ),);
-
     _buttonScaleAnimation = Tween<double>(
       begin: 1,
       end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _buttonController,
-      curve: Curves.easeInOut,
-    ),);
+    ).animate(
+      CurvedAnimation(
+        parent: _buttonController,
+        curve: Curves.easeInOut,
+      ),
+    );
   }
 
   void _initServices() {
     _locationService = LocationService(
       apiKey: AppConfig.googleMapsApiKey,
     );
-    
+
     // Inicializar FCM Service para notificações push
     // FCMService().initialize().catchError((e) => {
-      //   debugPrint('Erro ao inicializar FCMService: $e');
-      // }); // Removido - usando OneSignal
+    //   debugPrint('Erro ao inicializar FCMService: $e');
+    // }); // Removido - usando OneSignal
   }
 
   @override
   void dispose() {
     _statusController.removeListener(_onStatusChanged);
-    _statusController.dispose();
-    _pulseController.dispose();
     _buttonController.dispose();
     _positionSub?.cancel();
     _tripSub?.cancel();
@@ -133,9 +137,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
         (current['lat'] as num).toDouble(),
         (current['lng'] as num).toDouble(),
       );
-      await controller.animateCamera(CameraUpdate.newCameraPosition(
-        CameraPosition(target: latLng, zoom: 15),
-      ),);
+      await controller.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: latLng, zoom: 15),
+        ),
+      );
       _restartPositionStream();
     }
   }
@@ -159,9 +165,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
           _clearRoute();
           if (mounted) {
             setState(() {
-              _markers.removeWhere((m) =>
-                  m.markerId.value == 'origin' ||
-                  m.markerId.value == 'destination',);
+              _markers.removeWhere(
+                (m) =>
+                    m.markerId.value == 'origin' ||
+                    m.markerId.value == 'destination',
+              );
             });
           }
           _restartPositionStream();
@@ -226,12 +234,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       if (mounted) {
         setState(() {
           _markers.removeWhere((m) => m.markerId.value == 'driver_location');
-          _markers.add(Marker(
-            markerId: const MarkerId('driver_location'),
-            position: here,
-            icon: BitmapDescriptor.defaultMarkerWithHue(0.0),
-            infoWindow: const InfoWindow(title: 'Sua localização'),
-          ),);
+          _markers.add(
+            Marker(
+              markerId: const MarkerId('driver_location'),
+              position: here,
+              icon: _carIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+              infoWindow: const InfoWindow(title: 'Sua localização'),
+            ),
+          );
         });
       }
 
@@ -282,55 +292,54 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   }
 
   Future<void> _onStatusChanged() async {
-    if (!mounted) return;
-    
-    // Use post frame callback to avoid setState during build
-    SchedulerBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      
-      await _ensureDriverId();
+    if (!mounted || _isProcessingStatusChange) return;
 
-      if (_statusController.isOnline) {
-        final ok =
-            await _locationService.ensureLocationPermissions(background: true);
-        if (!ok) {
-          if (!_revertingOnlineDueToPermission) {
-            _revertingOnlineDueToPermission = true;
-            if (mounted) {
-              await _showLocationPermissionDialog();
+    _isProcessingStatusChange = true;
+
+    try {
+      // Use post frame callback to avoid setState during build
+      SchedulerBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+
+        await _ensureDriverId();
+
+        if (_statusController.isOnline) {
+          final ok = await _locationService.ensureLocationPermissions(
+              background: true);
+          if (!ok) {
+            if (!_revertingOnlineDueToPermission) {
+              _revertingOnlineDueToPermission = true;
+              if (mounted) {
+                await _showLocationPermissionDialog();
+              }
+              if (mounted) {
+                _statusController.toggleOnlineStatus();
+              }
+              await Future.delayed(const Duration(milliseconds: 200));
+              _revertingOnlineDueToPermission = false;
             }
-            if (mounted) {
-              _statusController.toggleOnlineStatus();
-            }
-            await Future.delayed(const Duration(milliseconds: 200));
-            _revertingOnlineDueToPermission = false;
+            return;
           }
-          return;
+
+          // Pulse animation removed
+        } else {
+          // Pulse animation removed
         }
 
-        // Start pulse animation when online
+        if (_driverId != null && mounted) {
+          try {
+            await DriverService(Supabase.instance.client)
+                .updateAvailability(_driverId!, _statusController.isOnline);
+          } catch (_) {}
+        }
+
         if (mounted) {
-          _pulseController.repeat(reverse: true);
+          _restartPositionStream();
         }
-      } else {
-        // Stop pulse animation when offline
-        if (mounted) {
-          _pulseController.stop();
-          _pulseController.reset();
-        }
-      }
-
-      if (_driverId != null && mounted) {
-        try {
-          await DriverService(Supabase.instance.client)
-              .updateAvailability(_driverId!, _statusController.isOnline);
-        } catch (_) {}
-      }
-
-      if (mounted) {
-        _restartPositionStream();
-      }
-    });
+      });
+    } finally {
+      _isProcessingStatusChange = false;
+    }
   }
 
   Future<void> _showLocationPermissionDialog() async {
@@ -397,10 +406,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     if (oLat == 0.0 && oLng == 0.0) return;
     if (dLat == 0.0 && dLng == 0.0) return;
 
-    _setMarker('origin', oLat, oLng, 0.0,
-        title: 'Origem');
-    _setMarker('destination', dLat, dLng, 0.0,
-        title: 'Destino');
+    _setMarker('origin', oLat, oLng, 0, title: 'Origem');
+    _setMarker('destination', dLat, dLng, 0, title: 'Destino');
 
     _clearRoute();
 
@@ -416,34 +423,43 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
 
     if (mounted) {
       setState(() {
-        _polylines.add(Polyline(
-          polylineId: const PolylineId('route_base'),
-          points: route.points,
-          color: colorScheme.primary,
-          width: 6,
-          startCap: Cap.roundCap,
-          endCap: Cap.roundCap,
-          jointType: JointType.round,
-        ),);
+        _polylines.add(
+          Polyline(
+            polylineId: const PolylineId('route_base'),
+            points: route.points,
+            color: colorScheme.primary,
+            width: 6,
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+            jointType: JointType.round,
+          ),
+        );
       });
     }
 
     await _fitRouteBounds(route.points);
   }
 
-  void _setMarker(String id, double lat, double lng, double hue,
-      {String? title,}) {
+  void _setMarker(
+    String id,
+    double lat,
+    double lng,
+    double hue, {
+    String? title,
+  }) {
     final pos = LatLng(lat, lng);
     if (mounted) {
       setState(() {
         _markers.removeWhere((m) => m.markerId.value == id);
-        _markers.add(Marker(
-          markerId: MarkerId(id),
-          position: pos,
-          icon: BitmapDescriptor.defaultMarkerWithHue(0.0),
-          infoWindow:
-              title != null ? InfoWindow(title: title) : InfoWindow.noText,
-        ),);
+        _markers.add(
+          Marker(
+            markerId: MarkerId(id),
+            position: pos,
+            icon: _carIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            infoWindow:
+                title != null ? InfoWindow(title: title) : InfoWindow.noText,
+          ),
+        );
       });
     }
   }
@@ -467,7 +483,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       northeast: LatLng(maxLat, maxLng),
     );
     final controller = await _ensureController();
-    controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, AppSpacing.headerHeight));
+    controller.animateCamera(
+        CameraUpdate.newLatLngBounds(bounds, AppSpacing.headerHeight));
   }
 
   void _clearRoute() {
@@ -485,7 +502,27 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       _buttonController.reverse();
     });
 
-    await _statusController.toggleOnlineStatus();
+    final status = _statusController.status;
+    
+    // Se está online, vai offline diretamente
+    if (status.isOnline) {
+      await _statusController.toggleOnlineStatus();
+      return;
+    }
+    
+    // Se está offline, verifica horário de trabalho antes de ficar online
+    final canGoOnline = await _statusController.tryGoOnlineWithValidation();
+    
+    if (!canGoOnline && mounted) {
+      // Mostrar diálogo de horário de trabalho
+      await showWorkingHoursDialog(
+        context: context,
+        statusController: _statusController,
+        onWorkingHoursUpdated: () {
+          // Callback quando horários são atualizados
+        },
+      );
+    }
   }
 
   Widget _buildGoButton(DriverStatus status) {
@@ -514,70 +551,65 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       icon = Icons.play_arrow;
     }
 
-    Widget button = Container(
-      width: 120,
-      height: 120,
-      decoration: BoxDecoration(
-        color: buttonColor,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: buttonColor.withOpacity(0.3),
-            blurRadius: AppSpacing.xs * 3,
-            spreadRadius: 3,
-          ),
-        ],
-      ),
-      child: status.isTransitioning
-          ? Center(
-              child: SizedBox(
-                width: AppSpacing.lg,
-                height: AppSpacing.lg,
-                child: CircularProgressIndicator(
-                  color: textColor,
-                  strokeWidth: 3,
+    Widget button = AnimatedBuilder(
+      animation: _buttonScaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _buttonScaleAnimation.value,
+          child: Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: buttonColor,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: buttonColor.withValues(alpha: 0.4),
+                  blurRadius: 16,
+                  spreadRadius: 4,
+                  offset: const Offset(0, 4),
                 ),
-              ),
-            )
-          : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (icon != null) ...[
-                  Icon(
-                    icon,
-                    color: textColor,
-                    size: AppSpacing.lg,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                ],
-                Text(
-                  buttonText,
-                  style: textTheme.titleLarge?.copyWith(
-                    color: textColor,
-                    fontWeight: AppTypography.bold,
-                  ),
+                BoxShadow(
+                  color: AppColors.black.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
+            child: status.isTransitioning
+                ? Center(
+                    child: AppLoading(
+                      type: AppLoadingType.circular,
+                      size: AppLoadingSize.medium,
+                      color: textColor,
+                    ),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (icon != null) ...[
+                        Icon(
+                          icon,
+                          color: textColor,
+                          size: AppSpacing.lg,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                      ],
+                      Text(
+                        buttonText,
+                        style: textTheme.titleLarge?.copyWith(
+                          color: textColor,
+                          fontWeight: AppTypography.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        );
+      },
     );
 
-    if (status.isOnline && !status.isTransitioning) {
-      button = AnimatedBuilder(
-        animation: _pulseAnimation,
-        builder: (context, child) => Transform.scale(
-          scale: _pulseAnimation.value,
-          child: button,
-        ),
-      );
-    }
-
-    button = AnimatedBuilder(
-      animation: _buttonScaleAnimation,
-      builder: (context, child) => Transform.scale(
-        scale: _buttonScaleAnimation.value,
-        child: button,
-      ),
-    );
+    // Pulse animation removed as requested
 
     return GestureDetector(
       onTap: status.isTransitioning ? null : _onGoButtonPressed,
@@ -587,6 +619,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
 
   void _navigateToDriverMenu() {
     Navigator.pushNamed(context, '/driver_menu');
+  }
+
+  void _navigateToWallet() {
+    Navigator.pushNamed(context, '/wallet');
   }
 
   @override
@@ -623,38 +659,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                 // Earnings widget
                 ListenableBuilder(
                   listenable: _statusController,
-                  builder: (context, _) => Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md, vertical: AppSpacing.xs * 3,),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface.withOpacity(0.95),
-                      borderRadius: BorderRadius.circular(AppSpacing.lg * 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.account_balance_wallet,
-                          color: colorScheme.primary,
-                          size: AppSpacing.iconSm,
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          _statusController.status.earningsDisplayText,
-                          style: textTheme.titleMedium?.copyWith(
-                            color: colorScheme.onSurface,
-                            fontWeight: AppTypography.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                  builder: (context, _) => DriverEarningsWidget(
+                    driverStatus: _statusController.status,
+                    onTap: _navigateToWallet,
                   ),
                 ),
 
@@ -680,13 +687,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                     // const SizedBox(width: AppSpacing.sm),
                     DecoratedBox(
                       decoration: BoxDecoration(
-                        color: colorScheme.surface.withOpacity(0.95),
+                        color: colorScheme.surface,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.black.withOpacity(0.1),
-                            blurRadius: AppSpacing.sm,
-                            offset: const Offset(0, 2),
+                            color: AppColors.black.withValues(alpha: 0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
@@ -706,7 +713,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
 
           // Bottom "IR" button
           Positioned(
-            bottom: AppSpacing.xl,
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.xl,
             left: 0,
             right: 0,
             child: Center(

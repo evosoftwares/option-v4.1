@@ -37,9 +37,7 @@ class DriverSchedule {
     return const TimeOfDay(hour: 0, minute: 0);
   }
 
-  static String _formatTime(TimeOfDay time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:00';
-  }
+  static String _formatTime(TimeOfDay time) => '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:00';
 
   final String id;
   final String driverId;
@@ -68,13 +66,9 @@ class DriverSchedule {
   }
 
   /// Retorna o horário formatado
-  String get timeRange {
-    return '${_formatTimeDisplay(startTime)} às ${_formatTimeDisplay(endTime)}';
-  }
+  String get timeRange => '${_formatTimeDisplay(startTime)} às ${_formatTimeDisplay(endTime)}';
 
-  String _formatTimeDisplay(TimeOfDay time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-  }
+  String _formatTimeDisplay(TimeOfDay time) => '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
 
   /// Verifica se o horário atual está dentro do período de trabalho
   bool isWorkingNow() {

@@ -1,18 +1,19 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../theme/app_colors.dart';
+
 import '../../models/supabase/driver.dart';
-import '../../models/trip_request_data.dart';
 import '../../models/trip_preferences.dart';
+import '../../models/trip_request_data.dart';
 import '../../models/vehicle_category.dart';
-import '../../services/driver_service.dart';
+import '../../services/driver_availability_service.dart';
 import '../../services/driver_matching_service.dart';
+import '../../services/driver_service.dart';
 import '../../services/individual_pricing_service.dart';
 import '../../services/trip_request_manager.dart';
-import '../../services/driver_availability_service.dart';
-import '../../widgets/app_card.dart';
+import '../../theme/app_colors.dart';
 import 'waiting_driver_screen.dart';
 
 class DriverWithUserData {
@@ -75,11 +76,9 @@ class DriverSelectionScreen extends StatefulWidget {
         needsGrocerySpace: args['needsGrocerySpace'] ?? false,
         isCondoOrigin: args['isCondoOrigin'] ?? false,
         isCondoDestination: args['isCondoDestination'] ?? false,
-        needsAc: false,
-        numberOfStops: 0,
-        estimatedDistanceKm: 0.0, // Será calculado
+        estimatedDistanceKm: 0, // Será calculado
         estimatedDurationMinutes: 0, // Será calculado
-        estimatedFare: 0.0, // Será calculado
+        estimatedFare: 0, // Será calculado
       );
       
       // Criar Position fictícia (será obtida em tempo real)
@@ -87,13 +86,13 @@ class DriverSelectionScreen extends StatefulWidget {
         longitude: _safeToDouble(origin['longitude']),
         latitude: _safeToDouble(origin['latitude']),
         timestamp: DateTime.now(),
-        accuracy: 10.0,
-        altitude: 0.0,
-        heading: 0.0,
-        speed: 0.0,
-        speedAccuracy: 0.0,
-        altitudeAccuracy: 0.0,
-        headingAccuracy: 0.0,
+        accuracy: 10,
+        altitude: 0,
+        heading: 0,
+        speed: 0,
+        speedAccuracy: 0,
+        altitudeAccuracy: 0,
+        headingAccuracy: 0,
       );
       
       print('✅ Objetos criados com sucesso');
@@ -111,13 +110,13 @@ class DriverSelectionScreen extends StatefulWidget {
 
   /// Converte qualquer tipo para double de forma segura
   static double _safeToDouble(dynamic value) {
-    if (value == null) return 0.0;
+    if (value == null) return 0;
     if (value is double) return value;
     if (value is int) return value.toDouble();
     if (value is String) {
       return double.tryParse(value) ?? 0.0;
     }
-    return 0.0;
+    return 0;
   }
 
   @override

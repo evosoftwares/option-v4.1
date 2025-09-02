@@ -7,6 +7,7 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../utils/snackbar_utils.dart';
 import '../../widgets/logo_branding.dart';
+import '../../widgets/feedback/index.dart';
 
 class PaymentsScreen extends StatefulWidget {
   const PaymentsScreen({super.key});
@@ -127,9 +128,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  ElevatedButton(
+                  AppButton(
                     onPressed: () => setState(() {}), // Rebuild to retry
-                    child: const Text('Tentar novamente'),
+                    text: 'Tentar novamente',
+                    type: AppButtonType.primary,
                   ),
                 ],
               ),
@@ -160,10 +162,11 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  ElevatedButton.icon(
+                  AppButton(
                     onPressed: _addPaymentMethod,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Adicionar método'),
+                    text: 'Adicionar método',
+                    type: AppButtonType.primary,
+                    icon: Icons.add,
                   ),
                 ],
               ),
@@ -548,9 +551,10 @@ class _AddPaymentMethodDialogState extends State<_AddPaymentMethodDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        ElevatedButton(
+        AppButton(
           onPressed: _save,
-          child: const Text('Adicionar'),
+          text: 'Adicionar',
+          type: AppButtonType.primary,
         ),
       ],
     );

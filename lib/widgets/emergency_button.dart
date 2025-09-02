@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../models/emergency.dart';
 import '../services/emergency_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import 'feedback/index.dart';
 
 /// Widget de botão de emergência
 class EmergencyButton extends StatefulWidget {
@@ -79,97 +79,31 @@ class _EmergencyButtonState extends State<EmergencyButton>
     }
   }
 
-  Future<bool?> _showConfirmationDialog() async => showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(
-              Icons.warning,
-              color: AppColors.error,
-              size: AppSpacing.lg,
-            ),
-            SizedBox(width: AppSpacing.sm),
-            Text('Confirmar Emergência'),
-          ],
-        ),
-        content: const Text(
-          'Você está prestes a acionar o botão de emergência. '
+  Future<bool?> _showConfirmationDialog() async => AppDialogUtils.showConfirmation(
+      context,
+      title: 'Confirmar Emergência',
+      content: 'Você está prestes a acionar o botão de emergência. '
           'Isso irá notificar seus contatos de emergência e as autoridades. '
           'Deseja continuar?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: AppColors.white,
-            ),
-            child: const Text('Confirmar Emergência'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Confirmar Emergência',
+      cancelLabel: 'Cancelar',
+      dismissible: false,
     );
 
   void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(
-              Icons.check_circle,
-              color: AppColors.success,
-              size: AppSpacing.lg,
-            ),
-            SizedBox(width: AppSpacing.sm),
-            Text('Emergência Acionada'),
-          ],
-        ),
-        content: const Text(
-          'Sua emergência foi registrada com sucesso. '
+    AppDialogUtils.showSuccess(
+      context,
+      title: 'Emergência Acionada',
+      content: 'Sua emergência foi registrada com sucesso. '
           'Seus contatos de emergência foram notificados.',
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
     );
   }
 
   void _showErrorDialog(String error) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(
-              Icons.error,
-              color: AppColors.error,
-              size: AppSpacing.lg,
-            ),
-            SizedBox(width: AppSpacing.sm),
-            Text('Erro'),
-          ],
-        ),
-        content: Text(
-          'Erro ao acionar emergência: $error',
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+    AppDialogUtils.showError(
+      context,
+      title: 'Erro',
+      content: 'Erro ao acionar emergência: $error',
     );
   }
 
@@ -215,7 +149,7 @@ class _EmergencyButtonState extends State<EmergencyButton>
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.emergency,
                           color: AppColors.white,
                           size: AppSpacing.iconXl,

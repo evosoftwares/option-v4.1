@@ -3,10 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/stepper_controller.dart';
 import '../../exceptions/user_registration_exception.dart';
-import '../../models/favorite_location.dart';
 import 'phone_step.dart';
 import 'photo_step.dart';
-import 'places_step.dart';
 
 class UserRegistrationStepper extends StatefulWidget {
   const UserRegistrationStepper({super.key});
@@ -48,7 +46,7 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
   }
 
   void _nextStep() {
-    if (_currentStep < 2) {
+    if (_currentStep < 1) {
       setState(() {
         _currentStep++;
       });
@@ -57,7 +55,7 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
         curve: Curves.easeInOut,
       );
     } else {
-      // Após o PlacesStep, finalizar cadastro
+      // Após o PhotoStep, finalizar cadastro
       _completeRegistration();
     }
   }
@@ -75,7 +73,7 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
   }
 
   void _jumpToStep(int step) {
-    if (step >= 0 && step <= 2) {
+    if (step >= 0 && step <= 1) {
       setState(() {
         _currentStep = step;
       });
@@ -83,18 +81,6 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
     }
   }
 
-  Future<void> _saveFavoriteLocations(List<FavoriteLocation> locations) async {
-    final controller = Provider.of<StepperController>(context, listen: false);
-    
-    try {
-      // Salvar locais favoritos usando o RealSavedPlacesService
-      await controller.saveFavoriteLocations(locations);
-      print('✅ Locais favoritos salvos com sucesso: ${locations.length} locais');
-    } catch (e) {
-      print('❌ Erro ao salvar locais favoritos: $e');
-      rethrow;
-    }
-  }
 
   Future<void> _completeRegistration() async {
     if (_isCompletingRegistration) return;
@@ -146,8 +132,8 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
         _registrationAttempts = 0;
         // Redirecionar baseado no tipo de usuário
         if (controller.userType == 'driver') {
-          print('🚗 [$timestamp] [REGISTRATION] Navegando para /driver_home (motorista)');
-          Navigator.of(context).pushReplacementNamed('/driver_home');
+          print('🚗 [$timestamp] [REGISTRATION] Navegando para stepper de motorista');
+          Navigator.of(context).pushReplacementNamed('/driver_stepper');
         } else {
           print('🚶 [$timestamp] [REGISTRATION] Navegando para /home (passageiro)');
           Navigator.of(context).pushReplacementNamed('/home');
@@ -219,10 +205,6 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
                   PhotoStep(
                     onNext: _nextStep,
                   ),
-                  PlacesStep(
-                    onNext: _nextStep,
-                    onSave: _saveFavoriteLocations,
-                  ),
                 ],
               ),
             ),
@@ -238,7 +220,7 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(3, (index) => GestureDetector(
+        children: List.generate(2, (index) => GestureDetector(
             onTap: () => _jumpToStep(index),
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -279,6 +261,8 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
                   fontWeight: FontWeight.w600,
                 ),
                 textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
               const SizedBox(height: 16),
               Text(
@@ -287,6 +271,8 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
                   color: colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
+                overflow: TextOverflow.visible,
+                maxLines: 4,
               ),
               const SizedBox(height: 32),
               Row(

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'core/shell_app.dart';
-import 'core/asset_manager.dart';
-import 'core/smart_preloader.dart';
+
 import 'config/app_config.dart';
+import 'core/asset_manager.dart';
+import 'core/deferred_maps.dart';
+import 'core/shell_app.dart';
+import 'core/smart_preloader.dart';
 import 'theme/light_theme.dart';
 import 'widgets/logo_branding.dart';
-import 'core/deferred_maps.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

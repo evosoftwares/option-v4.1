@@ -285,7 +285,7 @@ void main() {
         when(mockGoTrueClient.signInWithPassword(
           email: anyNamed('email'),
           password: anyNamed('password'),
-        )).thenThrow(const AuthException('Invalid credentials'));
+        )).thenThrow(const AuthException('Credenciais inválidas'));
 
         await tester.pumpWidget(
           const MaterialApp(
@@ -303,7 +303,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Should show error message
-        expect(find.text('Invalid credentials'), findsOneWidget);
+        expect(find.text('Credenciais inválidas'), findsOneWidget);
       });
 
       testWidgets('should handle generic errors', (tester) async {

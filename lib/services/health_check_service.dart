@@ -115,7 +115,6 @@ class HealthCheckService {
       endpoint: 'https://onesignal.com/',
       timeout: Duration(seconds: 8),
       interval: Duration(minutes: 2),
-      headers: {},
     ),
   ];
 

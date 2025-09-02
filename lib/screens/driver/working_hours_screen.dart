@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../models/supabase/working_hours.dart';
+import '../../services/working_hours_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../utils/supabase_helper.dart';
 
 class WorkingHoursScreen extends StatefulWidget {
   const WorkingHoursScreen({super.key});
@@ -12,6 +14,10 @@ class WorkingHoursScreen extends StatefulWidget {
 }
 
 class _WorkingHoursScreenState extends State<WorkingHoursScreen> {
+  late final WorkingHoursService _workingHoursService;
+  String? _driverId;
+  List<WorkingHours> _workingHours = [];
+  
   final Map<String, bool> _enabledDays = {
     'monday': false,
     'tuesday': false,
@@ -52,50 +58,84 @@ class _WorkingHoursScreenState extends State<WorkingHoursScreen> {
     'sunday': 'Domingo',
   };
 
+  final Map<String, int> _dayToInt = {
+    'monday': 1,
+    'tuesday': 2,
+    'wednesday': 3,
+    'thursday': 4,
+    'friday': 5,
+    'saturday': 6,
+    'sunday': 0,
+  };
+
+  final Map<int, String> _intToDay = {
+    0: 'sunday',
+    1: 'monday',
+    2: 'tuesday',
+    3: 'wednesday',
+    4: 'thursday',
+    5: 'friday',
+    6: 'saturday',
+  };
+
   bool _isLoading = true;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _loadWorkingHours();
+    _initializeService();
   }
-
-  Future<void> _loadWorkingHours() async {
+  
+  Future<void> _initializeService() async {
+    final supabase = Supabase.instance.client;
+    
+    _workingHoursService = WorkingHoursService(supabase);
+    await _loadDriverId();
+    await _loadWorkingHours();
+  }
+  
+  Future<void> _loadDriverId() async {
     try {
-      final supabase = SupabaseHelper.client;
-      if (supabase == null) {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
-        return;
-      }
+      final supabase = Supabase.instance.client;
       final userId = supabase.auth.currentUser?.id;
       
       if (userId == null) {
         throw Exception('Usuário não logado');
       }
 
-      // Buscar driver
+      // Buscar driver ID
       final driverResponse = await supabase
           .from('drivers')
-          .select('working_hours')
+          .select('id')
           .eq('user_id', userId)
-          .maybeSingle();
+          .single();
 
-      if (driverResponse != null && driverResponse['working_hours'] != null) {
-        final workingHours = driverResponse['working_hours'] as Map<String, dynamic>;
-        
-        if (mounted) {
-          setState(() {
-            _loadScheduleFromData(workingHours);
-            _isLoading = false;
-          });
-        }
-      } else {
+      _driverId = driverResponse['id'] as String;
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackBar('Erro ao buscar dados do motorista');
+      }
+    }
+  }
+
+  Future<void> _loadWorkingHours() async {
+    try {
+      if (_driverId == null) {
         if (mounted) {
           setState(() => _isLoading = false);
         }
+        return;
+      }
+
+      // Buscar horários usando o WorkingHoursService
+      _workingHours = await _workingHoursService.getWorkingHours(_driverId!);
+      
+      if (mounted) {
+        setState(() {
+          _loadScheduleFromWorkingHours(_workingHours);
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -105,69 +145,81 @@ class _WorkingHoursScreenState extends State<WorkingHoursScreen> {
     }
   }
 
-  void _loadScheduleFromData(Map<String, dynamic> workingHours) {
+  void _loadScheduleFromWorkingHours(List<WorkingHours> workingHours) {
+    // Primeiro, resetar todos os dias para false
     for (final dayKey in _enabledDays.keys) {
-      final dayData = workingHours[dayKey] as Map<String, dynamic>?;
-      if (dayData != null) {
-        _enabledDays[dayKey] = dayData['enabled'] == true;
-        
-        if (dayData['start_time'] != null) {
-          final startParts = dayData['start_time'].toString().split(':');
-          _startTimes[dayKey] = TimeOfDay(
-            hour: int.parse(startParts[0]),
-            minute: int.parse(startParts[1]),
-          );
-        }
-        
-        if (dayData['end_time'] != null) {
-          final endParts = dayData['end_time'].toString().split(':');
-          _endTimes[dayKey] = TimeOfDay(
-            hour: int.parse(endParts[0]),
-            minute: int.parse(endParts[1]),
-          );
-        }
-      }
+      _enabledDays[dayKey] = false;
     }
+    
+    // Mapear os working hours para os dias da semana
+     for (final hours in workingHours) {
+       final dayKey = _intToDay[hours.dayOfWeek];
+       if (dayKey != null) {
+         _enabledDays[dayKey] = true;
+         _startTimes[dayKey] = hours.parseStartTime();
+         _endTimes[dayKey] = hours.parseEndTime();
+       }
+     }
   }
 
   Future<void> _saveWorkingHours() async {
     setState(() => _isSaving = true);
 
     try {
-      final supabase = Supabase.instance.client;
-      final userId = supabase.auth.currentUser?.id;
-      
-      if (userId == null) {
-        throw Exception('Usuário não logado');
+      if (_driverId == null) {
+        throw Exception('Driver ID não encontrado');
       }
 
-      final workingHoursData = <String, dynamic>{};
-      
-      for (final dayKey in _enabledDays.keys) {
-        workingHoursData[dayKey] = {
-          'enabled': _enabledDays[dayKey],
-          'start_time': '${_startTimes[dayKey]!.hour.toString().padLeft(2, '0')}:${_startTimes[dayKey]!.minute.toString().padLeft(2, '0')}',
-          'end_time': '${_endTimes[dayKey]!.hour.toString().padLeft(2, '0')}:${_endTimes[dayKey]!.minute.toString().padLeft(2, '0')}',
-        };
+      // Validar horários antes de salvar
+      for (final entry in _enabledDays.entries) {
+        if (entry.value) {
+          final dayKey = entry.key;
+          final startTime = _startTimes[dayKey]!;
+          final endTime = _endTimes[dayKey]!;
+          
+          if (startTime.hour * 60 + startTime.minute >= endTime.hour * 60 + endTime.minute) {
+            throw Exception('Horário de início deve ser anterior ao horário de fim para ${_dayNames[dayKey]}');
+          }
+        }
       }
 
-      await supabase
-          .from('drivers')
-          .update({'working_hours': workingHoursData})
-          .eq('user_id', userId);
+      // Primeiro, desativar todos os horários existentes
+      await _workingHoursService.deactivateAllWorkingHours(_driverId!);
+
+      // Criar novos horários para dias habilitados
+      final newWorkingHours = <WorkingHours>[];
+      for (final entry in _enabledDays.entries) {
+        if (entry.value) { // Se o dia está habilitado
+          final dayKey = entry.key;
+          final dayOfWeek = _dayToInt[dayKey]!;
+          
+          final workingHour = await _workingHoursService.createWorkingHours(
+            driverId: _driverId!,
+            dayOfWeek: dayOfWeek,
+            startTime: _startTimes[dayKey]!,
+            endTime: _endTimes[dayKey]!,
+          );
+          
+          newWorkingHours.add(workingHour);
+        }
+      }
+
+      // Atualizar a lista local
+      _workingHours = newWorkingHours;
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Horários de trabalho salvos com sucesso!'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-          );
+          SnackBar(
+            content: const Text('Horários de trabalho salvos com sucesso!'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            duration: const Duration(seconds: 2),
+          ),
+        );
         Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
-        _showErrorSnackBar('Erro ao salvar horários de trabalho');
+        _showErrorSnackBar('Erro ao salvar horários de trabalho: ${e.toString()}');
       }
     } finally {
       if (mounted) {
@@ -191,14 +243,31 @@ class _WorkingHoursScreenState extends State<WorkingHoursScreen> {
     final time = await showTimePicker(
       context: context,
       initialTime: currentTime,
+      helpText: isStartTime ? 'Selecionar horário de início' : 'Selecionar horário de fim',
     );
 
     if (time != null) {
       setState(() {
         if (isStartTime) {
           _startTimes[dayKey] = time;
+          // Se o horário de início for maior que o de fim, ajustar o fim
+          final endTime = _endTimes[dayKey]!;
+          if (time.hour * 60 + time.minute >= endTime.hour * 60 + endTime.minute) {
+            _endTimes[dayKey] = TimeOfDay(
+              hour: time.hour < 23 ? time.hour + 1 : 23,
+              minute: time.minute,
+            );
+          }
         } else {
           _endTimes[dayKey] = time;
+          // Se o horário de fim for menor que o de início, ajustar o início
+          final startTime = _startTimes[dayKey]!;
+          if (startTime.hour * 60 + startTime.minute >= time.hour * 60 + time.minute) {
+            _startTimes[dayKey] = TimeOfDay(
+              hour: time.hour > 0 ? time.hour - 1 : 0,
+              minute: time.minute,
+            );
+          }
         }
       });
     }
@@ -222,6 +291,14 @@ class _WorkingHoursScreenState extends State<WorkingHoursScreen> {
         _endTimes[dayKey] = sourceEnd;
       }
     });
+    
+    // Mostrar feedback visual
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Horários de ${_dayNames[sourceDayKey]} copiados para todos os dias'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
   }
 
   @override
@@ -270,9 +347,9 @@ class _WorkingHoursScreenState extends State<WorkingHoursScreen> {
     return Container(
       padding: AppSpacing.paddingLg,
       decoration: BoxDecoration(
-        color: cs.primaryContainer.withOpacity(0.3),
+        color: cs.primaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        border: Border.all(color: cs.primary.withOpacity(0.3)),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -349,7 +426,7 @@ class _WorkingHoursScreenState extends State<WorkingHoursScreen> {
         color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
         border: Border.all(
-          color: isEnabled ? cs.primary.withOpacity(0.3) : cs.outlineVariant,
+          color: isEnabled ? cs.primary.withValues(alpha: 0.3) : cs.outlineVariant,
         ),
       ),
       child: Column(

@@ -117,8 +117,8 @@ class EnhancedDataIntegrityService extends DataIntegrityService {
       r'^\d+-\d{13}$',    // Telefones com timestamp "123-1640995123456"
       r'^PENDENTE_\w+',   // Dados placeholder como "PENDENTE_CADASTRO"
       r'unable_to_\w+',   // Padrões como "unable_to_validate"
-      r'phone_error',     // Erros específicos de telefone
-      r'missing_phone',   // Telefone ausente
+      'phone_error',     // Erros específicos de telefone
+      'missing_phone',   // Telefone ausente
     ];
     
     return knownPatterns.any((pattern) => RegExp(pattern, caseSensitive: false).hasMatch(data));

@@ -1,12 +1,10 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../exceptions/app_exceptions.dart';
 import '../models/supabase/driver.dart';
 import '../models/supabase/passenger_request.dart';
-import '../models/supabase/trip.dart';
 import 'driver_excluded_zones_service.dart';
 import 'driver_service.dart';
 

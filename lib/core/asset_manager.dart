@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:developer' as dev;
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:dio/dio.dart';
+
 import '../config/app_config.dart';
 
 enum AssetType {

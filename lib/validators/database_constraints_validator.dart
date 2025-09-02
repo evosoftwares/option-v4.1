@@ -11,6 +11,7 @@ class DatabaseConstraintsValidator {
   
   /// Valida constraints da tabela app_users
   static void validateAppUser(Map<String, dynamic> data) {
+    _validateUserId(data['user_id']);
     _validateEmail(data['email']);
     _validateFullName(data['full_name']);
     _validatePhone(data['phone']);

@@ -88,6 +88,7 @@ class _AddLocationModalState extends State<AddLocationModal> {
     if (_formKey.currentState!.validate()) {
       final location = FavoriteLocation(
         id: widget.location?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: widget.location?.userId ?? 'temp-user', // Fallback seguro
         name: _nameController.text,
         address: _addressController.text,
         type: _selectedType,

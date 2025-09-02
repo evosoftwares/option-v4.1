@@ -1,9 +1,9 @@
 /// Handler global de erros para capturar e tratar erros não tratados
 /// Integrado com o sistema de logging e notificação de usuário
+library;
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app_error.dart';
 import 'error_logger.dart';
@@ -11,11 +11,6 @@ import 'error_notifier.dart';
 
 /// Configuração do handler global de erros
 class GlobalErrorHandlerConfig {
-  final bool enableErrorReporting;
-  final bool showErrorDialog;
-  final bool enableCrashlytics;
-  final Duration errorDisplayDuration;
-  final List<AppErrorType> silentErrors;
 
   const GlobalErrorHandlerConfig({
     this.enableErrorReporting = true,
@@ -24,17 +19,22 @@ class GlobalErrorHandlerConfig {
     this.errorDisplayDuration = const Duration(seconds: 5),
     this.silentErrors = const [],
   });
+  final bool enableErrorReporting;
+  final bool showErrorDialog;
+  final bool enableCrashlytics;
+  final Duration errorDisplayDuration;
+  final List<AppErrorType> silentErrors;
 }
 
 /// Handler global de erros da aplicação
 class GlobalErrorHandler {
+
+  GlobalErrorHandler._internal();
   static GlobalErrorHandler? _instance;
   static GlobalErrorHandler get instance {
     _instance ??= GlobalErrorHandler._internal();
     return _instance!;
   }
-
-  GlobalErrorHandler._internal();
 
   GlobalErrorHandlerConfig _config = const GlobalErrorHandlerConfig();
   ErrorLoggingService get _logger => ErrorLoggingService.instance;

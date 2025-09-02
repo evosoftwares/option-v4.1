@@ -131,7 +131,7 @@ enum WalletTransactionType {
 
   static WalletTransactionType fromString(String value) => values.firstWhere(
       (type) => type.value == value,
-      orElse: () => throw ArgumentError('Unknown wallet transaction type: $value'),
+      orElse: () => throw ArgumentError('Tipo de transação da carteira desconhecido: $value'),
     );
 
   String get displayName {
@@ -170,7 +170,7 @@ enum WalletTransactionStatus {
 
   static WalletTransactionStatus fromString(String value) => values.firstWhere(
       (status) => status.value == value,
-      orElse: () => throw ArgumentError('Unknown wallet transaction status: $value'),
+      orElse: () => throw ArgumentError('Status de transação da carteira desconhecido: $value'),
     );
 
   String get displayName {

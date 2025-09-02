@@ -88,15 +88,24 @@ class ZoneValidationService {
     
     // Check if it's already a valid state code
     if (validBrazilianStates.contains(normalized)) {
-      return normalized;
+      return normalized.toUpperCase();
     }
     
     // Check if it's a state name variation
     if (stateVariations.containsKey(normalized)) {
-      return stateVariations[normalized]!;
+      return stateVariations[normalized]!.toUpperCase();
     }
     
-    throw ValidationException('Estado inválido: $state');
+    // Additional validation for common invalid patterns
+    if (normalized.length > 50) {
+      throw const ValidationException('Nome do estado muito longo');
+    }
+    
+    if (RegExp(r'[0-9]').hasMatch(normalized)) {
+      throw const ValidationException('Estado não pode conter números');
+    }
+    
+    throw ValidationException('Estado inválido: $state. Use códigos como SP, RJ, MG ou nomes completos.');
   }
   
   /// Validates that a neighborhood name is not empty after normalization
@@ -109,6 +118,20 @@ class ZoneValidationService {
     
     if (normalized.isEmpty) {
       throw const ValidationException('Nome do bairro não pode estar vazio após normalização');
+    }
+    
+    // Additional validations
+    if (normalized.length > 100) {
+      throw const ValidationException('Nome do bairro muito longo (máximo 100 caracteres)');
+    }
+    
+    if (normalized.length < 2) {
+      throw const ValidationException('Nome do bairro muito curto (mínimo 2 caracteres)');
+    }
+    
+    // Check for suspicious patterns
+    if (RegExp(r'^[0-9]+$').hasMatch(normalized)) {
+      throw const ValidationException('Nome do bairro não pode ser apenas números');
     }
     
     return normalized;
@@ -124,6 +147,20 @@ class ZoneValidationService {
     
     if (normalized.isEmpty) {
       throw const ValidationException('Nome da cidade não pode estar vazio após normalização');
+    }
+    
+    // Additional validations
+    if (normalized.length > 100) {
+      throw const ValidationException('Nome da cidade muito longo (máximo 100 caracteres)');
+    }
+    
+    if (normalized.length < 2) {
+      throw const ValidationException('Nome da cidade muito curto (mínimo 2 caracteres)');
+    }
+    
+    // Check for suspicious patterns
+    if (RegExp(r'^[0-9]+$').hasMatch(normalized)) {
+      throw const ValidationException('Nome da cidade não pode ser apenas números');
     }
     
     return normalized;

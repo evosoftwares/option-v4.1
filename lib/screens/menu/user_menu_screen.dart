@@ -7,6 +7,7 @@ import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../utils/user_utils.dart';
+import '../../widgets/feedback/index.dart';
 
 class UserMenuScreen extends StatefulWidget {
   const UserMenuScreen({super.key});
@@ -34,22 +35,12 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
   }
 
   Future<void> _logout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sair'),
-        content: const Text('Tem certeza que deseja sair?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Sair'),
-          ),
-        ],
-      ),
+    final confirm = await AppDialogUtils.showConfirmation(
+      context,
+      title: 'Sair',
+      content: 'Tem certeza que deseja sair?',
+      confirmLabel: 'Sair',
+      cancelLabel: 'Cancelar',
     );
 
     if (confirm ?? false) {

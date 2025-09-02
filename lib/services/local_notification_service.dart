@@ -26,9 +26,7 @@ class LocalNotificationService {
 
     const initializationSettingsIOS =
         DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      
     );
 
     const initializationSettings = InitializationSettings(
@@ -120,7 +118,6 @@ class LocalNotificationService {
       priority: Priority.high,
       sound: androidSound != null ? RawResourceAndroidNotificationSound(androidSound) : null,
       playSound: androidSound != null,
-      enableVibration: true,
       category: AndroidNotificationCategory.call,
       fullScreenIntent: true,
       ticker: 'Nova solicitação de viagem',

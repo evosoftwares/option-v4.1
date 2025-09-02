@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import '../models/supabase/driver.dart';
 import '../models/trip_preferences.dart';
 import '../models/vehicle_category.dart';
-import 'platform_settings_service.dart';
 
 /// Serviço para cálculo de preços individuais por motorista
 /// Utiliza os campos custom_price_per_km e custom_price_per_minute
@@ -55,7 +54,7 @@ class IndividualPricingService {
     final totalPrice = distanceComponent + timeComponent + additionalFees;
     
     // Garantir preço mínimo (configurável via platform_settings)
-    return math.max(totalPrice, 8.0); // TODO: Usar PlatformSettingsService.getMinFare()
+    return math.max(totalPrice, 8); // TODO: Usar PlatformSettingsService.getMinFare()
   }
   
   /// Calcula o componente de distância da fórmula de precificação

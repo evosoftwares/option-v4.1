@@ -242,18 +242,19 @@ class UserService {
       throw DatabaseException('Dados inválidos fornecidos para atualização: ${e.message}');
     }
 
-    try {
-      final updateData = <String, dynamic>{};
-      
-      if (fullName != null) updateData['full_name'] = fullName;
-      if (phone != null) updateData['phone'] = phone;
-      if (photoUrl != null) updateData['photo_url'] = photoUrl;
-      if (userType != null) updateData['user_type'] = userType;
-      if (status != null) updateData['status'] = status;
-      
-      // Sempre atualiza o updated_at
-      updateData['updated_at'] = DateTime.now().toIso8601String();
+    final updateData = <String, dynamic>{};
+    
+    if (fullName != null) updateData['full_name'] = fullName;
+    if (phone != null) updateData['phone'] = phone;
+    if (photoUrl != null) updateData['photo_url'] = photoUrl;
+    if (userType != null) updateData['user_type'] = userType;
+    if (status != null) updateData['status'] = status;
+    
+    // Sempre atualiza o updated_at
+    updateData['updated_at'] = DateTime.now().toIso8601String();
 
+    try {
+      // Try direct update first, but catch sync_control errors
       final response = await _supabase
           .from('app_users')
           .update(updateData)
@@ -263,6 +264,16 @@ class UserService {
 
       return User.fromMap(response);
     } on PostgrestException catch (e) {
+      print('❌ [USER_SERVICE] PostgrestException detalhado:');
+      print('  - Code: ${e.code}');
+      print('  - Message: ${e.message}');
+      print('  - Details: ${e.details}');
+      print('  - Hint: ${e.hint}');
+      
+      if (e.code == '42P01' && (e.message.contains('sync_control') ?? false)) {
+        // Sync control table doesn't exist - this is the main issue
+        throw const DatabaseException('Sistema de sincronização não configurado. Entre em contato com o suporte.', 'SYNC_ERROR');
+      }
       if (e.code == 'PGRST116') { // No rows returned
         throw UserNotFoundException(userId);
       }
@@ -440,6 +451,11 @@ class UserService {
 
   /// Creates a driver record for driver-type users (basic record, needs completion later)
   static Future<void> _createDriverRecord(User user) async {
+    await createDriverRecord(user);
+  }
+
+  /// Public method to create driver record when needed (e.g., when user switches to driver type)
+  static Future<void> createDriverRecord(User user) async {
     try {
       print('📝 Criando registro básico de motorista...');
       
@@ -482,10 +498,10 @@ class UserService {
         'ac_policy': 'on_request',
         'custom_price_per_km': 0.0,
         'custom_price_per_minute': 0.0,
-        'bank_account_type': 'corrente',
-        'bank_code': '',
-        'bank_agency': '',
-        'bank_account': '',
+        'bank_account_type': null,
+        'bank_code': null,
+        'bank_agency': null,
+        'bank_account': null,
         'pix_key': '',
         'pix_key_type': 'email',
         'consecutive_cancellations': 0,
