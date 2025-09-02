@@ -137,7 +137,9 @@ class DriverStatusController extends ChangeNotifier {
     if (_driverId == null) return;
     
     try {
-      await _driverService.updateDriverWorkingHours(_driverId!, workingHours);
+      // Converte List<WorkingHours> para List<Map<String, dynamic>>
+      final workingHoursJson = workingHours.map((wh) => wh.toJson()).toList();
+      await _driverService.updateDriverWorkingHours(_driverId!, workingHoursJson);
     } catch (e) {
       // Handle error silently
     }

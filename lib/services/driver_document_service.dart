@@ -15,7 +15,7 @@ class DriverDocumentService {
     return client;
   }
   static const String _tableName = 'driver_documents';
-  static const String _bucketName = 'driver-documents';
+  static const String _bucketName = 'user-photos';
 
   /// Cria um novo documento do motorista
   static Future<DriverDocument> createDocument({

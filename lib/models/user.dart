@@ -24,6 +24,9 @@ class User {
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
     );
+
+  /// Cria um User a partir de JSON (deserialização)
+  factory User.fromJson(Map<String, dynamic> json) => User.fromMap(json);
   final String id; // UUID do usuário de autenticação (mesmo que auth.users.id)
   final String email;
   final String fullName;
@@ -92,4 +95,10 @@ class User {
 
   @override
   int get hashCode => id.hashCode;
+
+  /// Converte o User para JSON (serialização)
+  Map<String, dynamic> toJson() => toMap();
+
+  /// Verifica se o usuário está ativo
+  bool get isActive => status == 'active';
 }

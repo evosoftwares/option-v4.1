@@ -16,15 +16,101 @@ class FileUploadService {
   
   // Configurações de upload
   static const int maxFileSizeBytes = 5 * 1024 * 1024; // 5MB
+  static const int maxDocumentSizeBytes = 10 * 1024 * 1024; // 10MB para documentos
   static const List<String> allowedMimeTypes = [
     'image/jpeg',
     'image/jpg', 
     'image/png',
     'image/webp',
   ];
+  static const List<String> allowedDocumentMimeTypes = [
+    'image/jpeg',
+    'image/jpg', 
+    'image/png',
+    'image/webp',
+    'application/pdf',
+  ];
   static const int maxImageWidth = 1920;
   static const int maxImageHeight = 1920;
   static const int compressionQuality = 85;
+
+  /// Faz upload de documentos de motorista para o Supabase Storage
+  /// 
+  /// [file] - Arquivo de documento a ser enviado (imagem ou PDF)
+  /// [bucket] - Nome do bucket no Supabase Storage
+  /// [path] - Caminho onde o arquivo será salvo
+  /// [compress] - Se deve comprimir a imagem (padrão: true, não se aplica a PDFs)
+  /// 
+  /// Retorna a URL pública do arquivo enviado
+  static Future<String> uploadDriverDocument({
+    required File file,
+    required String bucket,
+    required String path,
+    bool compress = true,
+  }) async {
+    try {
+      print('🔄 FileUploadService.uploadDriverDocument iniciado');
+      print('  - file: ${file.path}');
+      print('  - bucket: $bucket');
+      print('  - path: $path');
+      print('  - compress: $compress');
+
+      // Validar se o arquivo existe
+      if (!await file.exists()) {
+        throw FileUploadException('Arquivo não encontrado: ${file.path}');
+      }
+
+      // Validar tamanho do arquivo (10MB para documentos)
+      final fileSize = await file.length();
+      if (fileSize > maxDocumentSizeBytes) {
+        throw FileUploadException(
+          'Arquivo muito grande: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB. Máximo permitido: ${(maxDocumentSizeBytes / 1024 / 1024).toStringAsFixed(2)}MB',
+        );
+      }
+
+      // Validar tipo MIME para documentos
+      final mimeType = _getMimeType(file.path);
+      if (!allowedDocumentMimeTypes.contains(mimeType)) {
+        throw FileUploadException(
+          'Tipo de arquivo não permitido: $mimeType. Tipos permitidos: ${allowedDocumentMimeTypes.join(', ')}',
+        );
+      }
+
+      Uint8List fileBytes;
+      
+      if (compress && mimeType != 'application/pdf') {
+        // Comprimir apenas imagens, não PDFs
+        print('🔄 Comprimindo imagem...');
+        fileBytes = await _compressImage(file);
+        print('✅ Imagem comprimida: ${fileBytes.length} bytes');
+      } else {
+        // Usar arquivo original para PDFs ou quando compressão está desabilitada
+        fileBytes = await file.readAsBytes();
+        print('📄 Usando arquivo original: ${fileBytes.length} bytes');
+      }
+      
+      print('🔄 Fazendo upload para Supabase...');
+      await _supabase.storage.from(bucket).uploadBinary(
+        path,
+        fileBytes,
+        fileOptions: FileOptions(
+          contentType: mimeType,
+          upsert: true,
+        ),
+      );
+      
+      final url = _supabase.storage.from(bucket).getPublicUrl(path);
+      print('✅ Upload concluído: $url');
+      
+      return url;
+    } catch (e) {
+      print('❌ Erro no upload: $e');
+      if (e is StorageException) {
+        throw FileUploadException('Erro no storage: ${e.message}');
+      }
+      rethrow;
+    }
+  }
 
   /// Faz upload de uma imagem para o Supabase Storage
   /// 

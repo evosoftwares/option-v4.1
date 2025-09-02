@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/driver_stepper_controller.dart';
+import '../../models/vehicle_brand.dart';
+import '../../models/vehicle_model.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
@@ -57,21 +60,92 @@ class VehicleRegistrationStep extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                                if (controller.isBrandLoading)
+                                  const SizedBox(
+                                    height: 16,
+                                    width: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
                               ],
                             ),
                             const SizedBox(height: AppSpacing.md),
-                            TextFormField(
+                            TypeAheadField<VehicleBrand>(
                               controller: controller.brandController,
-                              decoration: InputDecoration(
-                                labelText: 'Marca',
-                                hintText: 'Ex: Toyota, Honda, Volkswagen',
-                                border: OutlineInputBorder(
+                              suggestionsCallback: (pattern) async {
+                                if (pattern.isEmpty) {
+                                  return await controller.searchBrands('');
+                                }
+                                return await controller.searchBrands(pattern);
+                              },
+                              itemBuilder: (context, suggestion) {
+                                return ListTile(
+                                  leading: const Icon(Icons.business),
+                                  title: Text(suggestion.name),
+                                );
+                              },
+                              onSelected: (suggestion) {
+                                controller.selectBrand(suggestion);
+                              },
+                              decorationBuilder: (context, child) {
+                                return Material(
+                                  type: MaterialType.card,
+                                  elevation: 4,
                                   borderRadius: BorderRadius.circular(8),
-                                ),
-                                prefixIcon: const Icon(Icons.business),
-                              ),
-                              textCapitalization: TextCapitalization.words,
-                              onChanged: (value) => controller.setBrand(value),
+                                  child: child,
+                                );
+                              },
+                              offset: const Offset(0, 8),
+                              constraints: const BoxConstraints(maxHeight: 200),
+                              builder: (context, textController, focusNode) {
+                                return Consumer<DriverStepperController>(
+                                  builder: (context, driverController, _) {
+                                    return TextFormField(
+                                      controller: textController,
+                                      focusNode: focusNode,
+                                      decoration: InputDecoration(
+                                        labelText: 'Marca',
+                                        hintText: 'Digite para buscar marcas...',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(
+                                            color: driverController.brandHasError 
+                                              ? Colors.red 
+                                              : Colors.grey,
+                                          ),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(
+                                            color: driverController.brandHasError 
+                                              ? Colors.red 
+                                              : Colors.grey,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(
+                                            color: driverController.brandHasError 
+                                              ? Colors.red 
+                                              : AppColors.lightPrimary,
+                                            width: 2,
+                                          ),
+                                        ),
+                                        prefixIcon: Icon(
+                                          Icons.business,
+                                          color: driverController.brandHasError 
+                                            ? Colors.red 
+                                            : null,
+                                        ),
+                                        errorText: driverController.brandErrorMessage,
+                                      ),
+                                      textCapitalization: TextCapitalization.words,
+                                      onChanged: (value) {
+                                        driverController.setBrand(value);
+                                      },
+                                    );
+                                  },
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -99,21 +173,98 @@ class VehicleRegistrationStep extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                                if (controller.isModelLoading)
+                                  const SizedBox(
+                                    height: 16,
+                                    width: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
                               ],
                             ),
                             const SizedBox(height: AppSpacing.md),
-                            TextFormField(
+                            TypeAheadField<VehicleModel>(
                               controller: controller.modelController,
-                              decoration: InputDecoration(
-                                labelText: 'Modelo',
-                                hintText: 'Ex: Corolla, Civic, Gol',
-                                border: OutlineInputBorder(
+                              suggestionsCallback: (pattern) async {
+                                if (controller.selectedBrand == null) {
+                                  return <VehicleModel>[];
+                                }
+                                if (pattern.isEmpty) {
+                                  return await controller.searchModels('');
+                                }
+                                return await controller.searchModels(pattern);
+                              },
+                              itemBuilder: (context, suggestion) {
+                                return ListTile(
+                                  leading: const Icon(Icons.directions_car_filled),
+                                  title: Text(suggestion.name),
+                                );
+                              },
+                              onSelected: (suggestion) {
+                                controller.selectModel(suggestion);
+                              },
+                              decorationBuilder: (context, child) {
+                                return Material(
+                                  type: MaterialType.card,
+                                  elevation: 4,
                                   borderRadius: BorderRadius.circular(8),
-                                ),
-                                prefixIcon: const Icon(Icons.directions_car_filled),
-                              ),
-                              textCapitalization: TextCapitalization.words,
-                              onChanged: (value) => controller.setModel(value),
+                                  child: child,
+                                );
+                              },
+                              offset: const Offset(0, 8),
+                              constraints: const BoxConstraints(maxHeight: 200),
+                              builder: (context, textController, focusNode) {
+                                return Consumer<DriverStepperController>(
+                                  builder: (context, driverController, _) {
+                                    return TextFormField(
+                                      controller: textController,
+                                      focusNode: focusNode,
+                                      decoration: InputDecoration(
+                                        labelText: 'Modelo',
+                                        hintText: driverController.selectedBrand == null 
+                                            ? 'Selecione uma marca primeiro'
+                                            : 'Digite para buscar modelos...',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(
+                                            color: driverController.modelHasError 
+                                              ? Colors.red 
+                                              : Colors.grey,
+                                          ),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(
+                                            color: driverController.modelHasError 
+                                              ? Colors.red 
+                                              : Colors.grey,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(
+                                            color: driverController.modelHasError 
+                                              ? Colors.red 
+                                              : AppColors.lightPrimary,
+                                            width: 2,
+                                          ),
+                                        ),
+                                        prefixIcon: Icon(
+                                          Icons.directions_car_filled,
+                                          color: driverController.modelHasError 
+                                            ? Colors.red 
+                                            : null,
+                                        ),
+                                        errorText: driverController.modelErrorMessage,
+                                      ),
+                                      enabled: driverController.selectedBrand != null,
+                                      textCapitalization: TextCapitalization.words,
+                                      onChanged: (value) {
+                                        driverController.setModel(value);
+                                      },
+                                    );
+                                  },
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -152,7 +303,30 @@ class VehicleRegistrationStep extends StatelessWidget {
                                       hintText: '2020',
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: controller.yearHasError 
+                                            ? Colors.red 
+                                            : Colors.grey,
+                                        ),
                                       ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: controller.yearHasError 
+                                            ? Colors.red 
+                                            : Colors.grey,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: controller.yearHasError 
+                                            ? Colors.red 
+                                            : AppColors.lightPrimary,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      errorText: controller.yearErrorMessage,
                                     ),
                                     keyboardType: TextInputType.number,
                                     maxLength: 4,
@@ -193,7 +367,30 @@ class VehicleRegistrationStep extends StatelessWidget {
                                       hintText: 'Branco',
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: controller.colorHasError 
+                                            ? Colors.red 
+                                            : Colors.grey,
+                                        ),
                                       ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: controller.colorHasError 
+                                            ? Colors.red 
+                                            : Colors.grey,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: controller.colorHasError 
+                                            ? Colors.red 
+                                            : AppColors.lightPrimary,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      errorText: controller.colorErrorMessage,
                                     ),
                                     textCapitalization: TextCapitalization.words,
                                     onChanged: (value) => controller.setColor(value),
@@ -237,8 +434,36 @@ class VehicleRegistrationStep extends StatelessWidget {
                                 hintText: 'ABC-1234 ou ABC1D23',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: controller.plateHasError 
+                                      ? Colors.red 
+                                      : Colors.grey,
+                                  ),
                                 ),
-                                prefixIcon: const Icon(Icons.confirmation_number),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: controller.plateHasError 
+                                      ? Colors.red 
+                                      : Colors.grey,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: controller.plateHasError 
+                                      ? Colors.red 
+                                      : AppColors.lightPrimary,
+                                    width: 2,
+                                  ),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.confirmation_number,
+                                  color: controller.plateHasError 
+                                    ? Colors.red 
+                                    : null,
+                                ),
+                                errorText: controller.plateErrorMessage,
                               ),
                               textCapitalization: TextCapitalization.characters,
                               onChanged: (value) => controller.setPlate(value),
@@ -267,7 +492,7 @@ class VehicleRegistrationStep extends StatelessWidget {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   margin: const EdgeInsets.only(bottom: AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.red),
                   ),
@@ -284,6 +509,42 @@ class VehicleRegistrationStep extends StatelessWidget {
                           controller.errorMessage!,
                           style: AppTypography.bodySmall.copyWith(
                             color: Colors.red,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              
+              // Validation warning message
+              if (!controller.canProceedFromVehicle && 
+                  (controller.brandFieldTouched || 
+                   controller.modelFieldTouched || 
+                   controller.yearFieldTouched || 
+                   controller.plateFieldTouched || 
+                   controller.colorFieldTouched))
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_outlined,
+                        color: Colors.orange,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          'Complete todos os campos obrigatórios para continuar',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: Colors.orange,
                           ),
                         ),
                       ),
@@ -321,7 +582,7 @@ class VehicleRegistrationStep extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: controller.canProceedFromVehicle
                           ? () => controller.nextStep()
-                          : null,
+                          : () => controller.validateVehicleFields(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.lightPrimary,
                         foregroundColor: AppColors.lightOnPrimary,

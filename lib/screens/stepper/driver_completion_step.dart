@@ -59,13 +59,17 @@ class DriverCompletionStep extends StatelessWidget {
                             const SizedBox(height: AppSpacing.md),
                             
                             _buildDocumentStatus(
-                              'CNH (Carteira Nacional de Habilitação)',
-                              controller.cnhPhoto != null,
+                              title: 'CNH (Carteira Nacional de Habilitação)',
+                              isUploaded: controller.cnhUrl != null,
+                              isUploading: controller.isUploadingCnh,
+                              error: controller.cnhError,
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             _buildDocumentStatus(
-                              'CRLV (Certificado de Registro e Licenciamento)',
-                              controller.crlvPhoto != null,
+                              title: 'CRLV (Certificado de Registro e Licenciamento)',
+                              isUploaded: controller.crlvUrl != null,
+                              isUploading: controller.isUploadingCrlv,
+                              error: controller.crlvError,
                             ),
                           ],
                         ),
@@ -250,40 +254,106 @@ class DriverCompletionStep extends StatelessWidget {
       },
     );
   
-  Widget _buildDocumentStatus(String title, bool isUploaded) => Row(
+  Widget _buildDocumentStatus({
+    required String title,
+    required bool isUploaded,
+    required bool isUploading,
+    String? error,
+  }) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          isUploaded ? Icons.check_circle : Icons.radio_button_unchecked,
-          color: isUploaded ? Colors.green : Colors.grey,
-          size: 20,
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(
-            title,
-            style: AppTypography.bodyMedium.copyWith(
-              color: isUploaded ? AppColors.lightOnSurface : Colors.grey,
-            ),
-          ),
-        ),
-        if (isUploaded)
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              'Enviado',
-              style: AppTypography.bodySmall.copyWith(
-                color: Colors.green,
-                fontWeight: FontWeight.bold,
+        Row(
+          children: [
+            if (isUploading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Icon(
+                isUploaded
+                    ? Icons.check_circle
+                    : (error != null ? Icons.error_outline : Icons.radio_button_unchecked),
+                color: isUploaded
+                    ? Colors.green
+                    : (error != null ? Colors.red : Colors.grey),
+                size: 20,
+              ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                title,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: isUploaded
+                      ? AppColors.lightOnSurface
+                      : (error != null ? Colors.red : Colors.grey),
+                ),
               ),
             ),
+            if (isUploading)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Enviando...',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: Colors.blue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            else if (isUploaded)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Enviado',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            else if (error != null)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Falha',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        if (error != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            error,
+            style: AppTypography.bodySmall.copyWith(color: Colors.red),
           ),
+        ],
       ],
     );
   
