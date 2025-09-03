@@ -1,5 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/error_handling/postgrest_error_mapper.dart';
+import '../core/error_handling/error_logger.dart';
+import '../core/error_handling/app_error.dart';
 import '../exceptions/app_exceptions.dart';
 import '../models/supabase/location.dart';
 import '../models/supabase/trip.dart';
@@ -61,10 +64,40 @@ class TripService {
           .single();
 
       return TripRequest.fromJson(response);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao criar solicitação de viagem. Por favor, verifique os dados e tente novamente.',);
+    } on PostgrestException catch (e) {
+      final context = {
+        'operation': 'createTripRequest',
+        'passengerId': passengerId,
+        'originAddress': originAddress,
+        'destinationAddress': destinationAddress,
+        'postgrestCode': e.code,
+        'postgrestMessage': e.message
+      };
+      
+      await ErrorLoggingService.instance.logException(
+        e,
+        context: context,
+        type: AppErrorType.databaseError,
+        severity: ErrorSeverity.high,
+      );
+      
+      throw PostgrestErrorMapper.mapError(e, context: context);
     } catch (e) {
+      final context = {
+        'operation': 'createTripRequest',
+        'passengerId': passengerId,
+        'originAddress': originAddress,
+        'destinationAddress': destinationAddress,
+        'errorType': e.runtimeType.toString()
+      };
+      
+      await ErrorLoggingService.instance.logException(
+        e,
+        context: context,
+        type: AppErrorType.databaseError,
+        severity: ErrorSeverity.high,
+      );
+      
       throw const DatabaseException(
           'Erro inesperado ao criar solicitação de viagem. Por favor, tente novamente mais tarde.',);
     }
@@ -93,10 +126,40 @@ class TripService {
       final response = await query.order('created_at', ascending: false);
 
       return response.map((json) => TripRequest.fromJson(json)).toList();
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao buscar solicitações. Por favor, tente novamente mais tarde.',);
+    } on PostgrestException catch (e) {
+      final context = {
+        'operation': 'getTripRequests',
+        'passengerId': passengerId,
+        'status': status,
+        'limit': limit,
+        'postgrestCode': e.code,
+        'postgrestMessage': e.message
+      };
+      
+      await ErrorLoggingService.instance.logException(
+        e,
+        context: context,
+        type: AppErrorType.databaseError,
+        severity: ErrorSeverity.medium,
+      );
+      
+      throw PostgrestErrorMapper.mapError(e, context: context);
     } catch (e) {
+      final context = {
+        'operation': 'getTripRequests',
+        'passengerId': passengerId,
+        'status': status,
+        'limit': limit,
+        'errorType': e.runtimeType.toString()
+      };
+      
+      await ErrorLoggingService.instance.logException(
+        e,
+        context: context,
+        type: AppErrorType.databaseError,
+        severity: ErrorSeverity.medium,
+      );
+      
       throw const DatabaseException(
           'Erro inesperado ao buscar solicitações. Por favor, tente novamente mais tarde.',);
     }
@@ -112,9 +175,36 @@ class TripService {
       if (e.code == 'PGRST116') {
         return null;
       }
-      throw const DatabaseException(
-          'Erro ao buscar solicitação. Por favor, tente novamente mais tarde.',);
+      
+      final context = {
+        'operation': 'getTripRequest',
+        'id': id,
+        'postgrestCode': e.code,
+        'postgrestMessage': e.message
+      };
+      
+      await ErrorLoggingService.instance.logException(
+        e,
+        context: context,
+        type: AppErrorType.databaseError,
+        severity: ErrorSeverity.medium,
+      );
+      
+      throw PostgrestErrorMapper.mapError(e, context: context);
     } catch (e) {
+      final context = {
+        'operation': 'getTripRequest',
+        'id': id,
+        'errorType': e.runtimeType.toString()
+      };
+      
+      await ErrorLoggingService.instance.logException(
+        e,
+        context: context,
+        type: AppErrorType.databaseError,
+        severity: ErrorSeverity.medium,
+      );
+      
       throw const DatabaseException(
           'Erro inesperado ao buscar solicitação. Por favor, tente novamente mais tarde.',);
     }
@@ -144,9 +234,8 @@ class TripService {
           .single();
 
       return TripRequest.fromJson(response);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao atualizar status. Por favor, verifique os dados e tente novamente.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'updateTripRequestStatus', 'id': id, 'status': status, 'driverId': driverId});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao atualizar status. Por favor, tente novamente mais tarde.',);
@@ -197,9 +286,8 @@ class TripService {
           .single();
 
       return Trip.fromJson(response);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao criar viagem. Por favor, verifique os dados e tente novamente.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'createTrip', 'tripRequestId': tripRequestId, 'driverId': driverId, 'passengerId': passengerId});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao criar viagem. Por favor, tente novamente mais tarde.',);
@@ -216,8 +304,7 @@ class TripService {
       if (e.code == 'PGRST116') {
         return null;
       }
-      throw const DatabaseException(
-          'Erro ao buscar viagem. Por favor, tente novamente mais tarde.',);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getTrip', 'id': id});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao buscar viagem. Por favor, tente novamente mais tarde.',);
@@ -252,9 +339,8 @@ class TripService {
       final response = await query.order('created_at', ascending: false);
 
       return response.map((json) => Trip.fromJson(json)).toList();
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao buscar viagens. Por favor, tente novamente mais tarde.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getTrips', 'passengerId': passengerId, 'driverId': driverId, 'status': status});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao buscar viagens. Por favor, tente novamente mais tarde.',);
@@ -365,8 +451,7 @@ class TripService {
       return trips;
     } on PostgrestException catch (e) {
       print('❌ [DEBUG] PostgrestException: ${e.message}');
-      throw const DatabaseException(
-          'Erro ao buscar histórico de viagens. Tente novamente.',);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getTripHistory', 'passengerId': passengerId, 'driverId': driverId});
     } catch (e) {
       print('❌ [DEBUG] Erro geral: $e');
       throw const DatabaseException(
@@ -396,9 +481,8 @@ class TripService {
           .single();
 
       return Trip.fromJson(response);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao completar viagem. Por favor, verifique os dados e tente novamente.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'completeTrip', 'tripId': tripId});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao completar viagem. Por favor, tente novamente mais tarde.',);
@@ -431,9 +515,8 @@ class TripService {
           .single();
 
       return Trip.fromJson(response);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao avaliar viagem. Por favor, verifique os dados e tente novamente.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'rateTrip', 'tripId': tripId});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao avaliar viagem. Por favor, tente novamente mais tarde.',);
@@ -470,9 +553,8 @@ class TripService {
           .single();
 
       return Location.fromJson(response);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao salvar localização. Por favor, tente novamente mais tarde.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'saveLocation', 'userId': userId});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao salvar localização. Por favor, tente novamente mais tarde.',);
@@ -488,9 +570,8 @@ class TripService {
           .order('created_at', ascending: false);
 
       return response.map(Location.fromJson).toList();
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao buscar localizações. Por favor, tente novamente mais tarde.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getUserLocations', 'userId': userId});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao buscar localizações. Por favor, tente novamente mais tarde.',);
@@ -507,8 +588,7 @@ class TripService {
       if (e.code == 'PGRST116') {
         return null;
       }
-      throw const DatabaseException(
-          'Erro ao buscar localização. Por favor, tente novamente mais tarde.',);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getLocation', 'id': id});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao buscar localização. Por favor, tente novamente mais tarde.',);
@@ -548,9 +628,8 @@ class TripService {
           .single();
 
       return Location.fromJson(response);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao atualizar localização. Por favor, verifique os dados e tente novamente.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'updateLocation', 'id': id});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao atualizar localização. Por favor, tente novamente mais tarde.',);
@@ -560,9 +639,8 @@ class TripService {
   Future<void> deleteLocation(String id) async {
     try {
       await _supabase.from('locations').delete().eq('id', id);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao deletar localização. Por favor, verifique os dados e tente novamente.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'deleteLocation', 'id': id});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao deletar localização. Por favor, tente novamente mais tarde.',);
@@ -607,9 +685,8 @@ class TripService {
           .order('created_at', ascending: false);
 
       return response.map(TripRequest.fromJson).toList();
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao buscar solicitações direcionadas. Tente novamente.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getTargetedRequestsForDriver', 'driverId': driverId});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao buscar solicitações. Tente novamente.',);
@@ -646,9 +723,8 @@ class TripService {
           .single();
 
       return TripRequest.fromJson(response);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao aceitar solicitação. Tente novamente.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'acceptTripRequest', 'requestId': requestId, 'driverId': driverId});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao aceitar solicitação. Tente novamente.',);
@@ -694,9 +770,8 @@ class TripService {
           .single();
 
       return TripRequest.fromJson(response);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao recusar solicitação. Tente novamente.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'declineTripRequest', 'requestId': requestId, 'driverId': driverId});
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao recusar solicitação. Tente novamente.',);

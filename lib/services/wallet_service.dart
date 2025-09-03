@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/error_handling/postgrest_error_mapper.dart';
+import '../core/error_handling/error_logger.dart';
+import '../core/error_handling/app_error.dart';
 import '../exceptions/app_exceptions.dart';
 import '../exceptions/wallet_exceptions.dart';
 import '../models/passenger_wallet.dart';
@@ -40,10 +43,41 @@ class WalletService {
       throw const DatabaseException('Operação demorou muito para completar. Verifique sua conexão e tente novamente.');
     } on PostgrestException catch (e) {
       print('❌ Erro PostgreSQL ao buscar motorista: ${e.code} - ${e.message}');
-      throw DatabaseException('Erro ao buscar motorista do usuário. Código: ${e.code}', e.code);
+      final mappedError = PostgrestErrorMapper.mapError(e, context: {
+        'operation': 'getDriverIdForUser',
+        'userId': userId,
+      });
+      
+      // Log error for monitoring
+      await ErrorLoggingService.instance.logException(
+        mappedError,
+        type: AppErrorType.databaseError,
+        context: {
+          'operation': 'getDriverIdForUser',
+          'userId': userId,
+          'postgrestCode': e.code,
+        },
+        severity: ErrorSeverity.medium,
+      );
+      
+      throw mappedError;
     } catch (e) {
       print('❌ Erro inesperado ao buscar motorista: $e');
-      throw DatabaseException('Erro inesperado ao buscar motorista: $e');
+      final error = DatabaseException('Erro inesperado ao buscar motorista: $e');
+      
+      // Log error for monitoring
+      await ErrorLoggingService.instance.logException(
+        error,
+        type: AppErrorType.databaseError,
+        context: {
+          'operation': 'getDriverIdForUser',
+          'userId': userId,
+          'originalError': e.toString(),
+        },
+        severity: ErrorSeverity.medium,
+      );
+      
+      throw error;
     }
   }
 
@@ -56,7 +90,7 @@ class WalletService {
           .maybeSingle();
       return data;
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar carteira. Por favor, tente novamente mais tarde.', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getDriverWallet', 'driverId': driverId});
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao buscar carteira. Por favor, tente novamente mais tarde.');
     }
@@ -147,7 +181,7 @@ class WalletService {
           .limit(limit);
       return (data as List).cast<Map<String, dynamic>>();
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar transações. Por favor, tente novamente mais tarde.', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getWalletTransactions', 'driverId': driverId});
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao buscar transações. Por favor, tente novamente mais tarde.');
     }
@@ -189,7 +223,7 @@ class WalletService {
           .single();
       return data;
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao solicitar saque. Por favor, verifique os dados e tente novamente.', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'requestWithdrawal', 'driverId': driverId, 'amount': amount});
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao solicitar saque. Por favor, tente novamente mais tarde.');
     }
@@ -220,7 +254,7 @@ class WalletService {
       throw const DatabaseException('Operação demorou muito para completar. Verifique sua conexão e tente novamente.');
     } on PostgrestException catch (e) {
       print('❌ Erro PostgreSQL ao buscar passageiro: ${e.code} - ${e.message}');
-      throw DatabaseException('Erro ao buscar passageiro do usuário. Código: ${e.code}', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getPassengerIdForUser', 'userId': userId});
     } catch (e) {
       print('❌ Erro inesperado ao buscar passageiro: $e');
       throw DatabaseException('Erro inesperado ao buscar passageiro: $e');
@@ -236,7 +270,7 @@ class WalletService {
           .maybeSingle();
       return data != null ? PassengerWallet.fromMap(data) : null;
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar carteira. Por favor, tente novamente mais tarde.', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getPassengerWallet', 'passengerId': passengerId});
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao buscar carteira. Por favor, tente novamente mais tarde.');
     }
@@ -259,7 +293,7 @@ class WalletService {
           .single();
       return PassengerWallet.fromMap(data);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao criar carteira. Por favor, tente novamente mais tarde.', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'createPassengerWallet', 'passengerId': passengerId, 'userId': userId});
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao criar carteira. Por favor, tente novamente mais tarde.');
     }
@@ -282,7 +316,7 @@ class WalletService {
           .map((item) => PassengerWalletTransaction.fromMap(item as Map<String, dynamic>))
           .toList();
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar transações. Por favor, tente novamente mais tarde.', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getPassengerWalletTransactions', 'passengerId': passengerId, 'limit': limit, 'page': page});
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao buscar transações. Por favor, tente novamente mais tarde.');
     }
@@ -327,7 +361,7 @@ class WalletService {
 
       return PassengerWalletTransaction.fromMap(transactionData);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao adicionar crédito. Por favor, tente novamente mais tarde.', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'addCredit', 'passengerId': passengerId, 'amount': amount});
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao adicionar crédito. Por favor, tente novamente mais tarde.');
     }
@@ -369,7 +403,7 @@ class WalletService {
 
       return PassengerWalletTransaction.fromMap(transactionData);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao debitar viagem. Por favor, tente novamente mais tarde.', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'debitTrip', 'passengerId': passengerId, 'tripId': tripId, 'amount': amount});
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao debitar viagem. Por favor, tente novamente mais tarde.');
     }
@@ -390,7 +424,7 @@ class WalletService {
           .map((item) => PaymentMethod.fromMap(item as Map<String, dynamic>))
           .toList();
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar métodos de pagamento. Por favor, tente novamente mais tarde.', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getPaymentMethods', 'userId': userId});
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao buscar métodos de pagamento. Por favor, tente novamente mais tarde.');
     }
@@ -429,7 +463,7 @@ class WalletService {
 
       return PaymentMethod.fromMap(data);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao adicionar método de pagamento. Por favor, tente novamente mais tarde.', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'addPaymentMethod', 'userId': userId, 'type': type.value});
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao adicionar método de pagamento. Por favor, tente novamente mais tarde.');
     }
@@ -460,7 +494,7 @@ class WalletService {
         'recent_transactions_count': recentTransactions.length,
       };
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar resumo da carteira. Por favor, tente novamente mais tarde.', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getPassengerWalletSummary', 'passengerId': passengerId});
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao buscar resumo da carteira. Por favor, tente novamente mais tarde.');
     }

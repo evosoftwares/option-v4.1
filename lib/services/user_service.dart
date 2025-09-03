@@ -1,5 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
+import '../core/error_handling/postgrest_error_mapper.dart';
+import '../core/error_handling/error_logger.dart';
+import '../core/error_handling/app_error.dart';
 import '../exceptions/app_exceptions.dart';
 import '../exceptions/validation_exception.dart' as validation;
 import '../models/user.dart';
@@ -122,28 +125,41 @@ class UserService {
       
       return user;
     } on PostgrestException catch (e) {
-      print('❌ [$timestamp] [USER_SERVICE] PostgrestException: ${e.code} - ${e.message}');
-      print('❌ [$timestamp] [USER_SERVICE] Detalhes do erro: ${e.details}');
-      print('❌ [$timestamp] [USER_SERVICE] Hint: ${e.hint}');
+      final context = {
+        'operation': 'createUser',
+        'authUserId': authUserId,
+        'email': email,
+        'userType': userType,
+        'postgrestCode': e.code,
+        'postgrestMessage': e.message,
+        'postgrestDetails': e.details,
+        'postgrestHint': e.hint
+      };
       
-      if (e.code == '23505') { // Unique constraint violation
-        // Analisar qual constraint foi violado
-        final message = e.message.toLowerCase() ?? '';
-        if (message.contains('phone')) {
-          print('❌ [$timestamp] [USER_SERVICE] Constraint violado: telefone duplicado');
-          throw DatabaseException('Este telefone já está cadastrado: $phone', 'PHONE_ALREADY_EXISTS');
-        } else if (message.contains('email')) {
-          print('❌ [$timestamp] [USER_SERVICE] Constraint violado: email duplicado');
-          throw UserAlreadyExistsException(email);
-        } else {
-          print('❌ [$timestamp] [USER_SERVICE] Constraint violado: dados duplicados');
-          throw UserAlreadyExistsException(email);
-        }
-      }
-      throw DatabaseException('Erro ao criar usuário: ${e.message}', e.code);
+      await ErrorLoggingService.instance.logException(
+         e,
+         context: context,
+         type: AppErrorType.databaseError,
+         severity: ErrorSeverity.high,
+       );
+      
+      throw PostgrestErrorMapper.mapError(e, context: context);
     } catch (e) {
-      print('❌ [$timestamp] [USER_SERVICE] Erro inesperado ao criar usuário: $e');
-      print('❌ [$timestamp] [USER_SERVICE] Tipo do erro: ${e.runtimeType}');
+      final context = {
+        'operation': 'createUser',
+        'authUserId': authUserId,
+        'email': email,
+        'userType': userType,
+        'errorType': e.runtimeType.toString()
+      };
+      
+      await ErrorLoggingService.instance.logException(
+         e,
+         context: context,
+         type: AppErrorType.databaseError,
+         severity: ErrorSeverity.high,
+       );
+      
       throw DatabaseException('Erro inesperado ao criar usuário: ${e.toString()}');
     }
   }
@@ -175,7 +191,7 @@ class UserService {
       return user;
         } on PostgrestException catch (e) {
       print('❌ [DEBUG] PostgrestException: ${e.message}');
-      throw const DatabaseException('Erro ao buscar usuário. Por favor, tente novamente mais tarde.');
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getUserById', 'userId': userId});
     } catch (e) {
       print('❌ [DEBUG] Erro inesperado em getUserById: $e');
       throw const DatabaseException('Erro inesperado ao buscar usuário. Por favor, tente novamente mais tarde.');
@@ -193,8 +209,8 @@ class UserService {
 
       if (response == null) return null;
       return User.fromMap(response);
-    } on PostgrestException {
-      throw Exception('Erro ao buscar usuário por email. Por favor, tente novamente mais tarde.');
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getUserByEmail', 'email': email});
     } catch (e) {
       throw Exception('Erro inesperado ao buscar usuário por email. Por favor, tente novamente mais tarde.');
     }
@@ -211,8 +227,8 @@ class UserService {
 
       if (response == null) return null;
       return User.fromMap(response);
-    } on PostgrestException {
-      throw Exception('Erro ao buscar usuário por telefone. Por favor, tente novamente mais tarde.');
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getUserByPhone', 'phone': phone});
     } catch (e) {
       throw Exception('Erro inesperado ao buscar usuário por telefone. Por favor, tente novamente mais tarde.');
     }
@@ -270,14 +286,16 @@ class UserService {
       print('  - Details: ${e.details}');
       print('  - Hint: ${e.hint}');
       
+      // Tratamento específico para sync_control antes do mapeamento geral
       if (e.code == '42P01' && (e.message.contains('sync_control') ?? false)) {
-        // Sync control table doesn't exist - this is the main issue
         throw const DatabaseException('Sistema de sincronização não configurado. Entre em contato com o suporte.', 'SYNC_ERROR');
       }
-      if (e.code == 'PGRST116') { // No rows returned
-        throw UserNotFoundException(userId);
-      }
-      throw DatabaseException('Erro ao atualizar usuário. Por favor, verifique os dados e tente novamente.', e.code);
+      
+      throw PostgrestErrorMapper.mapError(e, context: {
+        'operation': 'updateUser',
+        'userId': userId,
+        'updateFields': updateData.keys.toList()
+      });
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao atualizar usuário. Por favor, tente novamente mais tarde.');
     }
@@ -298,10 +316,7 @@ class UserService {
 
       return User.fromMap(response);
     } on PostgrestException catch (e) {
-      if (e.code == 'PGRST116') { // No rows returned
-        throw UserNotFoundException(userId);
-      }
-      throw DatabaseException('Erro ao atualizar tipo de usuário. Por favor, verifique os dados e tente novamente.', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'updateUserType', 'userId': userId, 'userType': userType});
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao atualizar tipo de usuário. Por favor, tente novamente mais tarde.');
     }
@@ -317,8 +332,8 @@ class UserService {
           .maybeSingle();
 
       return response != null;
-    } on PostgrestException {
-      throw Exception('Erro ao verificar existência do usuário. Por favor, tente novamente mais tarde.');
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'userExists', 'userId': userId});
     } catch (e) {
       throw Exception('Erro inesperado ao verificar usuário. Por favor, tente novamente mais tarde.');
     }
@@ -361,8 +376,8 @@ class UserService {
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', userId);
-    } on PostgrestException {
-      throw Exception('Erro ao desativar usuário. Por favor, tente novamente mais tarde.');
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'deactivateUser', 'userId': userId});
     } catch (e) {
       throw Exception('Erro inesperado ao desativar usuário. Por favor, tente novamente mais tarde.');
     }
@@ -384,8 +399,8 @@ class UserService {
           .range(offset, offset + limit - 1);
 
       return response.map(User.fromMap).toList();
-    } on PostgrestException {
-      throw Exception('Erro ao buscar usuários por tipo. Por favor, tente novamente mais tarde.');
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getUsersByType', 'userType': userType, 'limit': limit, 'offset': offset});
     } catch (e) {
       throw Exception('Erro inesperado ao buscar usuários. Por favor, tente novamente mais tarde.');
     }
@@ -442,7 +457,7 @@ class UserService {
       print('✅ Registro de passageiro criado com sucesso');
     } on PostgrestException catch (e) {
       print('❌ PostgrestException ao criar passageiro: ${e.code} - ${e.message}');
-      throw DatabaseException('Erro ao criar registro de passageiro: ${e.message}', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'createPassengerRecord', 'userId': user.id});
     } catch (e) {
       print('❌ Erro inesperado ao criar passageiro: $e');
       throw DatabaseException('Erro inesperado ao criar registro de passageiro: ${e.toString()}');
@@ -519,7 +534,7 @@ class UserService {
       print('✅ Registro básico de motorista criado com sucesso');
     } on PostgrestException catch (e) {
       print('❌ PostgrestException ao criar motorista: ${e.code} - ${e.message}');
-      throw DatabaseException('Erro ao criar registro de motorista: ${e.message}', e.code);
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'createDriverRecord', 'userId': user.id});
     } catch (e) {
       print('❌ Erro inesperado ao criar motorista: $e');
       throw DatabaseException('Erro inesperado ao criar registro de motorista: ${e.toString()}');

@@ -20,8 +20,8 @@ class NetworkException extends SavedPlacesException {
       : super(code: 'NETWORK_ERROR');
 }
 
-class DatabaseException extends SavedPlacesException {
-  DatabaseException(super.message, {super.originalError}) 
+class SavedPlacesDatabaseException extends SavedPlacesException {
+  SavedPlacesDatabaseException(super.message, {super.originalError}) 
       : super(code: 'DATABASE_ERROR');
 }
 
@@ -70,7 +70,7 @@ class RealSavedPlacesService {
       return FavoriteLocation.fromJson(response);
     } on PostgrestException catch (e) {
       AppLogger.error('RealSavedPlacesService: Erro de banco ao adicionar local: ${e.message}');
-      throw DatabaseException('Erro ao salvar local favorito: ${e.message}', originalError: e);
+      throw SavedPlacesDatabaseException('Erro ao salvar local favorito: ${e.message}', originalError: e);
     } on ValidationException {
       rethrow;
     } catch (e) {
@@ -102,7 +102,7 @@ class RealSavedPlacesService {
       return places;
     } on PostgrestException catch (e) {
       AppLogger.error('RealSavedPlacesService: Erro de banco ao buscar locais: ${e.message}');
-      throw DatabaseException('Erro ao buscar locais favoritos: ${e.message}', originalError: e);
+      throw SavedPlacesDatabaseException('Erro ao buscar locais favoritos: ${e.message}', originalError: e);
     } on ValidationException {
       rethrow;
     } catch (e) {
@@ -130,7 +130,7 @@ class RealSavedPlacesService {
       return true;
     } on PostgrestException catch (e) {
       AppLogger.error('RealSavedPlacesService: Erro de banco ao remover local: ${e.message}');
-      throw DatabaseException('Erro ao remover local favorito: ${e.message}', originalError: e);
+      throw SavedPlacesDatabaseException('Erro ao remover local favorito: ${e.message}', originalError: e);
     } on ValidationException {
       rethrow;
     } catch (e) {
@@ -168,7 +168,7 @@ class RealSavedPlacesService {
       return FavoriteLocation.fromJson(response);
     } on PostgrestException catch (e) {
       AppLogger.error('RealSavedPlacesService: Erro de banco ao atualizar local: ${e.message}');
-      throw DatabaseException('Erro ao atualizar local favorito: ${e.message}', originalError: e);
+      throw SavedPlacesDatabaseException('Erro ao atualizar local favorito: ${e.message}', originalError: e);
     } on ValidationException {
       rethrow;
     } catch (e) {

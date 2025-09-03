@@ -8,13 +8,13 @@ import '../models/favorite_location.dart';
 import '../models/user.dart';
 import '../services/app_logger.dart';
 import '../services/firebase_file_upload_service.dart';
-import '../services/real_saved_places_service.dart' as places_service show ValidationException;
+import '../services/real_saved_places_service.dart' as places_service show ValidationException, SavedPlacesDatabaseException;
 import '../services/real_saved_places_service.dart';
 import '../services/stepper_persistence_service.dart';
 import '../services/user_service.dart';
 import '../utils/supabase_helper.dart';
 
-export '../services/real_saved_places_service.dart' show DatabaseException, NetworkException;
+export '../services/real_saved_places_service.dart' show NetworkException;
 
 class StepperController extends ChangeNotifier {
 
@@ -246,7 +246,7 @@ class StepperController extends ChangeNotifier {
         } on places_service.ValidationException catch (e) {
           AppLogger.error('Erro de validação ao salvar local "${location.name}": ${e.message}');
           throw Exception('Dados inválidos para o local "${location.name}": ${e.message}');
-        } on DatabaseException catch (e) {
+        } on places_service.SavedPlacesDatabaseException catch (e) {
           AppLogger.error('Erro de banco ao salvar local "${location.name}": ${e.message}');
           throw Exception('Erro no banco de dados ao salvar local "${location.name}": ${e.message}');
         } on NetworkException catch (e) {

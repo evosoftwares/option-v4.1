@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../exceptions/app_exceptions.dart';
+import '../core/error_handling/postgrest_error_mapper.dart';
+import '../core/error_handling/error_logger.dart';
+import '../core/error_handling/app_error.dart';
 import '../models/supabase/driver.dart';
 import '../models/supabase/driver_offer.dart';
 import '../models/supabase/driver_effective_status.dart';
@@ -49,11 +52,41 @@ class DriverService {
       if (e.code == 'PGRST116') {
         return null;
       }
-      throw const DatabaseException(
-          'Erro ao buscar motorista. Por favor, tente novamente mais tarde.',);
+      final mappedError = PostgrestErrorMapper.mapError(e, context: {
+        'operation': 'getDriver',
+        'driverId': driverId,
+      });
+      
+      // Log error for monitoring
+      await ErrorLoggingService.instance.logException(
+        mappedError,
+        type: AppErrorType.databaseError,
+        context: {
+          'operation': 'getDriver',
+          'driverId': driverId,
+          'postgrestCode': e.code,
+        },
+        severity: ErrorSeverity.medium,
+      );
+      
+      throw mappedError;
     } catch (e) {
-      throw const DatabaseException(
+      final error = DatabaseException(
           'Erro inesperado ao buscar motorista. Por favor, tente novamente mais tarde.',);
+      
+      // Log error for monitoring
+      await ErrorLoggingService.instance.logException(
+        error,
+        type: AppErrorType.databaseError,
+        context: {
+          'operation': 'getDriver',
+          'driverId': driverId,
+          'originalError': e.toString(),
+        },
+        severity: ErrorSeverity.medium,
+      );
+      
+      throw error;
     }
   }
 
@@ -122,11 +155,41 @@ class DriverService {
       if (e.code == 'PGRST116') {
         return null;
       }
-      throw const DatabaseException(
-          'Erro ao buscar motorista. Por favor, tente novamente mais tarde.',);
+      final mappedError = PostgrestErrorMapper.mapError(e, context: {
+        'operation': 'getDriverWithUserData',
+        'driverId': driverId,
+      });
+      
+      // Log error for monitoring
+      await ErrorLoggingService.instance.logException(
+        mappedError,
+        type: AppErrorType.databaseError,
+        context: {
+          'operation': 'getDriverWithUserData',
+          'driverId': driverId,
+          'postgrestCode': e.code,
+        },
+        severity: ErrorSeverity.medium,
+      );
+      
+      throw mappedError;
     } catch (e) {
-      throw const DatabaseException(
+      final error = DatabaseException(
           'Erro inesperado ao buscar motorista. Por favor, tente novamente mais tarde.',);
+      
+      // Log error for monitoring
+      await ErrorLoggingService.instance.logException(
+        error,
+        type: AppErrorType.databaseError,
+        context: {
+          'operation': 'getDriverWithUserData',
+          'driverId': driverId,
+          'originalError': e.toString(),
+        },
+        severity: ErrorSeverity.medium,
+      );
+      
+      throw error;
     }
   }
 
@@ -218,12 +281,46 @@ class DriverService {
           await _supabase.from('drivers').insert(insertData).select().single();
 
       return Driver.fromJson(response);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao criar perfil de motorista. Por favor, verifique os dados e tente novamente.',);
+    } on PostgrestException catch (e) {
+      final mappedError = PostgrestErrorMapper.mapError(e, context: {
+        'operation': 'createDriver',
+        'userId': userId,
+        'cnhNumber': cnhNumber,
+        'vehicleCategory': category,
+      });
+      
+      // Log error for monitoring
+      await ErrorLoggingService.instance.logException(
+        mappedError,
+        type: AppErrorType.databaseError,
+        context: {
+          'operation': 'createDriver',
+          'userId': userId,
+          'cnhNumber': cnhNumber,
+          'vehicleCategory': category,
+          'postgrestCode': e.code,
+        },
+        severity: ErrorSeverity.high,
+      );
+      
+      throw mappedError;
     } catch (e) {
-      throw const DatabaseException(
+      final error = DatabaseException(
           'Erro inesperado ao criar perfil de motorista. Por favor, tente novamente mais tarde.',);
+      
+      // Log error for monitoring
+      await ErrorLoggingService.instance.logException(
+        error,
+        type: AppErrorType.databaseError,
+        context: {
+          'operation': 'createDriver',
+          'userId': userId,
+          'originalError': e.toString(),
+        },
+        severity: ErrorSeverity.high,
+      );
+      
+      throw error;
     }
   }
 
@@ -369,9 +466,8 @@ class DriverService {
           .single();
 
       return Driver.fromJson(response);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao atualizar motorista. Por favor, verifique os dados e tente novamente.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao atualizar motorista. Por favor, tente novamente mais tarde.',);
@@ -415,9 +511,8 @@ class DriverService {
           await _supabase.from('driver_offers').insert(data).select().single();
 
       return DriverOffer.fromJson(response);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao criar oferta. Por favor, verifique os dados e tente novamente.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao criar oferta. Por favor, tente novamente mais tarde.',);
@@ -435,7 +530,7 @@ class DriverService {
 
       return response.map(DriverOffer.fromJson).toList();
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar ofertas: ${e.message}');
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao buscar ofertas. Por favor, tente novamente mais tarde.',);
@@ -455,7 +550,7 @@ class DriverService {
 
       return response.map(DriverOffer.fromJson).toList();
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar ofertas pendentes: ${e.message}');
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao buscar ofertas pendentes');
     }
@@ -493,7 +588,7 @@ class DriverService {
 
       return DriverOffer.fromJson(response);
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao atualizar oferta: ${e.message}');
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao atualizar oferta');
     }
@@ -511,7 +606,7 @@ class DriverService {
 
       return response.map(Trip.fromJson).toList();
     } on PostgrestException catch (e) {
-      throw DatabaseException('Erro ao buscar viagens ativas: ${e.message}');
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       throw const DatabaseException('Erro inesperado ao buscar viagens ativas');
     }
@@ -530,9 +625,8 @@ class DriverService {
           .limit(limit);
 
       return response.map(Trip.fromJson).toList();
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao buscar histórico. Por favor, tente novamente mais tarde.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao buscar histórico. Por favor, tente novamente mais tarde.',);
@@ -551,10 +645,9 @@ class DriverService {
           'current_longitude': longitude,
         }).eq('id', driverId);
         return; // sucesso
-      } on PostgrestException {
+      } on PostgrestException catch (e) {
         if (attempt == retries - 1) {
-          throw const DatabaseException(
-              'Erro ao atualizar localização. Por favor, tente novamente mais tarde.',);
+          throw PostgrestErrorMapper.mapError(e);
         }
         await Future.delayed(delays[attempt]);
       } catch (e) {
@@ -573,9 +666,8 @@ class DriverService {
       await _supabase.from('drivers').update({
         'is_online': isOnline,
       }).eq('id', driverId);
-    } on PostgrestException {
-      throw const DatabaseException(
-          'Erro ao atualizar disponibilidade. Por favor, tente novamente mais tarde.',);
+    } on PostgrestException catch (e) {
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao atualizar disponibilidade. Por favor, tente novamente mais tarde.',);
@@ -891,7 +983,7 @@ class DriverService {
       print('  - Código: ${e.code}');
       print('  - Mensagem: ${e.message}');
       print('  - Detalhes: ${e.details}');
-      throw DatabaseException('Erro ao buscar motoristas disponíveis: ${e.message}', e.code);
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e, stackTrace) {
       print('❌ [${DateTime.now()}] Erro inesperado em getAvailableDriversNearby:');
       print('  - Tipo: ${e.runtimeType}');
@@ -1001,7 +1093,7 @@ class DriverService {
       print('❌ [${DateTime.now()}] PostgrestException em getAvailableDriversNearbyWithUserData:');
       print('  - Código: ${e.code}');
       print('  - Mensagem: ${e.message}');
-      throw DatabaseException('Erro ao buscar motoristas disponíveis: ${e.message}', e.code);
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       print('❌ [${DateTime.now()}] Erro inesperado em getAvailableDriversNearbyWithUserData:');
       print('  - Tipo: ${e.runtimeType}');
@@ -1083,7 +1175,7 @@ class DriverService {
             .map(VehicleCategoryData.defaultForCategory)
             .toList();
       }
-      throw DatabaseException('Erro ao buscar categorias disponíveis: ${e.message}');
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       // Fallback para dados padrão em caso de erro
       return VehicleCategory.popularCategories
@@ -1242,9 +1334,7 @@ class DriverService {
         );
       }
     } on PostgrestException catch (e) {
-      throw DatabaseException(
-        'Erro ao verificar placa do veículo: ${e.message}',
-      );
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       if (e is ValidationException) rethrow;
       throw const DatabaseException(
@@ -1267,9 +1357,7 @@ class DriverService {
         );
       }
     } on PostgrestException catch (e) {
-      throw DatabaseException(
-        'Erro ao verificar placa do veículo: ${e.message}',
-      );
+      throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       if (e is ValidationException) rethrow;
       throw const DatabaseException(
