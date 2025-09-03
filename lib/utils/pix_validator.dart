@@ -91,7 +91,7 @@ class PixValidator {
     if (RegExp(r'^(\d)\1{13}$').hasMatch(cnpj)) return false;
     
     // Calcula primeiro dígito verificador
-    var weights1 = <int>[5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    final weights1 = <int>[5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
     var sum = 0;
     for (var i = 0; i < 12; i++) {
       sum += int.parse(cnpj[i]) * weights1[i];
@@ -102,7 +102,7 @@ class PixValidator {
     if (int.parse(cnpj[12]) != firstDigit) return false;
     
     // Calcula segundo dígito verificador
-    var weights2 = <int>[6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    final weights2 = <int>[6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
     sum = 0;
     for (var i = 0; i < 13; i++) {
       sum += int.parse(cnpj[i]) * weights2[i];

@@ -481,7 +481,7 @@ class UserService {
         'vehicle_model': 'PENDENTE', 
         'vehicle_year': 2020,
         'vehicle_color': 'PENDENTE',
-        'vehicle_plate': 'PENDENTE',
+        'vehicle_plate': 'PENDENTE_${user.id.substring(0, 8)}',
         'vehicle_category': 'standard',
         'crlv_photo_url': '',
         'approval_status': 'pending',

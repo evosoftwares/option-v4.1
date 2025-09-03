@@ -195,8 +195,8 @@ void main() {
         userType: 'driver',
         status: 'active',
         photoUrl: 'https://example.com/photo.jpg',
-        createdAt: DateTime(2025, 1, 1, 12, 0),
-        updatedAt: DateTime(2025, 1, 1, 12, 0),
+        createdAt: DateTime(2025, 1, 1, 12),
+        updatedAt: DateTime(2025, 1, 1, 12),
       );
       
       // Convert to JSON and back

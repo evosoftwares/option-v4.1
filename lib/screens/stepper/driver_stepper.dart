@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
+
 import '../../controllers/driver_stepper_controller.dart';
+import 'driver_completion_step.dart';
 import 'driver_documents_step.dart';
 import 'vehicle_registration_step.dart';
-import 'driver_completion_step.dart';
 
 class DriverStepper extends StatefulWidget {
   const DriverStepper({super.key});

@@ -2,7 +2,6 @@
 // Execute: dart teste_whatsapp.dart
 
 import 'dart:io';
-import 'dart:convert';
 
 void main() async {
   print('=== TESTE DE VALIDAÇÃO DO WHATSAPP ===\n');

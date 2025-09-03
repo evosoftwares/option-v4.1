@@ -102,7 +102,6 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                         onPressed: _showAddPlaceScreen,
                         text: 'Adicionar local',
                         icon: Icons.add_location,
-                        type: AppButtonType.primary,
                         size: AppButtonSize.large,
                       ),
                     ),

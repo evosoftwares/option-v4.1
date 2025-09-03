@@ -41,8 +41,7 @@ class _WorkingHoursDialogState extends State<WorkingHoursDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Horário de Trabalho'),
       content: SizedBox(
         width: double.maxFinite,
@@ -97,7 +96,6 @@ class _WorkingHoursDialogState extends State<WorkingHoursDialog> {
         ),
       ],
     );
-  }
 
   String _getDayName(int dayOfWeek) {
     const days = [
@@ -124,8 +122,7 @@ Future<void> showWorkingHoursDialog({
   required BuildContext context,
   required DriverStatusController statusController,
   required VoidCallback onWorkingHoursUpdated,
-}) {
-  return showDialog<void>(
+}) => showDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (context) => WorkingHoursDialog(
@@ -133,4 +130,3 @@ Future<void> showWorkingHoursDialog({
       onWorkingHoursUpdated: onWorkingHoursUpdated,
     ),
   );
-}

@@ -90,19 +90,13 @@ class DriverStatusService {
   Future<DriverStatus> createOrUpdateDriverStatus({
     required String driverId,
     required bool onlineIntent,
-  }) async {
-    return updateOnlineIntent(driverId, onlineIntent);
-  }
+  }) async => updateOnlineIntent(driverId, onlineIntent);
 
   /// Liga o motorista (define intenção como true)
-  Future<DriverStatus> setDriverOnline(String driverId) async {
-    return updateOnlineIntent(driverId, true);
-  }
+  Future<DriverStatus> setDriverOnline(String driverId) async => updateOnlineIntent(driverId, true);
 
   /// Desliga o motorista (define intenção como false)
-  Future<DriverStatus> setDriverOffline(String driverId) async {
-    return updateOnlineIntent(driverId, false);
-  }
+  Future<DriverStatus> setDriverOffline(String driverId) async => updateOnlineIntent(driverId, false);
 
   /// Verifica se o motorista pode ficar online agora
   /// (está dentro dos horários de trabalho)
@@ -193,12 +187,10 @@ class DriverStatusService {
   Future<DriverStatus> initializeDriverStatus(
     String driverId, {
     bool initialOnlineIntent = false,
-  }) async {
-    return createOrUpdateDriverStatus(
+  }) async => createOrUpdateDriverStatus(
       driverId: driverId,
       onlineIntent: initialOnlineIntent,
     );
-  }
 
   /// Busca estatísticas de status dos motoristas
   Future<Map<String, int>> getDriverStatusStats() async {
@@ -207,10 +199,10 @@ class DriverStatusService {
           .from('driver_effective_status')
           .select('online_intent, effective_online');
 
-      int totalDrivers = 0;
-      int withIntent = 0;
-      int effectivelyOnline = 0;
-      int intentButOffline = 0;
+      var totalDrivers = 0;
+      var withIntent = 0;
+      var effectivelyOnline = 0;
+      var intentButOffline = 0;
 
       for (final row in response as List<dynamic>) {
         totalDrivers++;

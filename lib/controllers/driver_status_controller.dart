@@ -10,6 +10,10 @@ import '../services/user_service.dart';
 import '../services/wallet_service.dart';
 
 class DriverStatusController extends ChangeNotifier {
+
+  DriverStatusController() {
+    _driverService = DriverService(Supabase.instance.client);
+  }
   DriverStatus _status = DriverStatus.initial();
   Timer? _earningsTimer;
   Timer? _onlineTimer;
@@ -17,10 +21,6 @@ class DriverStatusController extends ChangeNotifier {
   String? _driverId;
   bool _isInitialized = false;
   late final DriverService _driverService;
-
-  DriverStatusController() {
-    _driverService = DriverService(Supabase.instance.client);
-  }
 
   DriverStatus get status => _status;
 

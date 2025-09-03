@@ -56,8 +56,7 @@ class AppDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildTitle(_DialogConfig config) {
-    return Container(
+  Widget _buildTitle(_DialogConfig config) => Container(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.lg,
@@ -86,10 +85,8 @@ class AppDialog extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildContent(_DialogConfig config) {
-    return Container(
+  Widget _buildContent(_DialogConfig config) => Container(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         0,
@@ -103,10 +100,9 @@ class AppDialog extends StatelessWidget {
         ),
       ),
     );
-  }
 
   List<Widget> _buildActions(BuildContext context) {
-    final List<AppDialogAction> actionsList = actions ??
+    final actionsList = actions ??
         [
           if (secondaryAction != null) secondaryAction!,
           if (primaryAction != null) primaryAction!,
@@ -267,8 +263,7 @@ abstract class AppDialogUtils {
     String confirmLabel = 'Confirmar',
     String cancelLabel = 'Cancelar',
     bool dismissible = true,
-  }) {
-    return showDialog<bool>(
+  }) => showDialog<bool>(
       context: context,
       barrierDismissible: dismissible,
       builder: (context) => AppDialog(
@@ -287,7 +282,6 @@ abstract class AppDialogUtils {
         ),
       ),
     );
-  }
 
   /// Exibe um diálogo de alerta
   static Future<void> showAlert(
@@ -297,8 +291,7 @@ abstract class AppDialogUtils {
     String buttonLabel = 'OK',
     AppDialogType type = AppDialogType.alert,
     bool dismissible = true,
-  }) {
-    return showDialog<void>(
+  }) => showDialog<void>(
       context: context,
       barrierDismissible: dismissible,
       builder: (context) => AppDialog(
@@ -313,7 +306,6 @@ abstract class AppDialogUtils {
         ),
       ),
     );
-  }
 
   /// Exibe um diálogo de erro
   static Future<void> showError(
@@ -322,8 +314,7 @@ abstract class AppDialogUtils {
     required String content,
     String buttonLabel = 'OK',
     bool dismissible = true,
-  }) {
-    return showAlert(
+  }) => showAlert(
       context,
       title: title,
       content: content,
@@ -331,7 +322,6 @@ abstract class AppDialogUtils {
       type: AppDialogType.error,
       dismissible: dismissible,
     );
-  }
 
   /// Exibe um diálogo de sucesso
   static Future<void> showSuccess(
@@ -340,8 +330,7 @@ abstract class AppDialogUtils {
     required String content,
     String buttonLabel = 'OK',
     bool dismissible = true,
-  }) {
-    return showAlert(
+  }) => showAlert(
       context,
       title: title,
       content: content,
@@ -349,7 +338,6 @@ abstract class AppDialogUtils {
       type: AppDialogType.success,
       dismissible: dismissible,
     );
-  }
 
   /// Exibe um diálogo de informação
   static Future<void> showInfo(
@@ -358,8 +346,7 @@ abstract class AppDialogUtils {
     required String content,
     String buttonLabel = 'OK',
     bool dismissible = true,
-  }) {
-    return showAlert(
+  }) => showAlert(
       context,
       title: title,
       content: content,
@@ -367,7 +354,6 @@ abstract class AppDialogUtils {
       type: AppDialogType.info,
       dismissible: dismissible,
     );
-  }
 
   /// Exibe um diálogo de aviso
   static Future<void> showWarning(
@@ -376,8 +362,7 @@ abstract class AppDialogUtils {
     required String content,
     String buttonLabel = 'OK',
     bool dismissible = true,
-  }) {
-    return showAlert(
+  }) => showAlert(
       context,
       title: title,
       content: content,
@@ -385,18 +370,15 @@ abstract class AppDialogUtils {
       type: AppDialogType.warning,
       dismissible: dismissible,
     );
-  }
 
   /// Exibe um diálogo personalizado
   static Future<T?> showCustom<T>(
     BuildContext context, {
     required AppDialog dialog,
     bool dismissible = true,
-  }) {
-    return showDialog<T>(
+  }) => showDialog<T>(
       context: context,
       barrierDismissible: dismissible,
       builder: (context) => dialog,
     );
-  }
 }

@@ -12,7 +12,7 @@ O sistema stepper é o núcleo do processo de cadastro/registro do aplicativo OP
 2. **UserRegistrationStepper** - Interface principal do fluxo
 3. **StepperPersistenceService** - Serviço de persistência local
 4. **Steps individuais** - PhoneStep, PhotoStep, PlacesStep
-5. **Integração Supabase** - Auth + Database + Storage
+5. **Integração Híbrida** - Supabase (Auth + Database) + Firebase Storage
 
 ### Diagrama de Fluxo
 
@@ -90,15 +90,15 @@ StepperPersistenceService.saveStepperState(phone: phone);
 **Funcionalidades:**
 - Seleção via câmera ou galeria
 - Redimensionamento automático (800x800px, 85% qualidade)
-- Upload para Supabase Storage bucket `user-photos`
+- Upload para Firebase Storage folder `user-photos`
 - Cleanup automático de fotos anteriores
 
 **Fluxo técnico:**
 ```dart
-// Upload com cleanup
-final photoUrl = await FileUploadService.uploadImage(
+// Upload com Firebase Storage
+final photoUrl = await FirebaseFileUploadService.uploadImage(
   file: _profilePhoto!,
-  bucket: 'user-photos',
+  folder: 'user-photos',
   path: storagePath,
 );
 
@@ -108,7 +108,7 @@ String storagePath = "users/{userId}/profile/{timestamp}_{filename}"
 
 **Dados salvos:**
 - `profilePhoto`: File local
-- `uploadedPhotoUrl`: String (URL do Storage)
+- `uploadedPhotoUrl`: String (URL do Firebase Storage)
 - `uploadedPhotoPath`: String (path interno)
 
 ### Step 2: Locais Favoritos (PlacesStep)
@@ -404,13 +404,15 @@ print('✅ Local "${location.name}" salvo com sucesso! ID: ${savedPlace.id}');
 ### Dependências Externas
 - `shared_preferences: ^2.2.2` - Persistência local
 - `image_picker: ^1.0.5` - Seleção de fotos
-- `supabase_flutter: ^2.5.6` - Backend e storage
+- `supabase_flutter: ^2.5.6` - Backend (Auth + Database)
+- `firebase_storage: ^12.3.2` - File storage
 - `provider: ^6.1.1` - Gerenciamento de estado
 
 ### Configurações Requeridas
 - Permissões de câmera e galeria
 - Configuração Supabase (URL, anon key)
-- Bucket `user-photos` no Supabase Storage
+- Configuração Firebase Storage
+- Folder `user-photos` no Firebase Storage
 - Google Maps API key para geocoding
 
 ### ⚠️ **Configurações Missing (CRÍTICAS):**

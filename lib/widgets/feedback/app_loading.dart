@@ -43,7 +43,7 @@ class AppLoading extends StatelessWidget {
     final effectiveColor = color ?? colorScheme.primary;
     final effectiveBackgroundColor = backgroundColor ?? colorScheme.surface;
 
-    return Container(
+    return ColoredBox(
       color: effectiveBackgroundColor,
       child: Center(
         child: Column(
@@ -107,19 +107,15 @@ class AppLoading extends StatelessWidget {
     );
   }
 
-  Widget _buildDotsIndicator(Color color) {
-    return _DotsLoadingIndicator(
+  Widget _buildDotsIndicator(Color color) => _DotsLoadingIndicator(
       color: color,
       size: size,
     );
-  }
 
-  Widget _buildSkeletonIndicator(Color color) {
-    return _SkeletonLoadingIndicator(
+  Widget _buildSkeletonIndicator(Color color) => _SkeletonLoadingIndicator(
       color: color,
       size: size,
     );
-  }
 
   double _getIndicatorSize() {
     switch (size) {
@@ -135,33 +131,33 @@ class AppLoading extends StatelessWidget {
   double _getStrokeWidth() {
     switch (size) {
       case AppLoadingSize.small:
-        return 2.0;
+        return 2;
       case AppLoadingSize.medium:
-        return 3.0;
+        return 3;
       case AppLoadingSize.large:
-        return 4.0;
+        return 4;
     }
   }
 
   double _getLinearWidth() {
     switch (size) {
       case AppLoadingSize.small:
-        return 100.0;
+        return 100;
       case AppLoadingSize.medium:
-        return 200.0;
+        return 200;
       case AppLoadingSize.large:
-        return 300.0;
+        return 300;
     }
   }
 
   double _getLinearHeight() {
     switch (size) {
       case AppLoadingSize.small:
-        return 2.0;
+        return 2;
       case AppLoadingSize.medium:
-        return 4.0;
+        return 4;
       case AppLoadingSize.large:
-        return 6.0;
+        return 6;
     }
   }
 }
@@ -202,8 +198,8 @@ class _DotsLoadingIndicatorState extends State<_DotsLoadingIndicator>
 
     _animations = _controllers
         .map((controller) => Tween<double>(
-              begin: 0.0,
-              end: 1.0,
+              begin: 0,
+              end: 1,
             ).animate(CurvedAnimation(
               parent: controller,
               curve: Curves.easeInOut,
@@ -214,7 +210,7 @@ class _DotsLoadingIndicatorState extends State<_DotsLoadingIndicator>
   }
 
   void _startAnimations() {
-    for (int i = 0; i < _controllers.length; i++) {
+    for (var i = 0; i < _controllers.length; i++) {
       Future.delayed(Duration(milliseconds: i * 200), () {
         if (mounted) {
           _controllers[i].repeat(reverse: true);
@@ -242,8 +238,7 @@ class _DotsLoadingIndicatorState extends State<_DotsLoadingIndicator>
         3,
         (index) => AnimatedBuilder(
           animation: _animations[index],
-          builder: (context, child) {
-            return Container(
+          builder: (context, child) => Container(
               margin: EdgeInsets.symmetric(horizontal: spacing / 2),
               child: Opacity(
                 opacity: 0.3 + (0.7 * _animations[index].value),
@@ -256,8 +251,7 @@ class _DotsLoadingIndicatorState extends State<_DotsLoadingIndicator>
                   ),
                 ),
               ),
-            );
-          },
+            ),
         ),
       ),
     );
@@ -266,22 +260,22 @@ class _DotsLoadingIndicatorState extends State<_DotsLoadingIndicator>
   double _getDotSize() {
     switch (widget.size) {
       case AppLoadingSize.small:
-        return 6.0;
+        return 6;
       case AppLoadingSize.medium:
-        return 8.0;
+        return 8;
       case AppLoadingSize.large:
-        return 12.0;
+        return 12;
     }
   }
 
   double _getDotSpacing() {
     switch (widget.size) {
       case AppLoadingSize.small:
-        return 4.0;
+        return 4;
       case AppLoadingSize.medium:
-        return 6.0;
+        return 6;
       case AppLoadingSize.large:
-        return 8.0;
+        return 8;
     }
   }
 }
@@ -314,8 +308,8 @@ class _SkeletonLoadingIndicatorState extends State<_SkeletonLoadingIndicator>
       vsync: this,
     );
     _animation = Tween<double>(
-      begin: -1.0,
-      end: 2.0,
+      begin: -1,
+      end: 2,
     ).animate(CurvedAnimation(
       parent: _controller,
       curve: Curves.easeInOut,
@@ -336,8 +330,7 @@ class _SkeletonLoadingIndicatorState extends State<_SkeletonLoadingIndicator>
 
     return AnimatedBuilder(
       animation: _animation,
-      builder: (context, child) {
-        return Container(
+      builder: (context, child) => Container(
           width: width,
           height: height,
           decoration: BoxDecoration(
@@ -357,30 +350,29 @@ class _SkeletonLoadingIndicatorState extends State<_SkeletonLoadingIndicator>
               ],
             ),
           ),
-        );
-      },
+        ),
     );
   }
 
   double _getSkeletonWidth() {
     switch (widget.size) {
       case AppLoadingSize.small:
-        return 80.0;
+        return 80;
       case AppLoadingSize.medium:
-        return 120.0;
+        return 120;
       case AppLoadingSize.large:
-        return 200.0;
+        return 200;
     }
   }
 
   double _getSkeletonHeight() {
     switch (widget.size) {
       case AppLoadingSize.small:
-        return 12.0;
+        return 12;
       case AppLoadingSize.medium:
-        return 16.0;
+        return 16;
       case AppLoadingSize.large:
-        return 24.0;
+        return 24;
     }
   }
 }
@@ -454,8 +446,7 @@ abstract class AppLoadingUtils {
   static Widget buttonLoading({
     Color? color,
     double? size,
-  }) {
-    return SizedBox(
+  }) => SizedBox(
       width: size ?? AppSpacing.iconSm,
       height: size ?? AppSpacing.iconSm,
       child: CircularProgressIndicator(
@@ -465,27 +456,23 @@ abstract class AppLoadingUtils {
         ),
       ),
     );
-  }
 
   /// Widget de carregamento para listas
   static Widget listLoading({
     String? message,
     AppLoadingSize size = AppLoadingSize.medium,
-  }) {
-    return AppLoading(
+  }) => AppLoading(
       type: AppLoadingType.circular,
       size: size,
       message: message ?? 'Carregando...',
       backgroundColor: Colors.transparent,
     );
-  }
 
   /// Widget de carregamento skeleton para listas
   static Widget skeletonList({
     int itemCount = 5,
     AppLoadingSize size = AppLoadingSize.medium,
-  }) {
-    return ListView.builder(
+  }) => ListView.builder(
       itemCount: itemCount,
       padding: const EdgeInsets.all(AppSpacing.md),
       itemBuilder: (context, index) => Container(
@@ -498,5 +485,4 @@ abstract class AppLoadingUtils {
         ),
       ),
     );
-  }
 }

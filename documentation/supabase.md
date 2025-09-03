@@ -2,6 +2,10 @@
 
 This document outlines the database schema for the Supabase project. It includes tables, views, and functions that are part of the application's data layer.
 
+**Note**: This project uses a hybrid architecture:
+- **Database, Authentication, Realtime**: Supabase
+- **File Storage**: Firebase Storage (not Supabase Storage)
+
 ## Tables
 
 ### activity_logs

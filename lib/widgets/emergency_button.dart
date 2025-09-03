@@ -86,7 +86,6 @@ class _EmergencyButtonState extends State<EmergencyButton>
           'Isso irá notificar seus contatos de emergência e as autoridades. '
           'Deseja continuar?',
       confirmLabel: 'Confirmar Emergência',
-      cancelLabel: 'Cancelar',
       dismissible: false,
     );
 

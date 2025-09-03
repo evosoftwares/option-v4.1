@@ -1,101 +1,169 @@
-# Supabase Storage Buckets Guide
+# Firebase Storage Buckets Guide
 
-This document provides an overview of the Supabase Storage buckets used in the project and guidelines for developers on how to interact with them.
+This document provides an overview of the Firebase Storage buckets/folders used in the project and guidelines for developers on how to interact with them.
 
-## Buckets
+**Important**: This project uses **Firebase Storage** for file storage, not Supabase Storage.
 
-### 1. user-photos
-- **ID:** user-photos
-- **Name:** user-photos
-- **Public:** Yes
-- **Type:** STANDARD
-- **File Size Limit:** None (null)
-- **Allowed MIME Types:**
+## Storage Structure
+
+Firebase Storage organizes files in a hierarchical folder structure:
+
+### 1. driver-documents/
+- **Purpose**: Store driver document uploads (CNH, CRLV, etc.)
+- **Path Pattern**: `driver-documents/drivers/{driver_id}/documents/{filename}`
+- **File Types**: 
   - image/jpeg
+  - image/jpg  
   - image/png
   - image/webp
+  - application/pdf
+- **Size Limit**: 50MB per file
+- **Compression**: Enabled for images (85% quality, max 1920x1920px)
+- **Access**: Private (authenticated users only)
+
+### 2. user-photos/
+- **Purpose**: Store user profile photos
+- **Path Pattern**: `user-photos/users/{user_id}/profile/{filename}`  
+- **File Types**:
+  - image/jpeg
   - image/jpg
-- **Created At:** 2025-08-29T02:40:55.764Z
-- **Updated At:** 2025-08-29T02:40:55.764Z
+  - image/png
+  - image/webp
+- **Size Limit**: 50MB per file
+- **Compression**: Enabled (85% quality, max 1920x1920px)
+- **Access**: Private (authenticated users only)
 
 ## Developer Guidelines
 
 ### Uploading Files
 
-1. **Authentication:** Ensure the user is authenticated with Supabase Auth before attempting to upload files.
-2. **File Validation:** Before uploading, validate the file size and MIME type on the client-side to match the bucket's restrictions.
-3. **File Path:** Use a clear and consistent naming convention for files. For example, for user photos, you might use:
-   `user-photos/{user_id}/{filename}.{extension}`
+1. **Authentication**: Ensure user has valid Supabase authentication session before uploading
+2. **File Validation**: Validate file size and MIME type client-side before upload
+3. **Path Convention**: Follow the established path patterns for consistency
+4. **Service Usage**: Always use `FirebaseFileUploadService` for uploads
 
-### Downloading Files
-
-1. **Public Access:** Files in public buckets can be accessed directly via URL:
-   `https://qlbwacmavngtonauxnte.supabase.co/storage/v1/object/public/{bucket_name}/{file_path}`
-
-### Error Handling
-
-- **MIME Type Error:** Handle the error when a file type is not allowed. Show a user-friendly message listing the accepted file types.
-- **Network Errors:** Implement retry logic for network-related errors during upload or download.
-
-### Example Code (Flutter/Dart)
+### Example Upload Code
 
 ```dart
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import '../services/firebase_file_upload_service.dart';
 
-final supabase = Supabase.instance.client;
-
-// Upload a file
-Future<String?> uploadUserPhoto(Uint8List fileBytes, String fileName, String userId) async {
- try {
-   final fileOptions = FileOptions(
-     cacheControl: '3600',
-     upsert: false,
-     contentType: 'image/jpeg', // Or determine dynamically
-   );
-
-   final response = await supabase.storage
-       .from('user-photos')
-       .uploadBinary(
-         'user-photos/$userId/$fileName',
-         fileBytes,
-         fileOptions: fileOptions,
-       );
-
-   return response; // Path to the uploaded file
- } on StorageException catch (error) {
-   // Handle specific storage errors (e.g., mime type)
-   print('Storage error: ${error.message}');
-   return null;
- } catch (error) {
-   // Handle other errors
-   print('Unexpected error: $error');
-   return null;
- }
+// Upload driver document
+Future<String?> uploadDriverDocument(File file, String driverId, String documentType) async {
+  final fileName = '${documentType}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+  final path = 'drivers/$driverId/documents/$fileName';
+  
+  return await FirebaseFileUploadService.uploadDriverDocument(
+    file: file,
+    folder: 'driver-documents',
+    path: path,
+    compress: true,
+  );
 }
 
-// Get public URL for a file
-String getUserPhotoUrl(String filePath) {
- return supabase.storage.from('user-photos').getPublicUrl(filePath);
-}
-
-// Download a file
-Future<Uint8List?> downloadUserPhoto(String filePath) async {
- try {
-   final data = await supabase.storage.from('user-photos').download(filePath);
-   return data; // Uint8List of the file content
- } on StorageException catch (error) {
-   print('Download error: ${error.message}');
-   return null;
- } catch (error) {
-   print('Unexpected error: $error');
-   return null;
- }
+// Upload user profile photo  
+Future<String?> uploadProfilePhoto(File file, String userId) async {
+  final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+  final path = 'users/$userId/profile/$fileName';
+  
+  return await FirebaseFileUploadService.uploadImage(
+    file: file,
+    folder: 'user-photos', 
+    path: path,
+    compress: true,
+  );
 }
 ```
 
-### Best Practices
+### Downloading/Accessing Files
 
-1.  **Organize Files:** Use folders (prefixes in the file path) to organize files within a bucket.
-2.  **Unique Filenames:** Generate unique filenames to prevent collisions (e.g., using UUIDs or timestamps).
-3.  **Security:** Regularly review bucket permissions. Although these buckets are public, ensure that file paths are not easily guessable if the content should not be publicly accessible by default.
-4.  **Cleanup:** Implement a strategy for deleting unused or temporary files to manage storage costs and keep buckets organized.
+Firebase Storage returns download URLs that can be used directly:
+
+```dart
+// The upload methods return download URLs
+String downloadUrl = await uploadDriverDocument(file, driverId, 'cnh');
+
+// Use the URL to display images
+NetworkImage(downloadUrl)
+
+// Or for documents
+launchUrl(Uri.parse(downloadUrl));
+```
+
+### Error Handling
+
+Handle common Firebase Storage errors:
+
+- **File Size Limit**: Files exceeding 50MB will be rejected
+- **MIME Type Error**: Only allowed file types can be uploaded
+- **Authentication Error**: Session must be valid for uploads
+- **Network Errors**: Implement retry logic for network issues
+- **Permission Denied**: Check Firebase Storage security rules
+
+### File Management
+
+```dart
+// Delete old file when uploading new one
+await FirebaseFileUploadService.deleteFile(
+  folder: 'user-photos',
+  path: oldFilePath,
+);
+
+// Get file metadata
+final metadata = await FirebaseFileUploadService.getFileMetadata(
+  folder: 'driver-documents',
+  path: filePath,
+);
+```
+
+## Security
+
+### Firebase Storage Rules
+
+Configure Firebase Storage security rules to:
+- Require authentication for all uploads
+- Validate file sizes and types
+- Restrict access to user's own files
+- Prevent unauthorized access
+
+### Path-based Security
+
+The service enforces security through:
+- Structured file paths that include user/driver IDs
+- Session validation before uploads
+- File type and size validation
+- Authentication checks
+
+## Best Practices
+
+1. **Unique Filenames**: Use timestamps and UUIDs to prevent conflicts
+2. **Compression**: Enable compression for images to reduce bandwidth
+3. **Cleanup**: Delete old files when updating profiles/documents  
+4. **Progress Tracking**: Show upload progress for better user experience
+5. **Error Handling**: Provide user-friendly error messages
+6. **Validation**: Validate files client-side before upload
+
+## Monitoring
+
+Monitor storage usage through:
+- Firebase Console Storage section
+- Usage metrics and analytics
+- Error logs and crash reports
+- Storage and bandwidth costs
+
+## Migration from Supabase Storage
+
+If migrating from Supabase Storage:
+
+1. **Code Changes**: Update all storage references to use `FirebaseFileUploadService`
+2. **File Migration**: Transfer existing files from Supabase to Firebase
+3. **URL Updates**: Update any stored file URLs in the database
+4. **Security Rules**: Configure Firebase Storage security rules
+5. **Testing**: Thoroughly test all upload/download functionality
+
+## Cost Optimization
+
+- Enable compression for images to reduce storage and bandwidth costs
+- Implement file cleanup policies for temporary files
+- Monitor usage patterns and optimize based on analytics
+- Consider CDN integration for frequently accessed files

@@ -323,7 +323,7 @@ class _PaginatedTransactionListState extends State<PaginatedTransactionList> {
             color: Colors.red,
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(
+          const Text(
             'Erro ao carregar transações',
             style: AppTypography.titleMedium,
           ),

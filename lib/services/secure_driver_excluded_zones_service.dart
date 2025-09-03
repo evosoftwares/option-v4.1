@@ -441,7 +441,7 @@ class SecureDriverExcludedZonesService {
           .from('driver_excluded_zones')
           .stream(primaryKey: ['id'])
           .eq('driver_id', driverId)
-          .order('created_at', ascending: false)
+          .order('created_at')
           .map((data) => (data as List<dynamic>)
               .map((json) => DriverExcludedZone.fromJson(json as Map<String, dynamic>))
               .toList());

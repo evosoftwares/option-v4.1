@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
 
-import '../../lib/controllers/driver_stepper_controller.dart';
-import '../../lib/services/file_upload_service.dart';
+import 'package:option/controllers/driver_stepper_controller.dart';
+import 'package:option/services/firebase_file_upload_service.dart';
 
 void main() {
   group('CNH Upload Tests', () {
@@ -177,13 +177,13 @@ void main() {
         20 * 1024 * 1024, // 20MB - inválido
       ];
       
-      for (int i = 0; i < testSizes.length; i++) {
+      for (var i = 0; i < testSizes.length; i++) {
         final size = testSizes[i];
         final isValid = size <= maxSizeBytes;
         final expectedResult = i < 4; // Primeiros 4 são válidos
         
         expect(isValid, equals(expectedResult), 
-               reason: 'Tamanho ${size} bytes deve ser ${expectedResult ? "válido" : "inválido"}');
+               reason: 'Tamanho $size bytes deve ser ${expectedResult ? "válido" : "inválido"}');
       }
     });
   });

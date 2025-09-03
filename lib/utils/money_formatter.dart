@@ -8,12 +8,12 @@ class MoneyFormatter {
   /// Formata um valor double para string numérica (ex: 1.234,56)
   static String formatNumber(double value) {
     // Converte para string com 2 casas decimais
-    var valueStr = value.toStringAsFixed(2);
+    final valueStr = value.toStringAsFixed(2);
     
     // Separa parte inteira e decimal
-    var parts = valueStr.split('.');
-    var integerPart = parts[0];
-    var decimalPart = parts[1];
+    final parts = valueStr.split('.');
+    final integerPart = parts[0];
+    final decimalPart = parts[1];
     
     // Adiciona separadores de milhares
     var formattedInteger = '';
@@ -99,8 +99,8 @@ class MoneyInputFormatter extends TextInputFormatter {
     }
     
     // Converte para centavos e formata
-    var value = double.parse(digitsOnly) / 100;
-    var formatted = MoneyFormatter.formatNumber(value);
+    final value = double.parse(digitsOnly) / 100;
+    final formatted = MoneyFormatter.formatNumber(value);
     
     return TextEditingValue(
       text: formatted,
@@ -144,7 +144,7 @@ class DecimalInputFormatter extends TextInputFormatter {
     }
     
     // Substitui ponto por vírgula para exibição (padrão brasileiro)
-    var display = filtered.replaceAll('.', ',');
+    final display = filtered.replaceAll('.', ',');
     
     return TextEditingValue(
       text: display,

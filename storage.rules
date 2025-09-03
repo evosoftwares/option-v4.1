@@ -1,0 +1,23 @@
+// Firebase Storage Security Rules para OPTION v4.1
+// Estas regras devem ser aplicadas no Firebase Console > Storage > Rules
+// IMPORTANTE: Como usamos Supabase Auth (não Firebase Auth), permitimos uploads para todos os usuários
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Permitir leitura e escrita para fotos de perfil dos usuários
+    match /user-photos/{allPaths=**} {
+      allow read, write: if true; // Acesso público (controlado pelo app via Supabase Auth)
+    }
+    
+    // Documentos de motoristas - acesso público (controlado pelo app)
+    match /driver-documents/{allPaths=**} {
+      allow read, write: if true; // Acesso público (controlado pelo app via Supabase Auth)
+    }
+    
+    // Regra catch-all - negar acesso a qualquer outro path não especificado
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

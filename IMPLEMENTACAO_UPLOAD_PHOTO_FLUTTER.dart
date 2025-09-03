@@ -6,12 +6,14 @@
 // =============================================
 
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'lib/exceptions/app_exceptions.dart';
 import 'lib/services/user_service.dart';
 import 'lib/utils/supabase_helper.dart';
-import 'lib/exceptions/app_exceptions.dart';
 
 class ProfilePhotoUploadService {
   static const String _bucketName = 'user-photos'; // Bucket já configurado

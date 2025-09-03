@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/user.dart' as app_models;
 import '../models/vehicle_brand.dart';
 import '../models/vehicle_model.dart';
 import '../services/driver_service.dart';
-import '../services/file_upload_service.dart';
+import '../services/driver_wallet_service.dart';
+import '../services/firebase_file_upload_service.dart';
 import '../services/user_service.dart';
 import '../services/vehicle_data_service.dart';
 import '../utils/supabase_helper.dart';
@@ -30,6 +32,12 @@ class DriverStepperController extends ChangeNotifier {
   String? _cnhError;
   String? _crlvError;
   
+  // Estados de retry para feedback visual
+  int _cnhRetryAttempt = 0;
+  int _crlvRetryAttempt = 0;
+  bool _cnhIsRetrying = false;
+  bool _crlvIsRetrying = false;
+  
   // Dados do veículo
   String _vehicleBrand = '';
   String _vehicleModel = '';
@@ -48,8 +56,8 @@ class DriverStepperController extends ChangeNotifier {
   final VehicleDataService _vehicleDataService = VehicleDataService();
   
   // Vehicle autocomplete data
-  List<VehicleBrand> _brands = [];
-  List<VehicleModel> _models = [];
+  final List<VehicleBrand> _brands = [];
+  final List<VehicleModel> _models = [];
   VehicleBrand? _selectedBrand;
   VehicleModel? _selectedModel;
   bool _isBrandLoading = false;
@@ -76,6 +84,12 @@ class DriverStepperController extends ChangeNotifier {
   bool get isUploadingCrlv => _isUploadingCrlv;
   String? get cnhError => _cnhError;
   String? get crlvError => _crlvError;
+  
+  // Getters para estados de retry
+  int get cnhRetryAttempt => _cnhRetryAttempt;
+  int get crlvRetryAttempt => _crlvRetryAttempt;
+  bool get cnhIsRetrying => _cnhIsRetrying;
+  bool get crlvIsRetrying => _crlvIsRetrying;
   
   String get vehicleBrand => _vehicleBrand;
   String get vehicleModel => _vehicleModel;
@@ -142,9 +156,23 @@ class DriverStepperController extends ChangeNotifier {
     notifyListeners();
   }
   
-  void setVehiclePlate(String plate) {
+  Future<void> setVehiclePlate(String plate) async {
     if (_disposed) return;
     _vehiclePlate = plate.toUpperCase();
+    
+    // Validação de placa única em tempo real
+    if (plate.isNotEmpty && !plate.startsWith('PENDENTE')) {
+      try {
+        await _checkPlateUniqueness(plate);
+      } catch (e) {
+        // Se houver erro de duplicação, limpar o campo
+        if (e.toString().contains('já está em uso')) {
+          _vehiclePlate = 'PENDENTE';
+          _errorMessage = 'Esta placa já está cadastrada por outro motorista';
+        }
+      }
+    }
+    
     notifyListeners();
   }
   
@@ -272,37 +300,38 @@ class DriverStepperController extends ChangeNotifier {
     }
   }
   
-  // Upload de documentos usando FileUploadService
+  // Upload de documentos usando FirebaseFileUploadService
   Future<String?> _uploadDocument(File file, String fileName) async {
     try {
-      final user = SupabaseHelper.client?.auth.currentUser;
-      if (user == null) {
-        throw Exception('Usuário não autenticado');
+      // Garantir que a sessão está válida antes de fazer upload
+      await _ensureValidSession();
+      
+      final user = SupabaseHelper.client!.auth.currentUser!;
+      
+      // Buscar driver_id para usar o caminho correto
+      // Adicionar retry logic para aguardar criação do registro do motorista
+      String? driverId;
+      for (var attempt = 1; attempt <= 3; attempt++) {
+        driverId = await DriverWalletService.getDriverId(user.id);
+        if (driverId != null) break;
+        
+        print('⏳ Tentativa $attempt: Aguardando criação do registro do motorista...');
+        if (attempt < 3) {
+          await Future.delayed(Duration(seconds: attempt * 2)); // 2s, 4s
+        }
       }
       
-      // Validar arquivo antes do upload
-      if (!await file.exists()) {
-        throw Exception('Arquivo não encontrado');
+      if (driverId == null) {
+        throw Exception('Registro de motorista não encontrado após múltiplas tentativas');
       }
       
-      // Verificar tamanho do arquivo (10MB máximo)
-      final fileSize = await file.length();
-      if (fileSize > 10 * 1024 * 1024) {
-        throw Exception('Arquivo muito grande. Máximo permitido: 10MB');
-      }
-      
-      // Verificar extensão do arquivo
+      // Usar caminho correto para Firebase Storage
+      final path = 'drivers/$driverId/documents/$fileName';
       final extension = fileName.toLowerCase().split('.').last;
-      final allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
-      if (!allowedExtensions.contains(extension)) {
-        throw Exception('Formato não suportado. Use: JPG, PNG ou PDF');
-      }
       
-      // Usar FileUploadService para upload de documentos
-      final path = 'driver_documents/${user.id}/$fileName';
-      final url = await FileUploadService.uploadDriverDocument(
+      final url = await FirebaseFileUploadService.uploadDriverDocument(
         file: file,
-        bucket: 'user-photos',
+        folder: 'driver-documents',
         path: path,
         compress: extension != 'pdf', // Não comprimir PDFs
       );
@@ -317,20 +346,29 @@ class DriverStepperController extends ChangeNotifier {
   
   String _mapUploadError(Object e) {
     final msg = e.toString().toLowerCase();
-    if (msg.contains('muito grande') || msg.contains('10mb')) {
-      return 'Arquivo excede o limite de 10MB.';
+    if (msg.contains('muito grande') || msg.contains('50mb') || msg.contains('10mb')) {
+      return 'Arquivo excede o limite permitido.';
     }
-    if (msg.contains('formato não suportado') || msg.contains('mime')) {
+    if (msg.contains('formato não suportado') || msg.contains('mime') || msg.contains('tipo de arquivo não permitido')) {
       return 'Formato inválido. Utilize JPG, PNG ou PDF.';
     }
-    if (msg.contains('não autenticado') || msg.contains('auth')) {
+    if (msg.contains('sessão expirada') || msg.contains('não foi possível renovar') || msg.contains('token expirado')) {
       return 'Sessão expirada. Faça login novamente.';
     }
-    if (msg.contains('permission denied') || msg.contains('rls') || msg.contains('not allowed')) {
-      return 'Permissão negada no Storage. Tente novamente em alguns minutos.';
+    if (msg.contains('não autenticado') || msg.contains('auth') || msg.contains('usuário não autenticado')) {
+      return 'Sessão expirada. Faça login novamente.';
+    }
+    if (msg.contains('permission denied') || msg.contains('unauthorized') || msg.contains('forbidden')) {
+      return 'Permissão negada no Firebase Storage. Verifique a configuração.';
     }
     if (msg.contains('arquivo não encontrado') || msg.contains('no such file')) {
       return 'Arquivo não encontrado no dispositivo.';
+    }
+    if (msg.contains('network') || msg.contains('connection') || msg.contains('timeout')) {
+      return 'Erro de conexão. Verifique sua internet e tente novamente.';
+    }
+    if (msg.contains('firebase') || msg.contains('storage')) {
+      return 'Erro no Firebase Storage. Tente novamente em alguns minutos.';
     }
     return 'Erro inesperado no upload. Detalhes: ${e.toString()}';
   }
@@ -344,11 +382,9 @@ class DriverStepperController extends ChangeNotifier {
     if (!_disposed) notifyListeners();
     
     try {
-      final user = SupabaseHelper.client?.auth.currentUser;
-      if (user == null) {
-        _setError('Sessão expirada. Faça login novamente.');
-        return false;
-      }
+      // Garantir que a sessão está válida
+      await _ensureValidSession();
+      final user = SupabaseHelper.client!.auth.currentUser!;
       
       // Validar se os documentos foram selecionados
       if (_cnhPhoto == null) {
@@ -367,21 +403,37 @@ class DriverStepperController extends ChangeNotifier {
       
       try {
         _isUploadingCnh = true;
+        _cnhRetryAttempt = 0;
+        _cnhIsRetrying = false;
         if (!_disposed) notifyListeners();
-        cnhUrl = await _uploadDocument(_cnhPhoto!, 'cnh_${DateTime.now().millisecondsSinceEpoch}.jpg');
+        
+        cnhUrl = await _uploadDocumentWithRetryTracking(
+          file: _cnhPhoto!,
+          fileName: 'cnh_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          documentType: 'CNH',
+          onRetry: (attempt) {
+            _cnhRetryAttempt = attempt;
+            _cnhIsRetrying = true;
+            if (!_disposed) notifyListeners();
+          },
+        );
+        
         if (_disposed) return false;
         _cnhUrl = cnhUrl;
         _cnhError = null;
+        _cnhIsRetrying = false;
       } catch (e) {
         if (_disposed) return false;
         _cnhError = _mapUploadError(e);
-        _setError('Falha no upload da CNH. ${_cnhError}');
+        _setError('Falha no upload da CNH. $_cnhError');
         _isUploadingCnh = false;
+        _cnhIsRetrying = false;
         _setLoading(false);
         if (!_disposed) notifyListeners();
         return false;
       } finally {
         _isUploadingCnh = false;
+        _cnhIsRetrying = false;
         if (!_disposed) notifyListeners();
       }
       
@@ -395,7 +447,7 @@ class DriverStepperController extends ChangeNotifier {
       } catch (e) {
         if (_disposed) return false;
         _crlvError = _mapUploadError(e);
-        _setError('Falha no upload do CRLV. ${_crlvError}');
+        _setError('Falha no upload do CRLV. $_crlvError');
         _isUploadingCrlv = false;
         _setLoading(false);
         if (!_disposed) notifyListeners();
@@ -405,17 +457,18 @@ class DriverStepperController extends ChangeNotifier {
         if (!_disposed) notifyListeners();
       }
       
-      // Buscar o driver ID primeiro
+      // Garantir que existe registro de driver e obter ID
+      String driverId;
       try {
-        final driverResponse = await SupabaseHelper.client!
-            .from('drivers')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
-        
-        final driverId = driverResponse['id'] as String;
-        
-        // Atualizar dados do motorista
+        driverId = await _ensureDriverExists(user);
+      } catch (e) {
+        _setError('Erro ao verificar dados do motorista: ${e.toString()}');
+        _setLoading(false);
+        return false;
+      }
+      
+      // Atualizar dados do motorista
+      try {
         final driverService = DriverService(SupabaseHelper.client!);
         await driverService.updateDriver(
           driverId,
@@ -431,8 +484,23 @@ class DriverStepperController extends ChangeNotifier {
         _clearError();
         _setLoading(false);
         return true;
+      } on PostgrestException catch (e) {
+        final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+        print('❌ [DRIVER-UPDATE-$sessionId] Erro PostgreSQL: ${e.code} - ${e.message}');
+        
+        if (e.code == 'PGRST116') {
+          _setError('Registro de motorista não encontrado. Tente fazer login novamente.');
+        } else if ((e.code ?? '').startsWith('23505')) { // Duplicate key
+          _setError('Placa do veículo já está sendo usada por outro motorista.');
+        } else if ((e.code ?? '').startsWith('23')) { // Other constraint violations
+          _setError('Dados inválidos detectados. Verifique as informações inseridas.');
+        } else {
+          _setError('Erro no banco de dados: ${e.message}');
+        }
+        _setLoading(false);
+        return false;
       } catch (e) {
-        _setError('Erro ao salvar dados do motorista: ${e.toString()}');
+        _setError('Erro inesperado ao salvar dados: ${e.toString()}');
         _setLoading(false);
         return false;
       }
@@ -443,7 +511,143 @@ class DriverStepperController extends ChangeNotifier {
     }
   }
   
+  /// Upload de documento com tracking de retry attempts para feedback visual
+  Future<String> _uploadDocumentWithRetryTracking({
+    required File file,
+    required String fileName,
+    required String documentType,
+    required Function(int attempt) onRetry,
+  }) async {
+    return await FirebaseFileUploadService.uploadDriverDocument(
+      file: file,
+      folder: 'driver-documents',
+      path: 'drivers/${SupabaseHelper.client!.auth.currentUser!.id}/documents/$fileName',
+      compress: true,
+    );
+  }
+  
   // Métodos auxiliares
+  /// Garante que existe um registro de driver para o usuário e retorna o ID
+  Future<String> _ensureDriverExists(User user) async {
+    final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    print('🔍 [DRIVER-$sessionId] Verificando se existe registro de motorista para usuário: ${user.id}');
+    
+    try {
+      // Primeiro, tentar buscar driver existente
+      final existingDriverResponse = await SupabaseHelper.client!
+          .from('drivers')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+      
+      if (existingDriverResponse != null) {
+        final driverId = existingDriverResponse['id'] as String;
+        print('✅ [DRIVER-$sessionId] Registro de motorista encontrado: $driverId');
+        return driverId;
+      }
+      
+      // Se não existe, criar usando UserService
+      print('⚠️ [DRIVER-$sessionId] Registro não encontrado, criando automaticamente...');
+      // Converter User do Supabase para User do modelo
+      final userModel = await _getUserModel(user.id);
+      await UserService.createDriverRecord(userModel);
+      
+      // Buscar novamente o registro recém-criado
+      final newDriverResponse = await SupabaseHelper.client!
+          .from('drivers')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+      
+      final driverId = newDriverResponse['id'] as String;
+      print('✅ [DRIVER-$sessionId] Registro de motorista criado com sucesso: $driverId');
+      return driverId;
+      
+    } on PostgrestException catch (e) {
+      print('❌ [DRIVER-$sessionId] Erro PostgreSQL: ${e.code} - ${e.message}');
+      if (e.code == 'PGRST116') {
+        throw Exception('Registro de motorista não encontrado após criação. Verifique as permissões do banco.');
+      } else if ((e.code ?? '').startsWith('23')) { // Constraint violation
+        throw Exception('Conflito de dados do motorista. Verifique se já existe um registro.');
+      } else {
+        throw Exception('Erro no banco de dados: ${e.message}');
+      }
+    } catch (e) {
+      print('❌ [DRIVER-$sessionId] Erro inesperado: $e');
+      throw Exception('Não foi possível acessar ou criar dados do motorista. Tente novamente.');
+    }
+  }
+  
+  /// Busca o modelo de usuário a partir do ID do usuário auth
+  Future<app_models.User> _getUserModel(String userId) async {
+    try {
+      final userResponse = await SupabaseHelper.client!
+          .from('app_users')
+          .select()
+          .eq('id', userId)
+          .single();
+      
+      return app_models.User.fromMap(userResponse);
+    } catch (e) {
+      throw Exception('Não foi possível buscar dados do usuário: $e');
+    }
+  }
+  
+  /// Verifica e renova a sessão do usuário se necessário
+  Future<void> _ensureValidSession() async {
+    final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    print('🔐 [SESSION-$sessionId] Verificando validade da sessão...');
+    
+    final client = SupabaseHelper.client;
+    if (client == null) {
+      print('❌ [SESSION-$sessionId] Erro: Cliente Supabase não disponível');
+      throw Exception('Erro de configuração do Supabase');
+    }
+    
+    final session = client.auth.currentSession;
+    final user = client.auth.currentUser;
+    
+    print('🔍 [SESSION-$sessionId] Estado da sessão:');
+    print('   - Usuário autenticado: ${user != null}');
+    print('   - User ID: ${user?.id ?? "null"}');
+    print('   - Session existe: ${session != null}');
+    
+    if (session?.expiresAt != null) {
+      final expiresAt = DateTime.fromMillisecondsSinceEpoch(session!.expiresAt! * 1000);
+      final now = DateTime.now();
+      final timeUntilExpiry = expiresAt.difference(now);
+      
+      print('   - Expira em: ${expiresAt.toIso8601String()}');
+      print('   - Tempo restante: ${timeUntilExpiry.inMinutes} minutos');
+      
+      if (session.expiresAt! <= DateTime.now().millisecondsSinceEpoch ~/ 1000) {
+        try {
+          print('⚠️ [SESSION-$sessionId] Token expirado, renovando sessão...');
+          await client.auth.refreshSession();
+          final newSession = client.auth.currentSession;
+          final newUser = client.auth.currentUser;
+          
+          print('✅ [SESSION-$sessionId] Sessão renovada com sucesso');
+          print('   - Novo User ID: ${newUser?.id}');
+          print('   - Nova expiração: ${newSession?.expiresAt != null ? DateTime.fromMillisecondsSinceEpoch(newSession!.expiresAt! * 1000).toIso8601String() : "null"}');
+        } catch (e) {
+          print('❌ [SESSION-$sessionId] Erro ao renovar sessão: $e');
+          throw Exception('Sessão expirada. Faça login novamente.');
+        }
+      } else {
+        print('✅ [SESSION-$sessionId] Sessão válida, não precisa renovar');
+      }
+    }
+    
+    final finalUser = client.auth.currentUser;
+    if (finalUser == null) {
+      print('❌ [SESSION-$sessionId] Usuário não autenticado após verificação');
+      throw Exception('Usuário não autenticado');
+    }
+    
+    print('✅ [SESSION-$sessionId] Sessão validada para usuário: ${finalUser.id}');
+  }
+
   void _setLoading(bool loading) {
     if (_disposed) return;
     _isLoading = loading;
@@ -558,12 +762,52 @@ class DriverStepperController extends ChangeNotifier {
     notifyListeners();
   }
   
-  void setPlate(String value) {
+  Future<void> setPlate(String value) async {
     if (_disposed) return;
     _plateFieldTouched = true;
     _vehiclePlate = value;
     plateController.text = value;
+    
+    // Validação de placa única em tempo real
+    if (value.isNotEmpty && !value.startsWith('PENDENTE')) {
+      try {
+        await _checkPlateUniqueness(value);
+      } catch (e) {
+        // Se houver erro de duplicação, limpar o campo
+        if (e.toString().contains('já está em uso')) {
+          _vehiclePlate = '';
+          plateController.text = '';
+          _errorMessage = 'Esta placa já está cadastrada por outro motorista';
+        }
+      }
+    }
+    
     notifyListeners();
+  }
+  
+  Future<void> _checkPlateUniqueness(String plate) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final currentUserId = supabase.auth.currentUser?.id;
+      
+      if (currentUserId == null) return;
+      
+      final response = await supabase
+          .from('drivers')
+          .select('user_id')
+          .eq('vehicle_plate', plate.toUpperCase())
+          .neq('user_id', currentUserId)
+          .maybeSingle();
+      
+      if (response != null) {
+        throw Exception('Placa já está em uso por outro motorista');
+      }
+    } catch (e) {
+      if (e.toString().contains('já está em uso')) {
+        rethrow;
+      }
+      // Ignorar outros erros de rede/conexão
+    }
   }
   
   void setColor(String value) {

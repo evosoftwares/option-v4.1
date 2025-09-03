@@ -78,8 +78,7 @@ class AppButton extends StatelessWidget {
     }
   }
 
-  Widget _buildElevatedButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) {
-    return ElevatedButton(
+  Widget _buildElevatedButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) => ElevatedButton(
       onPressed: isDisabled ? null : onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: colorScheme.primary,
@@ -94,10 +93,8 @@ class AppButton extends StatelessWidget {
       ),
       child: _buildButtonContent(colorScheme.onPrimary),
     );
-  }
 
-  Widget _buildFilledButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) {
-    return FilledButton(
+  Widget _buildFilledButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) => FilledButton(
       onPressed: isDisabled ? null : onPressed,
       style: FilledButton.styleFrom(
         backgroundColor: colorScheme.secondary,
@@ -111,10 +108,8 @@ class AppButton extends StatelessWidget {
       ),
       child: _buildButtonContent(colorScheme.onSecondary),
     );
-  }
 
-  Widget _buildOutlinedButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) {
-    return OutlinedButton(
+  Widget _buildOutlinedButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) => OutlinedButton(
       onPressed: isDisabled ? null : onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: colorScheme.primary,
@@ -132,10 +127,8 @@ class AppButton extends StatelessWidget {
       ),
       child: _buildButtonContent(colorScheme.primary),
     );
-  }
 
-  Widget _buildTextButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) {
-    return TextButton(
+  Widget _buildTextButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) => TextButton(
       onPressed: isDisabled ? null : onPressed,
       style: TextButton.styleFrom(
         foregroundColor: colorScheme.primary,
@@ -147,10 +140,8 @@ class AppButton extends StatelessWidget {
       ),
       child: _buildButtonContent(colorScheme.primary),
     );
-  }
 
-  Widget _buildDangerButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) {
-    return ElevatedButton(
+  Widget _buildDangerButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) => ElevatedButton(
       onPressed: isDisabled ? null : onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.error,
@@ -165,10 +156,8 @@ class AppButton extends StatelessWidget {
       ),
       child: _buildButtonContent(AppColors.white),
     );
-  }
 
-  Widget _buildSuccessButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) {
-    return ElevatedButton(
+  Widget _buildSuccessButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) => ElevatedButton(
       onPressed: isDisabled ? null : onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.success,
@@ -183,10 +172,8 @@ class AppButton extends StatelessWidget {
       ),
       child: _buildButtonContent(AppColors.white),
     );
-  }
 
-  Widget _buildWarningButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) {
-    return ElevatedButton(
+  Widget _buildWarningButton(BuildContext context, ColorScheme colorScheme, bool isDisabled) => ElevatedButton(
       onPressed: isDisabled ? null : onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.warning,
@@ -201,7 +188,6 @@ class AppButton extends StatelessWidget {
       ),
       child: _buildButtonContent(AppColors.white),
     );
-  }
 
   Widget _buildButtonContent(Color textColor) {
     if (isLoading) {
@@ -259,11 +245,11 @@ class AppButton extends StatelessWidget {
   double _getButtonHeight() {
     switch (size) {
       case AppButtonSize.small:
-        return 32.0;
+        return 32;
       case AppButtonSize.medium:
-        return 40.0;
+        return 40;
       case AppButtonSize.large:
-        return 48.0;
+        return 48;
     }
   }
 
@@ -298,9 +284,7 @@ class AppButton extends StatelessWidget {
     }
   }
 
-  double _getBorderWidth() {
-    return AppSpacing.borderMedium;
-  }
+  double _getBorderWidth() => AppSpacing.borderMedium;
 
   double _getElevation() {
     switch (size) {
@@ -338,11 +322,11 @@ class AppButton extends StatelessWidget {
   double _getLoadingSize() {
     switch (size) {
       case AppButtonSize.small:
-        return 12.0;
+        return 12;
       case AppButtonSize.medium:
-        return 16.0;
+        return 16;
       case AppButtonSize.large:
-        return 20.0;
+        return 20;
     }
   }
 }
@@ -425,8 +409,7 @@ abstract class AppButtonUtils {
     AppButtonSize size = AppButtonSize.medium,
     bool isLoading = false,
     double? width,
-  }) {
-    return AppButton(
+  }) => AppButton(
       onPressed: onPressed,
       text: text,
       type: AppButtonType.primary,
@@ -435,7 +418,6 @@ abstract class AppButtonUtils {
       isLoading: isLoading,
       width: width,
     );
-  }
 
   /// Botão secundário padrão
   static Widget secondary({
@@ -445,8 +427,7 @@ abstract class AppButtonUtils {
     AppButtonSize size = AppButtonSize.medium,
     bool isLoading = false,
     double? width,
-  }) {
-    return AppButton(
+  }) => AppButton(
       onPressed: onPressed,
       text: text,
       type: AppButtonType.secondary,
@@ -455,7 +436,6 @@ abstract class AppButtonUtils {
       isLoading: isLoading,
       width: width,
     );
-  }
 
   /// Botão de contorno padrão
   static Widget outline({
@@ -465,8 +445,7 @@ abstract class AppButtonUtils {
     AppButtonSize size = AppButtonSize.medium,
     bool isLoading = false,
     double? width,
-  }) {
-    return AppButton(
+  }) => AppButton(
       onPressed: onPressed,
       text: text,
       type: AppButtonType.outline,
@@ -475,7 +454,6 @@ abstract class AppButtonUtils {
       isLoading: isLoading,
       width: width,
     );
-  }
 
   /// Botão de texto padrão
   static Widget text({
@@ -484,8 +462,7 @@ abstract class AppButtonUtils {
     IconData? icon,
     AppButtonSize size = AppButtonSize.medium,
     bool isLoading = false,
-  }) {
-    return AppButton(
+  }) => AppButton(
       onPressed: onPressed,
       text: text,
       type: AppButtonType.text,
@@ -493,7 +470,6 @@ abstract class AppButtonUtils {
       icon: icon,
       isLoading: isLoading,
     );
-  }
 
   /// Botão de perigo padrão
   static Widget danger({
@@ -503,8 +479,7 @@ abstract class AppButtonUtils {
     AppButtonSize size = AppButtonSize.medium,
     bool isLoading = false,
     double? width,
-  }) {
-    return AppButton(
+  }) => AppButton(
       onPressed: onPressed,
       text: text,
       type: AppButtonType.danger,
@@ -513,7 +488,6 @@ abstract class AppButtonUtils {
       isLoading: isLoading,
       width: width,
     );
-  }
 
   /// Botão de sucesso padrão
   static Widget success({
@@ -523,8 +497,7 @@ abstract class AppButtonUtils {
     AppButtonSize size = AppButtonSize.medium,
     bool isLoading = false,
     double? width,
-  }) {
-    return AppButton(
+  }) => AppButton(
       onPressed: onPressed,
       text: text,
       type: AppButtonType.success,
@@ -533,7 +506,6 @@ abstract class AppButtonUtils {
       isLoading: isLoading,
       width: width,
     );
-  }
 
   /// Botão de aviso padrão
   static Widget warning({
@@ -543,8 +515,7 @@ abstract class AppButtonUtils {
     AppButtonSize size = AppButtonSize.medium,
     bool isLoading = false,
     double? width,
-  }) {
-    return AppButton(
+  }) => AppButton(
       onPressed: onPressed,
       text: text,
       type: AppButtonType.warning,
@@ -553,5 +524,4 @@ abstract class AppButtonUtils {
       isLoading: isLoading,
       width: width,
     );
-  }
 }

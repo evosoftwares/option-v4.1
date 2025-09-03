@@ -487,7 +487,6 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
                         borderRadius: BorderRadius.circular(8),
                         border: isMissing ? Border.all(
                           color: statusColor.withOpacity(0.3),
-                          width: 1,
                         ) : null,
                       ),
                       child: Icon(
@@ -638,8 +637,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
     );
   }
 
-  Widget _buildMissingDocumentsSection(List<Map<String, dynamic>> missingDocs) {
-    return Column(
+  Widget _buildMissingDocumentsSection(List<Map<String, dynamic>> missingDocs) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
@@ -716,10 +714,8 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         }),
       ],
     );
-  }
 
-  Widget _buildCompletedDocumentsSection(List<Map<String, dynamic>> completedDocs) {
-    return Column(
+  Widget _buildCompletedDocumentsSection(List<Map<String, dynamic>> completedDocs) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -754,10 +750,8 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         }),
       ],
     );
-  }
 
-  Widget _buildOptionalDocumentsSection(List<Map<String, dynamic>> optionalDocs) {
-    return Column(
+  Widget _buildOptionalDocumentsSection(List<Map<String, dynamic>> optionalDocs) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -799,7 +793,6 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         }),
       ],
     );
-  }
 
   String _formatDate(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 }

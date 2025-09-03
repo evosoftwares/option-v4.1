@@ -40,7 +40,6 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
       title: 'Sair',
       content: 'Tem certeza que deseja sair?',
       confirmLabel: 'Sair',
-      cancelLabel: 'Cancelar',
     );
 
     if (confirm ?? false) {

@@ -13,27 +13,27 @@
 /// - Detecção de atividades suspeitas
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
-import 'dart:typed_data';
 
+import '../../exceptions/wallet_exceptions.dart';
 import '../../models/passenger_wallet.dart';
 import '../../models/passenger_wallet_transaction.dart';
 import '../../models/payment_method.dart';
 import '../../models/user.dart' as app_user;
 import '../../services/passenger_payment_service.dart';
+import '../../services/transaction_cache_service.dart';
 import '../../services/user_service.dart';
 import '../../services/wallet_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../widgets/logo_branding.dart';
-import '../../utils/pix_validator.dart';
-import '../../exceptions/wallet_exceptions.dart';
 import '../../utils/money_formatter.dart';
+import '../../utils/pix_validator.dart';
 import '../../utils/wallet_constants.dart';
+import '../../widgets/logo_branding.dart';
 import '../../widgets/paginated_transaction_list.dart';
-import '../../services/transaction_cache_service.dart';
 
 /// Widget principal da tela de carteira
 /// 

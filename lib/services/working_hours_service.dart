@@ -261,9 +261,7 @@ class WorkingHoursService {
   }
 
   /// Converte TimeOfDay para minutos desde meia-noite
-  int _timeOfDayToMinutes(TimeOfDay time) {
-    return time.hour * 60 + time.minute;
-  }
+  int _timeOfDayToMinutes(TimeOfDay time) => time.hour * 60 + time.minute;
 
   /// Verifica se dois intervalos de tempo se sobrepõem
   bool _hasTimeOverlap(
@@ -294,7 +292,7 @@ class WorkingHoursService {
   }) async {
     // Validação básica: horário de início deve ser menor que horário de fim
     if (_timeOfDayToMinutes(startTime) >= _timeOfDayToMinutes(endTime)) {
-      throw ValidationException(
+      throw const ValidationException(
         'Horário de início deve ser anterior ao horário de fim.',
       );
     }

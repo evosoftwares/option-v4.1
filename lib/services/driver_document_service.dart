@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/supabase/driver_document.dart';
 import '../utils/supabase_helper.dart';
-import 'file_upload_service.dart';
+import 'firebase_file_upload_service.dart';
 
 class DriverDocumentService {
   static SupabaseClient get _supabase {
@@ -31,30 +31,30 @@ class DriverDocumentService {
 
     try {
       // Validar se a imagem é válida
-      final isValid = await FileUploadService.isValidImage(imageFile);
+      final isValid = await FirebaseFileUploadService.isValidImage(imageFile);
       if (!isValid) {
         throw DocumentException('Arquivo de imagem inválido');
       }
 
       // Obter informações da imagem
-      final imageInfo = await FileUploadService.getImageInfo(imageFile);
+      final imageInfo = await FirebaseFileUploadService.getImageInfo(imageFile);
       if (imageInfo == null) {
         throw DocumentException('Não foi possível obter informações da imagem');
       }
 
       // Gerar caminho único para o arquivo
       final fileName = imageFile.path.split('/').last;
-      final filePath = FileUploadService.generateDriverDocumentPath(
-        driverId: driverId,
+      final filePath = FirebaseFileUploadService.generateDriverDocumentPath(
+        userId: driverId,
         documentType: documentType.name,
         fileName: fileName,
       );
 
       print('🔄 Fazendo upload da imagem...');
       // Fazer upload da imagem
-      final fileUrl = await FileUploadService.uploadImage(
+      final fileUrl = await FirebaseFileUploadService.uploadImage(
         file: imageFile,
-        bucket: _bucketName,
+        folder: _bucketName,
         path: filePath,
       );
 
@@ -87,9 +87,6 @@ class DriverDocumentService {
       print('✅ Documento criado com sucesso: ${response['id']}');
       return DriverDocument.fromJson(response);
 
-    } on StorageException catch (e) {
-      print('❌ Erro do Supabase Storage: ${e.message}');
-      throw DocumentException('Erro no upload: ${e.message}');
     } on PostgrestException catch (e) {
       print('❌ Erro do banco de dados: ${e.message}');
       throw DocumentException('Erro ao salvar documento: ${e.message}');
@@ -242,8 +239,8 @@ class DriverDocumentService {
       final filePath = pathSegments.skip(3).join('/'); // Remove /storage/v1/object/public/bucket-name/
 
       // Remover arquivo do storage
-      await FileUploadService.deleteFile(
-        bucket: _bucketName,
+      await FirebaseFileUploadService.deleteFile(
+        folder: _bucketName,
         path: filePath,
       );
 

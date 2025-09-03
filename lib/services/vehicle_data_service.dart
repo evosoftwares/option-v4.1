@@ -8,6 +8,12 @@ import '../models/vehicle_brand.dart';
 import '../models/vehicle_model.dart';
 
 class VehicleDataService {
+
+  VehicleDataService({Dio? dio}) : _dio = dio ?? Dio() {
+    _dio.options.connectTimeout = const Duration(seconds: 5);
+    _dio.options.receiveTimeout = const Duration(seconds: 5);
+    _dio.options.sendTimeout = const Duration(seconds: 5);
+  }
   static const String _baseUrl = 'https://parallelum.com.br/fipe/api/v1';
   static const String _brandsKey = 'vehicle_brands';
   static const String _modelsKeyPrefix = 'vehicle_models_';
@@ -15,12 +21,6 @@ class VehicleDataService {
 
   final Dio _dio;
   SharedPreferences? _prefs;
-
-  VehicleDataService({Dio? dio}) : _dio = dio ?? Dio() {
-    _dio.options.connectTimeout = const Duration(seconds: 5);
-    _dio.options.receiveTimeout = const Duration(seconds: 5);
-    _dio.options.sendTimeout = const Duration(seconds: 5);
-  }
 
   Future<void> _initPrefs() async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -106,8 +106,7 @@ class VehicleDataService {
     ).toList();
   }
 
-  List<VehicleBrand> _getFallbackBrands() {
-    return const [
+  List<VehicleBrand> _getFallbackBrands() => const [
       // Marcas Nacionais/Principais
       VehicleBrand(id: 21, name: 'Fiat', code: '21'),
       VehicleBrand(id: 59, name: 'Volkswagen', code: '59'),
@@ -175,7 +174,6 @@ class VehicleDataService {
       VehicleBrand(id: 57, name: 'Lotus', code: '57'),
       VehicleBrand(id: 58, name: 'Morgan', code: '58'),
     ];
-  }
 
   List<VehicleModel> _getFallbackModels(int brandId) {
     final fallbackData = {
@@ -429,7 +427,7 @@ class VehicleDataService {
     return fallbackData[brandId] ?? [];
   }
 
-  void clearCache() async {
+  Future<void> clearCache() async {
     await _initPrefs();
     final keys = _prefs?.getKeys().where((key) => 
       key.startsWith(_brandsKey) || key.startsWith(_modelsKeyPrefix)

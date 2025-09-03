@@ -10,7 +10,6 @@ import '../../services/secure_driver_excluded_zones_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/app_card.dart';
-import '../../widgets/logo_branding.dart';
 import '../place_picker_screen.dart';
 
 class DriverUnavailableNeighborhoodsScreen extends StatefulWidget {

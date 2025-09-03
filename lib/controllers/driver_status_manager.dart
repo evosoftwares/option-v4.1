@@ -1,11 +1,11 @@
 import 'driver_status_controller.dart';
 
 class DriverStatusManager {
+  
+  factory DriverStatusManager() => _instance;
   DriverStatusManager._internal();
   
   static final DriverStatusManager _instance = DriverStatusManager._internal();
-  
-  factory DriverStatusManager() => _instance;
 
   DriverStatusController? _controller;
 

@@ -15,8 +15,7 @@ class VehicleRegistrationStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Consumer<DriverStepperController>(
-      builder: (context, controller, child) {
-        return Padding(
+      builder: (context, controller, child) => Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -612,7 +611,6 @@ class VehicleRegistrationStep extends StatelessWidget {
               ),
             ],
           ),
-        );
-      },
+        ),
     );
 }

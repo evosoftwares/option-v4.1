@@ -309,6 +309,11 @@ class _VehicleScreenState extends State<VehicleScreen> {
             
             return null;
           },
+          onChanged: (value) {
+            if (value.isNotEmpty && !value.startsWith('PENDENTE')) {
+              _checkPlateUniqueness(value);
+            }
+          },
         ),
         
         const SizedBox(height: AppSpacing.lg),
@@ -321,6 +326,7 @@ class _VehicleScreenState extends State<VehicleScreen> {
     required String label,
     required String hint,
     String? Function(String?)? validator,
+    void Function(String)? onChanged,
   }) {
     final cs = Theme.of(context).colorScheme;
     
@@ -337,6 +343,7 @@ class _VehicleScreenState extends State<VehicleScreen> {
         TextFormField(
           controller: controller,
           validator: validator,
+          onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
             border: OutlineInputBorder(
@@ -475,5 +482,30 @@ class _VehicleScreenState extends State<VehicleScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _checkPlateUniqueness(String plate) async {
+    if (plate.isEmpty || plate.startsWith('PENDENTE')) return;
+    
+    try {
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+      
+      if (userId == null) return;
+      
+      final response = await supabase
+          .from('drivers')
+          .select('user_id')
+          .eq('vehicle_plate', plate.toUpperCase())
+          .neq('user_id', userId)
+          .maybeSingle();
+      
+      if (response != null && mounted) {
+        _showErrorSnackBar('Esta placa já está cadastrada por outro motorista');
+        _plateController.clear();
+      }
+    } catch (e) {
+      // Ignorar erros de rede/conexão
+    }
   }
 }

@@ -46,17 +46,17 @@
 /// ```
 library;
 
-export 'app_error.dart';
-export 'error_logger.dart';
-export 'error_notifier.dart';
-export 'global_error_handler.dart';
-export 'error_extensions.dart';
-
 // Importações necessárias para as classes utilitárias
 import 'app_error.dart';
 import 'error_logger.dart';
 import 'error_notifier.dart';
 import 'global_error_handler.dart';
+
+export 'app_error.dart';
+export 'error_extensions.dart';
+export 'error_logger.dart';
+export 'error_notifier.dart';
+export 'global_error_handler.dart';
 
 /// Classe utilitária para inicialização rápida do sistema de erros
 class ErrorHandlingSystem {

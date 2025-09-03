@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:option/exceptions/app_exceptions.dart';
-import 'package:option/services/user_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Testes para validar a correção do erro sync_control no profile edit

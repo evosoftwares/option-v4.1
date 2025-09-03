@@ -1,54 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <group android:scaleX="2.0"
-           android:scaleY="2.0"
-           android:pivotX="54"
-           android:pivotY="54">
-        <!-- Fundo interno branco -->
-        <path android:fillColor="#FFFFFF"
-              android:pathData="M 16,16
-                             L 46,16
-                             Q 50,16 50,20
-                             L 50,50
-                             Q 50,54 46,54
-                             L 16,54
-                             Q 12,54 12,50
-                             L 12,20
-                             Q 12,16 16,16 Z"/>
-        
-        <!-- Círculo externo azul -->
-        <path android:fillColor="#2196F3"
-              android:pathData="M 25,35
-                               C 25,29.5 29.5,25 35,25
-                               C 40.5,25 45,29.5 45,35
-                               C 45,40.5 40.5,45 35,45
-                               C 29.5,45 25,40.5 25,35 Z"/>
-        
-        <!-- Círculo médio branco -->
-        <path android:fillColor="#FFFFFF"
-              android:pathData="M 29,35
-                               C 29,31.7 31.7,29 35,29
-                               C 38.3,29 41,31.7 41,35
-                               C 41,38.3 38.3,41 35,41
-                               C 31.7,41 29,38.3 29,35 Z"/>
-        
-        <!-- Círculo interno azul -->
-        <path android:fillColor="#2196F3"
-              android:pathData="M 32,35
-                               C 32,33.3 33.3,32 35,32
-                               C 36.7,32 38,33.3 38,35
-                               C 38,36.7 36.7,38 35,38
-                               C 33.3,38 32,36.7 32,35 Z"/>
-        
-        <!-- Seta/triângulo -->
-        <path android:fillColor="#2196F3"
-              android:pathData="M 33,40
-                             L 42,38
-                             L 38,47
-                             Z"/>
-    </group>
-</vector>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <bitmap
+            android:src="@drawable/ic_launcher_foreground_image"
+            android:gravity="center" />
+    </item>
+</layer-list>

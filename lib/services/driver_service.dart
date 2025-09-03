@@ -206,6 +206,11 @@ class DriverService {
         'consecutive_cancellations': 0,
       };
 
+      // Verificar se a placa já existe antes da criação
+      if (plate.trim().isNotEmpty && !plate.trim().startsWith('PENDENTE')) {
+        await _checkVehiclePlateUniquenessForCreation(plate.trim());
+      }
+
       // Validar dados antes da inserção
       DatabaseConstraintsValidator.validateDriver(insertData);
 
@@ -344,6 +349,11 @@ class DriverService {
       }
       if (currentLongitude != null) {
         updates['current_longitude'] = currentLongitude;
+      }
+
+      // Verificar se a placa já existe antes da atualização
+      if (plate != null && plate.trim().isNotEmpty && !plate.trim().startsWith('PENDENTE')) {
+        await _checkVehiclePlateUniqueness(plate.trim(), driverId);
       }
 
       // Validar dados antes da atualização
@@ -1175,14 +1185,10 @@ class DriverService {
   // === Métodos para o novo sistema de status ===
   
   /// Obtém o status efetivo do motorista (calculado pela view)
-  Future<DriverEffectiveStatus?> getDriverEffectiveStatus(String driverId) async {
-    return await _driverStatusService.getDriverEffectiveStatus(driverId);
-  }
+  Future<DriverEffectiveStatus?> getDriverEffectiveStatus(String driverId) async => await _driverStatusService.getDriverEffectiveStatus(driverId);
   
   /// Verifica se o motorista pode ficar online baseado nos horários de trabalho
-  Future<bool> canDriverGoOnline(String driverId) async {
-    return await _driverStatusService.canDriverGoOnlineNow(driverId);
-  }
+  Future<bool> canDriverGoOnline(String driverId) async => await _driverStatusService.canDriverGoOnlineNow(driverId);
   
   /// Obtém a intenção de ficar online do motorista
   Future<bool> getDriverOnlineIntent(String driverId) async {
@@ -1191,9 +1197,7 @@ class DriverService {
   }
   
   /// Obtém os horários de trabalho do motorista
-  Future<List<WorkingHours>> getDriverWorkingHours(String driverId) async {
-    return await _workingHoursService.getWorkingHours(driverId);
-  }
+  Future<List<WorkingHours>> getDriverWorkingHours(String driverId) async => await _workingHoursService.getWorkingHours(driverId);
   
   /// Atualiza os horários de trabalho do motorista
   Future<void> updateDriverWorkingHours(String driverId, List<Map<String, dynamic>> workingHours) async {
@@ -1218,12 +1222,59 @@ class DriverService {
   }
   
   /// Obtém lista de motoristas efetivamente online
-  Future<List<DriverEffectiveStatus>> getEffectivelyOnlineDrivers() async {
-    return await _driverStatusService.getOnlineDrivers();
-  }
+  Future<List<DriverEffectiveStatus>> getEffectivelyOnlineDrivers() async => await _driverStatusService.getOnlineDrivers();
   
   /// Obtém estatísticas de status dos motoristas
-  Future<Map<String, int>> getDriverStatusStats() async {
-    return await _driverStatusService.getDriverStatusStats();
+  Future<Map<String, int>> getDriverStatusStats() async => await _driverStatusService.getDriverStatusStats();
+
+  /// Verifica se a placa do veículo já está sendo usada por outro motorista
+  Future<void> _checkVehiclePlateUniqueness(String plate, String currentDriverId) async {
+    try {
+      final response = await _supabase
+          .from('drivers')
+          .select('id, vehicle_plate')
+          .eq('vehicle_plate', plate)
+          .neq('id', currentDriverId);
+
+      if (response.isNotEmpty) {
+        throw const ValidationException(
+          'Esta placa já está cadastrada por outro motorista. Por favor, verifique os dados e tente novamente.',
+        );
+      }
+    } on PostgrestException catch (e) {
+      throw DatabaseException(
+        'Erro ao verificar placa do veículo: ${e.message}',
+      );
+    } catch (e) {
+      if (e is ValidationException) rethrow;
+      throw const DatabaseException(
+        'Erro inesperado ao verificar placa do veículo.',
+      );
+    }
+  }
+
+  /// Verifica se a placa do veículo já existe na criação de um novo motorista
+  Future<void> _checkVehiclePlateUniquenessForCreation(String plate) async {
+    try {
+      final response = await _supabase
+          .from('drivers')
+          .select('id, vehicle_plate')
+          .eq('vehicle_plate', plate);
+
+      if (response.isNotEmpty) {
+        throw const ValidationException(
+          'Esta placa já está cadastrada por outro motorista. Por favor, verifique os dados e tente novamente.',
+        );
+      }
+    } on PostgrestException catch (e) {
+      throw DatabaseException(
+        'Erro ao verificar placa do veículo: ${e.message}',
+      );
+    } catch (e) {
+      if (e is ValidationException) rethrow;
+      throw const DatabaseException(
+        'Erro inesperado ao verificar placa do veículo.',
+      );
+    }
   }
 }

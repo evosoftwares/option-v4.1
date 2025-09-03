@@ -551,10 +551,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       icon = Icons.play_arrow;
     }
 
-    Widget button = AnimatedBuilder(
+    final Widget button = AnimatedBuilder(
       animation: _buttonScaleAnimation,
-      builder: (context, child) {
-        return Transform.scale(
+      builder: (context, child) => Transform.scale(
           scale: _buttonScaleAnimation.value,
           child: Container(
             width: 120,
@@ -605,8 +604,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                     ],
                   ),
           ),
-        );
-      },
+        ),
     );
 
     // Pulse animation removed as requested

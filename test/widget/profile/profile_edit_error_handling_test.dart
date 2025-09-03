@@ -249,7 +249,7 @@ void main() {
       // Test retry logic for errors that might be temporary
       
       // Arrange
-      var retryCount = 0;
+      final retryCount = 0;
       const maxRetries = 3;
       var shouldRetry = false;
       

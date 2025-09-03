@@ -1,11 +1,12 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../models/user.dart' as app;
 import '../../core/smart_preloader.dart';
-import '../../services/file_upload_service.dart';
+import '../../models/user.dart' as app;
+import '../../services/firebase_file_upload_service.dart';
 import '../../services/stepper_persistence_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
@@ -173,14 +174,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     setState(() => _uploadingPhoto = true);
     try {
-      final photoPath = FileUploadService.generateUserPhotoPath(
+      final photoPath = FirebaseFileUploadService.generateUserPhotoPath(
         userId: _currentUser!.id,
         fileName: 'profile.jpg',
       );
 
-      final photoUrl = await FileUploadService.uploadImage(
+      final photoUrl = await FirebaseFileUploadService.uploadImage(
         file: _selectedImage!,
-        bucket: 'user-photos', // Usar o mesmo bucket do stepper para consistência
+        folder: 'user-photos', // Usar o mesmo bucket do stepper para consistência
         path: photoPath,
       );
 

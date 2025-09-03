@@ -7,7 +7,7 @@ import '../exceptions/user_registration_exception.dart';
 import '../models/favorite_location.dart';
 import '../models/user.dart';
 import '../services/app_logger.dart';
-import '../services/file_upload_service.dart';
+import '../services/firebase_file_upload_service.dart';
 import '../services/real_saved_places_service.dart' as places_service show ValidationException;
 import '../services/real_saved_places_service.dart';
 import '../services/stepper_persistence_service.dart';
@@ -93,8 +93,8 @@ class StepperController extends ChangeNotifier {
 
     // If a file was already uploaded, attempt to delete it from Storage
     if (_uploadedPhotoPath != null) {
-      FileUploadService.deleteFile(
-        bucket: 'user-photos',
+      FirebaseFileUploadService.deleteFile(
+        folder: 'user-photos',
         path: _uploadedPhotoPath!,
       ).then((ok) {
         if (ok) {
@@ -114,7 +114,7 @@ class StepperController extends ChangeNotifier {
 
   bool hasProfilePhoto() => _profilePhoto != null;
 
-  /// Upload profile photo to Supabase Storage
+  /// Upload profile photo to Firebase Storage
   Future<String?> uploadProfilePhoto() async {
     if (_profilePhoto == null) return null;
     
@@ -133,8 +133,8 @@ class StepperController extends ChangeNotifier {
       if (_uploadedPhotoPath != null) {
         try {
           AppLogger.upload('Removendo foto anterior do Storage', filename: _uploadedPhotoPath);
-          await FileUploadService.deleteFile(
-            bucket: 'user-photos',
+          await FirebaseFileUploadService.deleteFile(
+            folder: 'user-photos',
             path: _uploadedPhotoPath!,
           );
         } catch (e) {
@@ -144,15 +144,15 @@ class StepperController extends ChangeNotifier {
       
       // Generate storage path
       final fileName = _profilePhoto!.path.split('/').last;
-      final storagePath = FileUploadService.generateUserPhotoPath(
+      final storagePath = FirebaseFileUploadService.generateUserPhotoPath(
         userId: authUser.id,
         fileName: fileName,
       );
       
       // Upload to user-photos bucket
-      final photoUrl = await FileUploadService.uploadImage(
+      final photoUrl = await FirebaseFileUploadService.uploadImage(
         file: _profilePhoto!,
-        bucket: 'user-photos',
+        folder: 'user-photos',
         path: storagePath,
       );
       

@@ -88,7 +88,7 @@ class WalletService {
         'vehicle_model': 'PENDENTE', 
         'vehicle_year': 2020,
         'vehicle_color': 'PENDENTE',
-        'vehicle_plate': 'PENDENTE',
+        'vehicle_plate': 'PENDENTE_${userId.substring(0, 8)}',
         'vehicle_category': 'standard',
         'crlv_photo_url': '',
         'approval_status': 'pending',

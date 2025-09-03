@@ -6,7 +6,7 @@ import 'package:option/models/supabase/working_hours.dart';
 void main() {
   group('WorkingHours Widget Integration Tests', () {
     group('Time Display Formatting', () {
-      testWidgets('should format time correctly for display', (WidgetTester tester) async {
+      testWidgets('should format time correctly for display', (tester) async {
         // Test time formatting in a simple widget context
         final workingHours = WorkingHours(
           id: 'test-id',
@@ -43,7 +43,7 @@ void main() {
         expect(find.text('Day: Segunda-feira'), findsOneWidget);
       });
 
-      testWidgets('should handle midnight crossing display', (WidgetTester tester) async {
+      testWidgets('should handle midnight crossing display', (tester) async {
         final nightShift = WorkingHours(
           id: 'test-id',
           driverId: 'driver-id',
@@ -79,7 +79,7 @@ void main() {
     });
 
     group('Day Name Display', () {
-      testWidgets('should display correct day names', (WidgetTester tester) async {
+      testWidgets('should display correct day names', (tester) async {
          final testCases = [
            (0, 'Domingo'),
            (1, 'Segunda-feira'),
@@ -116,7 +116,7 @@ void main() {
     });
 
     group('Time Range Validation Display', () {
-      testWidgets('should display valid time ranges', (WidgetTester tester) async {
+      testWidgets('should display valid time ranges', (tester) async {
         final validHours = WorkingHours(
           id: 'valid-id',
           driverId: 'driver-123',
@@ -153,7 +153,7 @@ void main() {
         expect(find.text('Duration: 9 hours'), findsOneWidget);
       });
 
-      testWidgets('should handle edge case times in display', (WidgetTester tester) async {
+      testWidgets('should handle edge case times in display', (tester) async {
         final edgeCaseHours = WorkingHours(
           id: 'edge-id',
           driverId: 'driver-456',
@@ -191,7 +191,7 @@ void main() {
     });
 
     group('Multiple Working Hours Display', () {
-      testWidgets('should display multiple working hours for same day', (WidgetTester tester) async {
+      testWidgets('should display multiple working hours for same day', (tester) async {
         final morningShift = WorkingHours(
           id: 'morning-id',
           driverId: 'driver-789',
@@ -235,7 +235,7 @@ void main() {
         expect(find.text('Both Active: true'), findsOneWidget);
       });
 
-      testWidgets('should handle inactive working hours', (WidgetTester tester) async {
+      testWidgets('should handle inactive working hours', (tester) async {
         final inactiveHours = WorkingHours(
           id: 'inactive-id',
           driverId: 'driver-inactive',

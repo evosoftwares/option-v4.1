@@ -1,6 +1,17 @@
 /// Modelo para o status efetivo do motorista (view driver_effective_status)
 /// Combina a intenção online com os horários de trabalho para calcular o status real
 class DriverEffectiveStatus {
+
+  /// Converte de JSON do Supabase (view)
+  factory DriverEffectiveStatus.fromJson(Map<String, dynamic> json) {
+    return DriverEffectiveStatus(
+      driverId: json['driver_id'] as String,
+      onlineIntent: json['online_intent'] as bool,
+      intentUpdatedAt: DateTime.parse(json['intent_updated_at'] as String),
+      isWithinWorkingHours: json['is_within_working_hours'] as bool,
+      effectiveOnline: json['effective_online'] as bool,
+    );
+  }
   const DriverEffectiveStatus({
     required this.driverId,
     required this.onlineIntent,
@@ -24,27 +35,14 @@ class DriverEffectiveStatus {
   /// Status efetivo online (onlineIntent AND isWithinWorkingHours)
   final bool effectiveOnline;
 
-  /// Converte de JSON do Supabase (view)
-  factory DriverEffectiveStatus.fromJson(Map<String, dynamic> json) {
-    return DriverEffectiveStatus(
-      driverId: json['driver_id'] as String,
-      onlineIntent: json['online_intent'] as bool,
-      intentUpdatedAt: DateTime.parse(json['intent_updated_at'] as String),
-      isWithinWorkingHours: json['is_within_working_hours'] as bool,
-      effectiveOnline: json['effective_online'] as bool,
-    );
-  }
-
   /// Converte para JSON (somente leitura, pois é uma view)
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'driver_id': driverId,
       'online_intent': onlineIntent,
       'intent_updated_at': intentUpdatedAt.toIso8601String(),
       'is_within_working_hours': isWithinWorkingHours,
       'effective_online': effectiveOnline,
     };
-  }
 
   /// Cria uma cópia com campos alterados
   DriverEffectiveStatus copyWith({
@@ -53,15 +51,13 @@ class DriverEffectiveStatus {
     DateTime? intentUpdatedAt,
     bool? isWithinWorkingHours,
     bool? effectiveOnline,
-  }) {
-    return DriverEffectiveStatus(
+  }) => DriverEffectiveStatus(
       driverId: driverId ?? this.driverId,
       onlineIntent: onlineIntent ?? this.onlineIntent,
       intentUpdatedAt: intentUpdatedAt ?? this.intentUpdatedAt,
       isWithinWorkingHours: isWithinWorkingHours ?? this.isWithinWorkingHours,
       effectiveOnline: effectiveOnline ?? this.effectiveOnline,
     );
-  }
 
   /// Retorna uma descrição do status para exibição
   String get statusDescription {
@@ -78,9 +74,7 @@ class DriverEffectiveStatus {
   bool get canReceiveTrips => effectiveOnline;
 
   @override
-  String toString() {
-    return 'DriverEffectiveStatus(driverId: $driverId, onlineIntent: $onlineIntent, isWithinWorkingHours: $isWithinWorkingHours, effectiveOnline: $effectiveOnline)';
-  }
+  String toString() => 'DriverEffectiveStatus(driverId: $driverId, onlineIntent: $onlineIntent, isWithinWorkingHours: $isWithinWorkingHours, effectiveOnline: $effectiveOnline)';
 
   @override
   bool operator ==(Object other) {
@@ -94,13 +88,11 @@ class DriverEffectiveStatus {
   }
 
   @override
-  int get hashCode {
-    return Object.hash(
+  int get hashCode => Object.hash(
       driverId,
       onlineIntent,
       intentUpdatedAt,
       isWithinWorkingHours,
       effectiveOnline,
     );
-  }
 }

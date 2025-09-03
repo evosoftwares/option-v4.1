@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -14,11 +15,11 @@ import 'screens/driver/ac_policy_screen.dart';
 import 'screens/driver/custom_pricing_screen.dart';
 import 'screens/driver/driver_documents_screen.dart';
 import 'screens/driver/driver_excluded_zones_screen.dart';
-import 'screens/driver/driver_unavailable_neighborhoods_screen.dart';
 import 'screens/driver/driver_home_screen.dart';
 import 'screens/driver/driver_operation_zones_screen.dart';
 import 'screens/driver/driver_requests_screen.dart';
 import 'screens/driver/driver_trip_screen.dart';
+import 'screens/driver/driver_unavailable_neighborhoods_screen.dart';
 import 'screens/driver/statistics_screen.dart';
 import 'screens/driver/vehicle_screen.dart';
 import 'screens/driver/working_hours_screen.dart';
@@ -51,6 +52,14 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializar Firebase
+  try {
+    await Firebase.initializeApp();
+    print('✅ Firebase inicializado com sucesso!');
+  } catch (e) {
+    print('❌ Erro ao inicializar Firebase: $e');
+  }
 
   const supabaseUrl = AppConfig.supabaseUrl;
   const supabaseAnonKey = AppConfig.supabaseAnonKey;

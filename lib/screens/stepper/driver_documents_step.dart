@@ -13,8 +13,7 @@ class DriverDocumentsStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Consumer<DriverStepperController>(
-      builder: (context, controller, child) {
-        return Padding(
+      builder: (context, controller, child) => Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,8 +190,7 @@ class DriverDocumentsStep extends StatelessWidget {
               ),
             ],
           ),
-        );
-      },
+        ),
     );
   
   Widget _buildPhotoPreview(
@@ -213,7 +211,7 @@ class DriverDocumentsStep extends StatelessWidget {
             fit: BoxFit.cover,
           ),
         ),
-        child: Container(
+        child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             color: Colors.black.withOpacity(0.3),
@@ -262,14 +260,13 @@ class DriverDocumentsStep extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: AppColors.lightOutline,
-            style: BorderStyle.solid,
           ),
           color: AppColors.lightSurfaceVariant.withOpacity(0.3),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.camera_alt,
               color: AppColors.lightPrimary,
               size: 32,

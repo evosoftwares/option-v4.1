@@ -101,7 +101,7 @@ class ZoneValidationService {
       throw const ValidationException('Nome do estado muito longo');
     }
     
-    if (RegExp(r'[0-9]').hasMatch(normalized)) {
+    if (RegExp('[0-9]').hasMatch(normalized)) {
       throw const ValidationException('Estado não pode conter números');
     }
     

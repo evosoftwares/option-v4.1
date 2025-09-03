@@ -131,7 +131,6 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   AppButton(
                     onPressed: () => setState(() {}), // Rebuild to retry
                     text: 'Tentar novamente',
-                    type: AppButtonType.primary,
                   ),
                 ],
               ),
@@ -165,7 +164,6 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   AppButton(
                     onPressed: _addPaymentMethod,
                     text: 'Adicionar método',
-                    type: AppButtonType.primary,
                     icon: Icons.add,
                   ),
                 ],
@@ -554,7 +552,6 @@ class _AddPaymentMethodDialogState extends State<_AddPaymentMethodDialog> {
         AppButton(
           onPressed: _save,
           text: 'Adicionar',
-          type: AppButtonType.primary,
         ),
       ],
     );

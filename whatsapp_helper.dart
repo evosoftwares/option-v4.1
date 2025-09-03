@@ -68,7 +68,6 @@ class WhatsAppHelper {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
-        duration: const Duration(seconds: 4),
         action: SnackBarAction(
           label: 'Tentar Novamente',
           textColor: Colors.white,

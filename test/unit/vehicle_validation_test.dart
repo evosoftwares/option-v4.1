@@ -6,10 +6,7 @@ void main() {
   group('Teste de Validação Visual de Veículos', () {
     late DriverStepperController controller;
 
-    setUpAll(() {
-      // Marcar Supabase como inicializado para testes
-      SupabaseHelper.markInitialized();
-    });
+    setUpAll(SupabaseHelper.markInitialized);
 
     setUp(() {
       controller = DriverStepperController();

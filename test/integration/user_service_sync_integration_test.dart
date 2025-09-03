@@ -1,8 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:option/exceptions/app_exceptions.dart';
 import 'package:option/models/user.dart' as app_user;
-import 'package:option/services/user_service.dart';
-import 'package:option/utils/supabase_helper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Teste de integração para validar a correção do erro sync_control no UserService

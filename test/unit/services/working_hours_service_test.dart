@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../../lib/models/supabase/working_hours.dart';
+import 'package:option/models/supabase/working_hours.dart';
 
 void main() {
   group('WorkingHours Model Tests', () {

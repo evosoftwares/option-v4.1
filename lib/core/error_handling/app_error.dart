@@ -71,7 +71,7 @@ class AppError implements Exception {
     final errorMessage = exception.toString();
     
     // Detectar tipo de erro baseado na mensagem
-    var detectedType = type ?? _detectErrorType(errorMessage);
+    final detectedType = type ?? _detectErrorType(errorMessage);
     
     return AppError(
       type: detectedType,
