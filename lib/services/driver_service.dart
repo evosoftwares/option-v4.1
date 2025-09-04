@@ -364,6 +364,9 @@ class DriverService {
     double? currentLatitude,
     double? currentLongitude,
   }) async {
+    final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    print('🔄 [UPDATE-DRIVER-$sessionId] Iniciando atualização do motorista: $driverId');
+    
     try {
       final updates = <String, dynamic>{};
       if (cnhNumber != null) updates['cnh_number'] = cnhNumber;
@@ -378,6 +381,8 @@ class DriverService {
       if (color != null) updates['vehicle_color'] = color;
       if (plate != null) updates['vehicle_plate'] = plate;
       if (category != null) updates['vehicle_category'] = category;
+      
+      print('📝 [UPDATE-DRIVER-$sessionId] Dados a serem atualizados: ${updates.keys.join(", ")}');
       if (crlvPhotoUrl != null) updates['crlv_photo_url'] = crlvPhotoUrl;
 
       if (approvalStatus != null) updates['approval_status'] = approvalStatus;
@@ -450,14 +455,19 @@ class DriverService {
 
       // Verificar se a placa já existe antes da atualização
       if (plate != null && plate.trim().isNotEmpty && !plate.trim().startsWith('PENDENTE')) {
+        print('🔍 [UPDATE-DRIVER-$sessionId] Verificando unicidade da placa: ${plate.trim()}');
         await _checkVehiclePlateUniqueness(plate.trim(), driverId);
+        print('✅ [UPDATE-DRIVER-$sessionId] Placa validada com sucesso');
       }
 
       // Validar dados antes da atualização
       if (updates.isNotEmpty) {
-        DatabaseConstraintsValidator.validateDriver(updates);
+        print('🔍 [UPDATE-DRIVER-$sessionId] Validando constraints dos dados...');
+        _validateUpdateData(updates);
+        print('✅ [UPDATE-DRIVER-$sessionId] Dados validados com sucesso');
       }
 
+      print('💾 [UPDATE-DRIVER-$sessionId] Executando query de atualização no Supabase...');
       final response = await _supabase
           .from('drivers')
           .update(updates)
@@ -465,10 +475,14 @@ class DriverService {
           .select()
           .single();
 
+      print('✅ [UPDATE-DRIVER-$sessionId] Motorista atualizado com sucesso');
       return Driver.fromJson(response);
     } on PostgrestException catch (e) {
+      print('❌ [UPDATE-DRIVER-$sessionId] PostgrestException: ${e.code} - ${e.message}');
+      print('❌ [UPDATE-DRIVER-$sessionId] Details: ${e.details}');
       throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
+      print('❌ [UPDATE-DRIVER-$sessionId] Erro inesperado: $e');
       throw const DatabaseException(
           'Erro inesperado ao atualizar motorista. Por favor, tente novamente mais tarde.',);
     }
@@ -1363,6 +1377,75 @@ class DriverService {
       throw const DatabaseException(
         'Erro inesperado ao verificar placa do veículo.',
       );
+    }
+  }
+
+  /// Valida apenas os campos que estão sendo atualizados
+  void _validateUpdateData(Map<String, dynamic> updates) {
+    // Validar vehicle_category se presente (campo crítico)
+    if (updates.containsKey('vehicle_category')) {
+      final category = updates['vehicle_category'];
+      if (category != null) {
+        final categoryStr = category.toString().toLowerCase().trim();
+        const validCategories = ['economico', 'standard', 'premium', 'suv', 'executivo', 'van'];
+        if (!validCategories.contains(categoryStr)) {
+          throw ValidationException(
+            'vehicle_category inválido: $categoryStr. Valores permitidos: ${validCategories.join(", ")}'
+          );
+        }
+      }
+    }
+    
+    // Validar vehicle_plate se presente (campo crítico)
+    if (updates.containsKey('vehicle_plate')) {
+      final plate = updates['vehicle_plate'];
+      if (plate != null) {
+        final plateStr = plate.toString().trim();
+        if (plateStr.isNotEmpty && !plateStr.startsWith('PENDENTE')) {
+          final cleanPlate = plateStr.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+          
+          if (cleanPlate.length != 7) {
+            throw ValidationException('Placa deve ter exatamente 7 caracteres (ex: ABC1234)');
+          }
+          
+          // Formato brasileiro: ABC1234 ou ABC1D23 (Mercosul)
+          final plateRegex = RegExp(r'^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$');
+          if (!plateRegex.hasMatch(cleanPlate)) {
+            throw ValidationException('Formato de placa inválido. Use ABC1234 ou ABC1D23');
+          }
+        }
+      }
+    }
+    
+    // Validar vehicle_year se presente
+    if (updates.containsKey('vehicle_year')) {
+      final year = updates['vehicle_year'];
+      if (year != null) {
+        int? yearInt;
+        if (year is String) {
+          yearInt = int.tryParse(year);
+        } else if (year is int) {
+          yearInt = year;
+        }
+        
+        if (yearInt != null) {
+          final currentYear = DateTime.now().year;
+          if (yearInt < 1990 || yearInt > currentYear + 1) {
+            throw ValidationException('vehicle_year deve estar entre 1990 e ${currentYear + 1}: $yearInt');
+          }
+        }
+      }
+    }
+    
+    // Para outros campos, apenas verificar se não são nulos quando obrigatórios
+    final requiredFields = ['vehicle_brand', 'vehicle_model', 'vehicle_color'];
+    for (final field in requiredFields) {
+      if (updates.containsKey(field)) {
+        final value = updates[field];
+        if (value == null || value.toString().trim().isEmpty) {
+          throw ValidationException('$field é obrigatório e não pode estar vazio');
+        }
+      }
     }
   }
 }

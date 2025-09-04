@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../models/vehicle_category.dart';
 import '../../services/driver_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../utils/plate_formatter.dart';
 import '../../validators/database_constraints_validator.dart';
 
 class VehicleScreen extends StatefulWidget {
@@ -295,23 +297,25 @@ class _VehicleScreenState extends State<VehicleScreen> {
           controller: _plateController,
           label: 'Placa',
           hint: 'Ex: ABC-1234',
+          inputFormatters: [PlateInputFormatter()],
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
               return 'Placa é obrigatória';
             }
             
-            // Usar DatabaseConstraintsValidator para validação adicional
-            try {
-              DatabaseConstraintsValidator.validateDriver({'vehicle_plate': value.trim()});
-            } catch (e) {
-              return e.toString().replaceAll('ValidationException: ', '');
+            // Usar PlateValidator para validação mais amigável
+            if (!PlateValidator.isValidBrazilianPlate(value)) {
+              return PlateValidator.getErrorMessage(value);
             }
             
             return null;
           },
           onChanged: (value) {
             if (value.isNotEmpty && !value.startsWith('PENDENTE')) {
-              _checkPlateUniqueness(value);
+              final cleanPlate = PlateValidator.cleanPlate(value);
+              if (cleanPlate.length == 7) {
+                _checkPlateUniqueness(cleanPlate);
+              }
             }
           },
         ),
@@ -327,6 +331,7 @@ class _VehicleScreenState extends State<VehicleScreen> {
     required String hint,
     String? Function(String?)? validator,
     void Function(String)? onChanged,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     final cs = Theme.of(context).colorScheme;
     
@@ -344,6 +349,7 @@ class _VehicleScreenState extends State<VehicleScreen> {
           controller: controller,
           validator: validator,
           onChanged: onChanged,
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(
             hintText: hint,
             border: OutlineInputBorder(

@@ -153,12 +153,14 @@ class UserService {
         'errorType': e.runtimeType.toString()
       };
       
-      await ErrorLoggingService.instance.logException(
-         e,
-         context: context,
-         type: AppErrorType.databaseError,
-         severity: ErrorSeverity.high,
-       );
+      if (e is Exception) {
+        await ErrorLoggingService.instance.logException(
+          e,
+          context: context,
+          type: AppErrorType.databaseError,
+          severity: ErrorSeverity.high,
+        );
+      }
       
       throw DatabaseException('Erro inesperado ao criar usuário: ${e.toString()}');
     }

@@ -53,7 +53,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializar Firebase
+  // Inicializando Firebase
   try {
     await Firebase.initializeApp();
     print('✅ Firebase inicializado com sucesso!');
@@ -81,13 +81,13 @@ Future<void> main() async {
     print('📋 Certifique-se de que SUPABASE_URL e SUPABASE_ANON_KEY estão configuradas');
   }
 
-  // Inicializar OneSignal para notificações push
-  try {
-    await OneSignalService().initialize();
-    print('✅ OneSignal inicializado com sucesso!');
-  } catch (e) {
-    print('❌ Erro ao inicializar OneSignal: $e');
-  }
+  // Comentando OneSignal temporariamente para debug
+  // try {
+  //   await OneSignalService().initialize();
+  //   print('✅ OneSignal inicializado com sucesso!');
+  // } catch (e) {
+  //   print('❌ Erro ao inicializar OneSignal: $e');
+  // }
 
   runApp(const MyApp());
 }

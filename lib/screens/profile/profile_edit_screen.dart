@@ -4,10 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../core/smart_preloader.dart';
 import '../../models/user.dart' as app;
 import '../../services/firebase_file_upload_service.dart';
-import '../../services/stepper_persistence_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../utils/phone_mask.dart';
@@ -27,7 +25,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   final _nameController = TextEditingController();
-  String? _selectedType; // 'passenger' | 'driver'
+  // User type is no longer editable in profile
 
   bool _loading = true;
   bool _saving = false;
@@ -89,7 +87,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       _phoneController.text = user.phone != null && user.phone!.isNotEmpty
           ? PhoneValidator.format(user.phone!)
           : '';
-      _selectedType = user.userType;
+      // User type is loaded but not editable
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -108,7 +106,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   void _initializeDefaultValues() {
     _nameController.text = 'Nome do Usuário';
     _phoneController.text = '';
-    _selectedType = 'passenger';
+    // User type set to passenger by default (not editable)
     // Cria um usuário padrão para testes
     _currentUser = app.User(
       id: 'test-user-id',
@@ -217,12 +215,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     print('✅ [PROFILE_EDIT] Dados válidos, iniciando salvamento');
     print('  - Nome: ${_nameController.text.trim()}');
     print('  - Telefone: ${_phoneController.text}');
-    print('  - Tipo: $_selectedType');
+    print('  - Tipo: ${_currentUser!.userType} (não editável)');
     print('  - Tem imagem selecionada: ${_selectedImage != null}');
 
-    // Detectar se houve mudança de tipo de usuário
-    final originalUserType = _currentUser!.userType;
-    final hasUserTypeChanged = originalUserType != _selectedType;
+    // User type is no longer changeable through profile editing
     
     setState(() => _saving = true);
     try {
@@ -245,7 +241,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         userId: _currentUser!.id,
         fullName: _nameController.text.trim(),
         phone: unformattedPhone,
-        userType: _selectedType,
+        userType: _currentUser!.userType, // Keep existing user type
         photoUrl: newPhotoUrl ?? _currentUser!.photoUrl,
       );
 
@@ -256,24 +252,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       // Mostrar mensagem de sucesso
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(hasUserTypeChanged 
-              ? 'Perfil atualizado! Redirecionando para a tela apropriada...'
-              : 'Perfil atualizado com sucesso'),
+          content: const Text('Perfil atualizado com sucesso'),
           backgroundColor: Theme.of(context).colorScheme.inverseSurface,
           behavior: SnackBarBehavior.floating,
-          duration: hasUserTypeChanged 
-              ? const Duration(seconds: 2) 
-              : const Duration(seconds: 4),
+          duration: const Duration(seconds: 4),
         ),
       );
       
-      // Se houve mudança de tipo de usuário, navegar para a tela apropriada
-      if (hasUserTypeChanged) {
-        print('🔄 [PROFILE_EDIT] Tipo de usuário alterado de $originalUserType para $_selectedType');
-        await _handleUserTypeChange();
-      } else {
-        Navigator.of(context).pop(true);
-      }
+      Navigator.of(context).pop(true);
     } catch (e, stackTrace) {
       print('❌ [PROFILE_EDIT] Erro no salvamento: $e');
       print('❌ [PROFILE_EDIT] Stack trace: $stackTrace');
@@ -302,51 +288,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
   }
 
-  /// Gerencia a navegação após mudança de tipo de usuário
-  Future<void> _handleUserTypeChange() async {
-    try {
-      print('🔄 [PROFILE_EDIT] Iniciando transição de perfil...');
-      
-      // Atualizar caches e estado global após mudança de perfil
-    try {
-      // Limpar dados persistidos do stepper que podem estar desatualizados
-      await StepperPersistenceService.clearStepperState();
-      print('✅ Cache do StepperPersistenceService limpo');
-      
-      // Atualizar cache do SmartPreloader com o novo perfil
-      final smartPreloader = SmartPreloader();
-      await smartPreloader.predictAndPreload();
-      print('✅ SmartPreloader atualizado após mudança de perfil');
-    } catch (e) {
-      print('⚠️ Erro ao atualizar caches após mudança de perfil: $e');
-    }
-      
-      // Aguardar um momento para que a mensagem seja exibida
-      await Future.delayed(const Duration(milliseconds: 1500));
-      
-      if (!mounted) return;
-      
-      // Navegar para a tela apropriada baseada no novo tipo de usuário
-      final targetRoute = _selectedType == 'driver' ? '/driver_home' : '/home';
-      
-      print('🏠 [PROFILE_EDIT] Navegando para: $targetRoute');
-      
-      // Usar pushNamedAndRemoveUntil para limpar o stack de navegação
-      // e garantir que o usuário vá para a tela correta
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        targetRoute,
-        (route) => false, // Remove todas as rotas anteriores
-      );
-      
-    } catch (e) {
-      print('❌ [PROFILE_EDIT] Erro na transição de perfil: $e');
-      
-      // Em caso de erro, apenas fechar a tela atual
-      if (mounted) {
-        Navigator.of(context).pop(true);
-      }
-    }
-  }
 
   /// Obtém a imagem de perfil atual (selecionada ou existente)
   ImageProvider? _getProfileImage() {
@@ -509,27 +450,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
                     const SizedBox(height: AppSpacing.lg),
 
-                    // User type selection
-                    Text('Tipo de usuário', style: textTheme.titleMedium),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      children: [
-                        _TypeChip(
-                          label: 'Passageiro',
-                          value: 'passenger',
-                          groupValue: _selectedType,
-                          onSelected: (v) => setState(() => _selectedType = v),
-                        ),
-                        _TypeChip(
-                          label: 'Motorista',
-                          value: 'driver',
-                          groupValue: _selectedType,
-                          onSelected: (v) => setState(() => _selectedType = v),
-                        ),
-                      ],
-                    ),
-
                     const SizedBox(height: AppSpacing.xxl),
                     FilledButton(
                       onPressed: _saving ? null : _onSave,
@@ -552,38 +472,3 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 }
 
-class _TypeChip extends StatelessWidget {
-
-  const _TypeChip({
-    required this.label,
-    required this.value,
-    required this.groupValue,
-    required this.onSelected,
-  });
-  final String label;
-  final String value;
-  final String? groupValue;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final selected = value == groupValue;
-
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onSelected(value),
-      selectedColor: colorScheme.secondaryContainer,
-      backgroundColor: colorScheme.surface,
-      labelStyle: TextStyle(
-        color: selected ? colorScheme.onSecondaryContainer : colorScheme.onSurface,
-      ),
-      shape: StadiumBorder(
-        side: BorderSide(
-          color: selected ? colorScheme.secondary : colorScheme.outlineVariant,
-        ),
-      ),
-    );
-  }
-}

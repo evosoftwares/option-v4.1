@@ -293,19 +293,26 @@ class DatabaseConstraintsValidator {
   /// Valida placa do veículo
   static void _validateVehiclePlate(dynamic plate) {
     if (plate == null) {
-      throw const ValidationException('vehicle_plate é obrigatório');
+      throw const ValidationException('Placa é obrigatória');
     }
     
-    final plateStr = plate.toString().trim().toUpperCase();
+    final plateStr = plate.toString().trim();
     
     if (plateStr.isEmpty) {
-      throw const ValidationException('vehicle_plate não pode estar vazio');
+      throw const ValidationException('Placa não pode estar vazia');
+    }
+    
+    // Limpar formatação (hífens, espaços) e converter para maiúscula
+    final cleanPlate = plateStr.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+    
+    if (cleanPlate.length != 7) {
+      throw ValidationException('Placa deve ter exatamente 7 caracteres (ex: ABC1234)');
     }
     
     // Formato brasileiro: ABC1234 ou ABC1D23 (Mercosul)
     final plateRegex = RegExp(r'^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$');
-    if (!plateRegex.hasMatch(plateStr)) {
-      throw ValidationException('vehicle_plate deve seguir o formato brasileiro: $plateStr');
+    if (!plateRegex.hasMatch(cleanPlate)) {
+      throw ValidationException('Formato de placa inválido. Use ABC1234 ou ABC1D23');
     }
   }
   
@@ -317,7 +324,7 @@ class DatabaseConstraintsValidator {
     
     final categoryStr = category.toString().toLowerCase().trim();
     
-    const validCategories = ['economy', 'comfort', 'premium', 'suv', 'van'];
+    const validCategories = ['economico', 'standard', 'premium', 'suv', 'executivo', 'van'];
     if (!validCategories.contains(categoryStr)) {
       throw ValidationException(
         'vehicle_category inválido: $categoryStr. Valores permitidos: ${validCategories.join(", ")}'

@@ -388,12 +388,12 @@ class DriverStepperController extends ChangeNotifier {
       
       // Validar se os documentos foram selecionados
       if (_cnhPhoto == null) {
-        _setError('Por favor, tire uma foto da sua CNH.');
+        _setError('📷 Foto da CNH obrigatória\n\nPor favor, tire uma foto clara da sua Carteira Nacional de Habilitação para continuar.');
         return false;
       }
       
       if (_crlvPhoto == null) {
-        _setError('Por favor, tire uma foto do seu CRLV.');
+        _setError('📷 Foto do CRLV obrigatória\n\nPor favor, tire uma foto clara do Certificado de Registro e Licenciamento do Veículo para continuar.');
         return false;
       }
       
@@ -425,7 +425,7 @@ class DriverStepperController extends ChangeNotifier {
       } catch (e) {
         if (_disposed) return false;
         _cnhError = _mapUploadError(e);
-        _setError('Falha no upload da CNH. $_cnhError');
+        _setError('❌ Não foi possível enviar a foto da CNH.\n\n$_cnhError\n\nVerifique sua conexão e tente novamente.');
         _isUploadingCnh = false;
         _cnhIsRetrying = false;
         _setLoading(false);
@@ -447,7 +447,7 @@ class DriverStepperController extends ChangeNotifier {
       } catch (e) {
         if (_disposed) return false;
         _crlvError = _mapUploadError(e);
-        _setError('Falha no upload do CRLV. $_crlvError');
+        _setError('❌ Não foi possível enviar a foto do CRLV.\n\n$_crlvError\n\nVerifique sua conexão e tente novamente.');
         _isUploadingCrlv = false;
         _setLoading(false);
         if (!_disposed) notifyListeners();
@@ -462,7 +462,7 @@ class DriverStepperController extends ChangeNotifier {
       try {
         driverId = await _ensureDriverExists(user);
       } catch (e) {
-        _setError('Erro ao verificar dados do motorista: ${e.toString()}');
+        _setError('❌ Não foi possível verificar seus dados de motorista.\n\nTente fazer login novamente ou entre em contato com o suporte.');
         _setLoading(false);
         return false;
       }
@@ -489,23 +489,23 @@ class DriverStepperController extends ChangeNotifier {
         print('❌ [DRIVER-UPDATE-$sessionId] Erro PostgreSQL: ${e.code} - ${e.message}');
         
         if (e.code == 'PGRST116') {
-          _setError('Registro de motorista não encontrado. Tente fazer login novamente.');
+          _setError('❌ Registro de motorista não encontrado.\n\nTente fazer login novamente.');
         } else if ((e.code ?? '').startsWith('23505')) { // Duplicate key
-          _setError('Placa do veículo já está sendo usada por outro motorista.');
+          _setError('❌ Esta placa já está cadastrada!\n\nA placa ${_vehiclePlate} já está sendo usada por outro motorista. Verifique se digitou corretamente.');
         } else if ((e.code ?? '').startsWith('23')) { // Other constraint violations
-          _setError('Dados inválidos detectados. Verifique as informações inseridas.');
+          _setError('❌ Dados inválidos detectados.\n\nVerifique se todas as informações do veículo estão corretas e tente novamente.');
         } else {
-          _setError('Erro no banco de dados: ${e.message}');
+          _setError('❌ Erro no sistema.\n\n${e.message}\n\nTente novamente em alguns instantes.');
         }
         _setLoading(false);
         return false;
       } catch (e) {
-        _setError('Erro inesperado ao salvar dados: ${e.toString()}');
+        _setError('❌ Não foi possível salvar seus dados.\n\nOcorreu um erro inesperado. Tente novamente ou entre em contato com o suporte.');
         _setLoading(false);
         return false;
       }
     } catch (e) {
-      _setError('Erro inesperado: ${e.toString()}');
+      _setError('❌ Erro inesperado no cadastro.\n\nAlgo deu errado durante o processo. Tente novamente ou reinicie o aplicativo.');
       _setLoading(false);
       return false;
     }
@@ -664,6 +664,11 @@ class DriverStepperController extends ChangeNotifier {
     if (_disposed) return;
     _errorMessage = null;
     notifyListeners();
+  }
+  
+  // Public method to clear errors
+  void clearError() {
+    _clearError();
   }
   
   // Vehicle data setters

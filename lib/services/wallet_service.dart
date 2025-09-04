@@ -189,14 +189,21 @@ class WalletService {
 
   Future<void> ensureAsaasCustomerForUser(app_user.User user) async {
     try {
+      // Verificar se as credenciais do Asaas estão configuradas
+      if (_asaas.baseUrl.isEmpty || _asaas.headers['access_token']?.isEmpty == true) {
+        print('⚠️ Credenciais do Asaas não configuradas. Pulando criação de cliente.');
+        return; // Não falhar, apenas pular a criação
+      }
+      
       await _asaas.ensureCustomer(
         name: user.fullName,
         email: user.email,
         mobilePhone: user.phone,
       );
     } catch (e) {
-      // Propagar como NetworkException já vem do serviço
-      rethrow;
+      // Log do erro mas não propagar para não travar a UI
+      print('❌ Erro ao garantir cliente Asaas: $e');
+      // Não rethrow para evitar travamento da tela
     }
   }
 

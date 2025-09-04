@@ -8,10 +8,12 @@ class AppConfig {
   // Asaas configuration
   static const String asaasBaseUrl = String.fromEnvironment(
     'ASAAS_BASE_URL',
+    defaultValue: 'https://api.asaas.com/v3', // API de produção
   );
 
   static const String asaasApiKey = String.fromEnvironment(
     'ASAAS_API_KEY',
+    defaultValue: 'aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6Ojg1OTI0YjdiLTk1ODEtNDc0ZS04N2YzLTY0ZDk2MGM4ZDI3Yjo6JGFhY2hfNDhlN2M3OTAtOGY4NC00ZDE2LTk0NWQtNjAwMTU4ODhkMTM3', // Token de produção
   );
 
   // Google Maps API

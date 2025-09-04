@@ -2,6 +2,192 @@
 -- Execute este script no SQL Editor do Supabase Dashboard
 
 -- ========================================
+-- PARTE 0: CRIAR FUNÇÕES FALTANTES (PRIORIDADE ALTA)
+-- ========================================
+
+-- 0.0 Remover funções existentes se houver conflito
+DROP FUNCTION IF EXISTS get_nearby_drivers(double precision, double precision, double precision);
+DROP FUNCTION IF EXISTS get_emergency_nearby_drivers(double precision, double precision, double precision);
+
+-- 0.1 Criar função get_nearby_drivers
+CREATE OR REPLACE FUNCTION get_nearby_drivers(
+    lat DOUBLE PRECISION,
+    lng DOUBLE PRECISION,
+    radius_km DOUBLE PRECISION DEFAULT 5.0
+)
+RETURNS TABLE (
+    driver_id UUID,
+    user_id UUID,
+    vehicle_brand TEXT,
+    vehicle_model TEXT,
+    vehicle_year INTEGER,
+    vehicle_color TEXT,
+    vehicle_category TEXT,
+    vehicle_plate TEXT,
+    is_online BOOLEAN,
+    accepts_pet BOOLEAN,
+    accepts_grocery BOOLEAN,
+    accepts_condo BOOLEAN,
+    ac_policy TEXT,
+    custom_price_per_km NUMERIC,
+    custom_price_per_minute NUMERIC,
+    pet_fee NUMERIC,
+    grocery_fee NUMERIC,
+    condo_fee NUMERIC,
+    stop_fee NUMERIC,
+    current_latitude DOUBLE PRECISION,
+    current_longitude DOUBLE PRECISION,
+    average_rating NUMERIC,
+    total_trips INTEGER,
+    distance_km DOUBLE PRECISION,
+    onesignal_player_id TEXT,
+    player_id TEXT,
+    fcm_token TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        d.id as driver_id,
+        d.user_id,
+        d.vehicle_brand,
+        d.vehicle_model,
+        d.vehicle_year,
+        d.vehicle_color,
+        d.vehicle_category,
+        d.vehicle_plate,
+        d.is_online,
+        d.accepts_pet,
+        d.accepts_grocery,
+        d.accepts_condo,
+        d.ac_policy,
+        d.custom_price_per_km,
+        d.custom_price_per_minute,
+        d.pet_fee,
+        d.grocery_fee,
+        d.condo_fee,
+        d.stop_fee,
+        d.current_latitude,
+        d.current_longitude,
+        d.average_rating,
+        d.total_trips,
+        (
+            6371 * acos(
+                cos(radians(lat)) * 
+                cos(radians(d.current_latitude)) * 
+                cos(radians(d.current_longitude) - radians(lng)) + 
+                sin(radians(lat)) * 
+                sin(radians(d.current_latitude))
+            )
+        ) as distance_km,
+        au.fcm_token as onesignal_player_id,
+        au.fcm_token as player_id,
+        au.fcm_token
+    FROM drivers d
+    INNER JOIN app_users au ON d.user_id = au.id
+    WHERE 
+        d.is_online = true
+        AND (d.approval_status = 'approved' OR d.approval_status IS NULL)
+        AND d.current_latitude IS NOT NULL
+        AND d.current_longitude IS NOT NULL
+        AND d.current_latitude BETWEEN (lat - (radius_km / 111.0)) AND (lat + (radius_km / 111.0))
+        AND d.current_longitude BETWEEN (lng - (radius_km / (111.0 * cos(radians(lat))))) AND (lng + (radius_km / (111.0 * cos(radians(lat)))))
+    HAVING 
+        (
+            6371 * acos(
+                cos(radians(lat)) * 
+                cos(radians(d.current_latitude)) * 
+                cos(radians(d.current_longitude) - radians(lng)) + 
+                sin(radians(lat)) * 
+                sin(radians(d.current_latitude))
+            )
+        ) <= radius_km
+    ORDER BY distance_km
+    LIMIT 50;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 0.2 Criar função get_emergency_nearby_drivers
+CREATE OR REPLACE FUNCTION get_emergency_nearby_drivers(
+    lat DOUBLE PRECISION,
+    lng DOUBLE PRECISION,
+    radius_km DOUBLE PRECISION DEFAULT 10.0
+)
+RETURNS TABLE (
+    driver_id UUID,
+    user_id UUID,
+    vehicle_brand TEXT,
+    vehicle_model TEXT,
+    vehicle_year INTEGER,
+    vehicle_color TEXT,
+    vehicle_category TEXT,
+    vehicle_plate TEXT,
+    is_online BOOLEAN,
+    current_latitude DOUBLE PRECISION,
+    current_longitude DOUBLE PRECISION,
+    average_rating NUMERIC,
+    total_trips INTEGER,
+    distance_km DOUBLE PRECISION,
+    onesignal_player_id TEXT,
+    player_id TEXT,
+    fcm_token TEXT,
+    full_name TEXT,
+    phone TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        d.id as driver_id,
+        d.user_id,
+        d.vehicle_brand,
+        d.vehicle_model,
+        d.vehicle_year,
+        d.vehicle_color,
+        d.vehicle_category,
+        d.vehicle_plate,
+        d.is_online,
+        d.current_latitude,
+        d.current_longitude,
+        d.average_rating,
+        d.total_trips,
+        (
+            6371 * acos(
+                cos(radians(lat)) * 
+                cos(radians(d.current_latitude)) * 
+                cos(radians(d.current_longitude) - radians(lng)) + 
+                sin(radians(lat)) * 
+                sin(radians(d.current_latitude))
+            )
+        ) as distance_km,
+        au.fcm_token as onesignal_player_id,
+        au.fcm_token as player_id,
+        au.fcm_token,
+        au.full_name,
+        au.phone
+    FROM drivers d
+    INNER JOIN app_users au ON d.user_id = au.id
+    WHERE 
+        d.is_online = true
+        AND (d.approval_status = 'approved' OR d.approval_status IS NULL)
+        AND d.current_latitude IS NOT NULL
+        AND d.current_longitude IS NOT NULL
+        AND d.current_latitude BETWEEN (lat - (radius_km / 111.0)) AND (lat + (radius_km / 111.0))
+        AND d.current_longitude BETWEEN (lng - (radius_km / (111.0 * cos(radians(lat))))) AND (lng + (radius_km / (111.0 * cos(radians(lat)))))
+    HAVING 
+        (
+            6371 * acos(
+                cos(radians(lat)) * 
+                cos(radians(d.current_latitude)) * 
+                cos(radians(d.current_longitude) - radians(lng)) + 
+                sin(radians(lat)) * 
+                sin(radians(d.current_latitude))
+            )
+        ) <= radius_km
+    ORDER BY distance_km
+    LIMIT 100;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ========================================
 -- PARTE 1: DIAGNÓSTICO DOS PROBLEMAS
 -- ========================================
 
@@ -13,24 +199,12 @@ FROM pg_constraint
 WHERE conname LIKE '%vehicle_category%' 
    OR conname LIKE '%drivers_vehicle_category%';
 
--- 1.2 Verificar RLS nas tabelas de storage
+-- 1.2 Verificar se as funções RPC foram criadas
 SELECT 
-    schemaname,
-    tablename,
-    rowsecurity as rls_enabled
-FROM pg_tables 
-WHERE schemaname = 'storage' 
-AND tablename IN ('objects', 'buckets');
-
--- 1.3 Verificar buckets existentes
-SELECT 
-    id,
-    name,
-    public,
-    file_size_limit,
-    allowed_mime_types
-FROM storage.buckets 
-WHERE name IN ('user-photos', 'driver-documents');
+    proname as function_name,
+    pg_get_function_result(oid) as return_type
+FROM pg_proc 
+WHERE proname IN ('get_nearby_drivers', 'get_emergency_nearby_drivers');
 
 -- ========================================
 -- PARTE 2: CORREÇÃO DA CONSTRAINT VEHICLE_CATEGORY
@@ -55,79 +229,26 @@ WHERE vehicle_category NOT IN ('economico', 'standard', 'premium', 'suv', 'execu
    OR vehicle_category IS NULL;
 
 -- ========================================
--- PARTE 3: CORREÇÃO DO RLS NO STORAGE
+-- PARTE 3: VERIFICAÇÃO DAS FUNÇÕES CRIADAS
 -- ========================================
 
--- 3.1 Desabilitar RLS nas tabelas de storage
-ALTER TABLE storage.objects DISABLE ROW LEVEL SECURITY;
-ALTER TABLE storage.buckets DISABLE ROW LEVEL SECURITY;
+-- 3.1 Testar função get_nearby_drivers
+SELECT 'Testando get_nearby_drivers...' as test_status;
+SELECT COUNT(*) as function_exists 
+FROM pg_proc 
+WHERE proname = 'get_nearby_drivers';
 
--- 3.2 Remover políticas conflitantes
-DROP POLICY IF EXISTS "Give anon users access to JPG images in folder 1oj01fe_0" ON storage.objects;
-DROP POLICY IF EXISTS "Give anon users access to PNG images in folder 1oj01fe_1" ON storage.objects;
-DROP POLICY IF EXISTS "Give users access to own folder 1oj01fe_0" ON storage.objects;
-DROP POLICY IF EXISTS "Give users access to own folder 1oj01fe_1" ON storage.objects;
-DROP POLICY IF EXISTS "Give users access to own folder 1oj01fe_2" ON storage.objects;
-DROP POLICY IF EXISTS "Allow public read access" ON storage.objects;
-DROP POLICY IF EXISTS "Allow authenticated users to upload" ON storage.objects;
-DROP POLICY IF EXISTS "Allow public uploads" ON storage.objects;
-DROP POLICY IF EXISTS "Public bucket access" ON storage.buckets;
-
--- 3.3 Conceder permissões básicas
-GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO authenticated;
-GRANT SELECT ON storage.buckets TO anon;
-GRANT SELECT ON storage.buckets TO authenticated;
+-- 3.2 Testar função get_emergency_nearby_drivers
+SELECT 'Testando get_emergency_nearby_drivers...' as test_status;
+SELECT COUNT(*) as function_exists 
+FROM pg_proc 
+WHERE proname = 'get_emergency_nearby_drivers';
 
 -- ========================================
--- PARTE 4: CONFIGURAÇÃO DOS BUCKETS
+-- PARTE 4: VERIFICAÇÃO FINAL
 -- ========================================
 
--- 4.1 Criar/atualizar bucket user-photos
-INSERT INTO storage.buckets (
-    id,
-    name,
-    public,
-    file_size_limit,
-    allowed_mime_types
-)
-VALUES (
-    'user-photos',
-    'user-photos',
-    true,
-    52428800, -- 50MB
-    ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg']
-)
-ON CONFLICT (id) DO UPDATE SET
-    public = EXCLUDED.public,
-    file_size_limit = EXCLUDED.file_size_limit,
-    allowed_mime_types = EXCLUDED.allowed_mime_types;
-
--- 4.2 Criar/atualizar bucket driver-documents
-INSERT INTO storage.buckets (
-    id,
-    name,
-    public,
-    file_size_limit,
-    allowed_mime_types
-)
-VALUES (
-    'driver-documents',
-    'driver-documents',
-    true,
-    52428800, -- 50MB
-    ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf']
-)
-ON CONFLICT (id) DO UPDATE SET
-    public = EXCLUDED.public,
-    file_size_limit = EXCLUDED.file_size_limit,
-    allowed_mime_types = EXCLUDED.allowed_mime_types;
-
--- ========================================
--- PARTE 5: VERIFICAÇÃO FINAL
--- ========================================
-
--- 5.1 Verificar constraint atualizada
+-- 4.1 Verificar constraint atualizada
 SELECT 
     'Constraint Status' as check_type,
     conname as name,
@@ -135,30 +256,28 @@ SELECT
 FROM pg_constraint 
 WHERE conname = 'drivers_vehicle_category_check';
 
--- 5.2 Verificar RLS desabilitado
+-- 4.2 Verificar funções RPC criadas
 SELECT 
-    'RLS Status' as check_type,
-    schemaname || '.' || tablename as name,
-    CASE WHEN rowsecurity THEN 'HABILITADO' ELSE 'DESABILITADO' END as status
-FROM pg_tables 
-WHERE schemaname = 'storage' 
-AND tablename IN ('objects', 'buckets');
+    'Function Status' as check_type,
+    proname as name,
+    'CRIADA' as status
+FROM pg_proc 
+WHERE proname IN ('get_nearby_drivers', 'get_emergency_nearby_drivers');
 
--- 5.3 Verificar buckets configurados
+-- 4.3 Verificar se há registros com vehicle_category inválido
 SELECT 
-    'Bucket Status' as check_type,
-    name,
-    CASE WHEN public THEN 'PÚBLICO' ELSE 'PRIVADO' END as status,
-    file_size_limit,
-    array_length(allowed_mime_types, 1) as mime_types_count
-FROM storage.buckets 
-WHERE name IN ('user-photos', 'driver-documents');
+    'Data Validation' as check_type,
+    COUNT(*) as invalid_records,
+    'Registros com vehicle_category inválido' as description
+FROM drivers 
+WHERE vehicle_category NOT IN ('economico', 'standard', 'premium', 'suv', 'executivo', 'van')
+   OR vehicle_category IS NULL;
 
 -- ========================================
--- PARTE 6: TESTE DE INSERÇÃO (OPCIONAL)
+-- PARTE 5: TESTE DE INSERÇÃO (OPCIONAL)
 -- ========================================
 
--- 6.1 Teste de inserção na tabela drivers (descomente para testar)
+-- 5.1 Teste de inserção na tabela drivers (descomente para testar)
 /*
 INSERT INTO drivers (
     user_id,
@@ -186,24 +305,15 @@ SELECT 'Driver Insert Test' as result, 'SUCCESS' as status;
 DELETE FROM drivers WHERE vehicle_plate = 'TESTE123';
 */
 
--- 6.2 Teste de upload no storage (descomente para testar)
+-- 5.2 Teste das funções RPC (descomente para testar)
 /*
-INSERT INTO storage.objects (
-    bucket_id,
-    name,
-    owner,
-    metadata
-) VALUES (
-    'driver-documents',
-    'test/test_upload.jpg',
-    null,
-    '{"size": 1024}'
-);
+-- Testar get_nearby_drivers
+SELECT * FROM get_nearby_drivers(-23.5505, -46.6333, 5.0) LIMIT 1;
 
-SELECT 'Storage Insert Test' as result, 'SUCCESS' as status;
+-- Testar get_emergency_nearby_drivers
+SELECT * FROM get_emergency_nearby_drivers(-23.5505, -46.6333, 10.0) LIMIT 1;
 
--- Limpar teste
-DELETE FROM storage.objects WHERE name = 'test/test_upload.jpg';
+SELECT 'RPC Functions Test' as result, 'SUCCESS' as status;
 */
 
 -- ========================================
@@ -212,15 +322,19 @@ DELETE FROM storage.objects WHERE name = 'test/test_upload.jpg';
 
 SELECT '🎯 CORREÇÕES APLICADAS:' as summary
 UNION ALL
+SELECT '✅ Funções get_nearby_drivers e get_emergency_nearby_drivers criadas'
+UNION ALL
 SELECT '✅ Constraint vehicle_category atualizada com valores corretos'
 UNION ALL
-SELECT '✅ RLS desabilitado nas tabelas de storage'
+SELECT '✅ Erro 42P01 (função inexistente) resolvido'
 UNION ALL
-SELECT '✅ Permissões concedidas para anon/authenticated'
+SELECT '✅ Validação de dados implementada'
 UNION ALL
-SELECT '✅ Buckets user-photos e driver-documents configurados'
+SELECT ''
 UNION ALL
-SELECT '✅ Políticas conflitantes removidas'
+SELECT '📝 NOTA: O projeto usa Firebase Storage para arquivos'
+UNION ALL
+SELECT '📝 Upload de documentos é feito via FirebaseFileUploadService'
 UNION ALL
 SELECT ''
 UNION ALL

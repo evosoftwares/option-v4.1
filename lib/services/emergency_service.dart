@@ -198,8 +198,8 @@ class EmergencyService {
     try {
       // Buscar motoristas online em um raio de 5km
       final nearbyDrivers = await _supabase.rpc('get_nearby_drivers', params: {
-        'user_lat': emergency.latitude,
-        'user_lng': emergency.longitude,
+        'lat': emergency.latitude,
+        'lng': emergency.longitude,
         'radius_km': 5,
       });
 

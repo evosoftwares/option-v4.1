@@ -156,24 +156,65 @@ class DriverCompletionStep extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: AppSpacing.md),
                   decoration: BoxDecoration(
                     color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.withOpacity(0.3)),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
-                        size: 20,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          controller.errorMessage!,
-                          style: AppTypography.bodySmall.copyWith(
-                            color: Colors.red,
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(
+                              Icons.error_outline,
+                              color: Colors.white,
+                              size: 16,
+                            ),
                           ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              'Erro no Cadastro',
+                              style: AppTypography.titleSmall.copyWith(
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        controller.errorMessage!,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: Colors.red.shade700,
+                          height: 1.4,
                         ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 16,
+                            color: Colors.red.shade600,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              'Verifique os dados e tente novamente',
+                              style: AppTypography.bodySmall.copyWith(
+                                color: Colors.red.shade600,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -210,15 +251,47 @@ class DriverCompletionStep extends StatelessWidget {
                     flex: 2,
                     child: ElevatedButton(
                       onPressed: controller.canCompleteRegistration && !controller.isLoading
-                          ? () => controller.completeDriverRegistration()
+                          ? () async {
+                              // Limpar erro anterior
+                              controller.clearError();
+                              
+                              // Tentar finalizar cadastro
+                              final success = await controller.completeDriverRegistration();
+                              
+                              if (success && context.mounted) {
+                                // Exibir mensagem de sucesso
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('🎉 Cadastro finalizado com sucesso!'),
+                                    backgroundColor: Colors.green,
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                                
+                                // Aguardar um momento para que a mensagem seja exibida
+                                await Future.delayed(const Duration(milliseconds: 1500));
+                                
+                                if (context.mounted) {
+                                  // Navegar para a tela principal do motorista
+                                  Navigator.of(context).pushNamedAndRemoveUntil(
+                                    '/driver_home',
+                                    (route) => false, // Remove todas as rotas anteriores
+                                  );
+                                }
+                              }
+                              // Em caso de erro, a mensagem já será exibida automaticamente
+                            }
                           : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: controller.canCompleteRegistration 
+                            ? Colors.green 
+                            : Colors.grey,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
+                        elevation: controller.canCompleteRegistration ? 2 : 0,
                       ),
                       child: controller.isLoading
                           ? const SizedBox(
@@ -232,15 +305,22 @@ class DriverCompletionStep extends StatelessWidget {
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.check_circle, size: 20),
+                                Icon(
+                                  controller.canCompleteRegistration 
+                                      ? Icons.check_circle 
+                                      : Icons.block,
+                                  size: 20,
+                                ),
                                 const SizedBox(width: AppSpacing.xs),
                                 Flexible(
-                                child: Text(
-                                  'Finalizar Cadastro',
-                                  style: AppTypography.labelLarge,
-                                  overflow: TextOverflow.ellipsis,
+                                  child: Text(
+                                    controller.canCompleteRegistration 
+                                        ? 'Finalizar Cadastro'
+                                        : 'Complete os dados',
+                                    style: AppTypography.labelLarge,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
                               ],
                             ),
                     ),

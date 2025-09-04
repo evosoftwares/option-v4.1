@@ -335,17 +335,6 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
-            if (data.availableDrivers > 0)
-              Text(
-                '${data.availableDrivers} motoristas',
-                style: textTheme.bodySmall?.copyWith(
-                  color: selected ? colorScheme.onPrimaryContainer.withValues(alpha: 0.7) : colorScheme.onSurface.withValues(alpha: 0.7),
-                  fontSize: 10,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
           ],
         ),
       ),

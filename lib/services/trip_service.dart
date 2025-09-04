@@ -91,12 +91,14 @@ class TripService {
         'errorType': e.runtimeType.toString()
       };
       
-      await ErrorLoggingService.instance.logException(
-        e,
-        context: context,
-        type: AppErrorType.databaseError,
-        severity: ErrorSeverity.high,
-      );
+      if (e is Exception) {
+        await ErrorLoggingService.instance.logException(
+          e,
+          context: context,
+          type: AppErrorType.databaseError,
+          severity: ErrorSeverity.high,
+        );
+      }
       
       throw const DatabaseException(
           'Erro inesperado ao criar solicitação de viagem. Por favor, tente novamente mais tarde.',);
@@ -153,12 +155,14 @@ class TripService {
         'errorType': e.runtimeType.toString()
       };
       
-      await ErrorLoggingService.instance.logException(
-        e,
-        context: context,
-        type: AppErrorType.databaseError,
-        severity: ErrorSeverity.medium,
-      );
+      if (e is Exception) {
+        await ErrorLoggingService.instance.logException(
+          e,
+          context: context,
+          type: AppErrorType.databaseError,
+          severity: ErrorSeverity.medium,
+        );
+      }
       
       throw const DatabaseException(
           'Erro inesperado ao buscar solicitações. Por favor, tente novamente mais tarde.',);
@@ -198,12 +202,14 @@ class TripService {
         'errorType': e.runtimeType.toString()
       };
       
-      await ErrorLoggingService.instance.logException(
-        e,
-        context: context,
-        type: AppErrorType.databaseError,
-        severity: ErrorSeverity.medium,
-      );
+      if (e is Exception) {
+        await ErrorLoggingService.instance.logException(
+          e,
+          context: context,
+          type: AppErrorType.databaseError,
+          severity: ErrorSeverity.medium,
+        );
+      }
       
       throw const DatabaseException(
           'Erro inesperado ao buscar solicitação. Por favor, tente novamente mais tarde.',);
