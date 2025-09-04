@@ -97,21 +97,83 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
     // Se está online, vai offline diretamente
     if (status.isOnline) {
       await widget.statusController.toggleOnlineStatus();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.offline_bolt, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Você está agora offline'),
+              ],
+            ),
+            backgroundColor: Colors.orange.shade600,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
       return;
     }
     
     // Se está offline, verifica horário de trabalho antes de ficar online
     final canGoOnline = await widget.statusController.tryGoOnlineWithValidation();
     
-    if (!canGoOnline && mounted) {
-      // Mostrar diálogo de horário de trabalho
-      await showWorkingHoursDialog(
-        context: context,
-        statusController: widget.statusController,
-        onWorkingHoursUpdated: () {
-          // Callback quando horários são atualizados
-        },
+    if (canGoOnline && mounted) {
+      // Sucesso ao ficar online
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.online_prediction, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Você está agora online e pronto para receber viagens!'),
+            ],
+          ),
+          backgroundColor: Colors.green.shade600,
+          duration: const Duration(seconds: 3),
+        ),
       );
+    } else if (!canGoOnline && mounted) {
+      // Tentativa fora do horário - mostrar feedback visual
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.schedule, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(child: Text('Fora do horário de trabalho configurado')),
+            ],
+          ),
+          backgroundColor: Colors.red.shade600,
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Configurar',
+            textColor: Colors.white,
+            onPressed: () {
+              // Mostrar diálogo de horário de trabalho
+              showWorkingHoursDialog(
+                context: context,
+                statusController: widget.statusController,
+                onWorkingHoursUpdated: () {
+                  // Callback quando horários são atualizados
+                },
+              );
+            },
+          ),
+        ),
+      );
+      
+      // Também mostrar diálogo após um pequeno delay
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        await showWorkingHoursDialog(
+          context: context,
+          statusController: widget.statusController,
+          onWorkingHoursUpdated: () {
+            // Callback quando horários são atualizados
+          },
+        );
+      }
     }
   }
 

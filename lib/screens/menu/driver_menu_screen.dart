@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../controllers/driver_status_manager.dart';
 import '../../models/user.dart' as app_user;
+import '../../services/driver_service.dart';
 import '../../services/driver_wallet_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
@@ -76,6 +77,97 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
         );
       }
     }
+  }
+
+  /// Verifica se o cadastro do motorista está completo antes de navegar para áreas
+  Future<void> _navigateToOperationZones() async {
+    try {
+      final user = await UserService.getCurrentUser();
+      if (user == null) {
+        _showRegistrationIncompleteDialog('Usuário não encontrado. Faça login novamente.');
+        return;
+      }
+
+      // Verificar se existe driver na tabela drivers
+      final supabase = Supabase.instance.client;
+      final driverResponse = await supabase
+          .from('drivers')
+          .select('brand, model, plate, color')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (driverResponse == null) {
+        _showRegistrationIncompleteDialog(
+          'Cadastro de motorista não encontrado.\n\n'
+          'Complete seu cadastro primeiro através do botão "Finalizar Cadastro" no menu principal.'
+        );
+        return;
+      }
+
+      // Verificar se os dados não são "PENDENTE" (indicando cadastro incompleto)
+      final brand = driverResponse['brand'] as String?;
+      final model = driverResponse['model'] as String?;
+      final plate = driverResponse['plate'] as String?;
+      final color = driverResponse['color'] as String?;
+
+      if (brand?.startsWith('PENDENTE') == true || 
+          model?.startsWith('PENDENTE') == true || 
+          plate?.startsWith('PENDENTE') == true || 
+          color?.startsWith('PENDENTE') == true) {
+        _showRegistrationIncompleteDialog(
+          'Cadastro incompleto detectado.\n\n'
+          'Você precisa finalizar seu cadastro de motorista antes de configurar áreas de atuação.\n\n'
+          '• Complete os dados do veículo\n'
+          '• Envie os documentos obrigatórios\n'
+          '• Finalize o processo de cadastro\n\n'
+          'Acesse o menu "Meu Veículo" para completar.'
+        );
+        return;
+      }
+
+      // Se chegou até aqui, o cadastro está completo - navegar normalmente
+      if (mounted) {
+        Navigator.pushNamed(context, '/driver_operation_zones');
+      }
+    } catch (e) {
+      _showRegistrationIncompleteDialog(
+        'Erro ao verificar cadastro: $e\n\n'
+        'Tente novamente em alguns instantes.'
+      );
+    }
+  }
+
+  /// Exibe diálogo informando que o cadastro precisa ser completado
+  void _showRegistrationIncompleteDialog(String message) {
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Cadastro Incompleto'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+          if (message.contains('Meu Veículo'))
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/vehicle');
+              },
+              child: const Text('Ir para Meu Veículo'),
+            ),
+        ],
+      ),
+    );
   }
 
   Future<void> _openWhatsAppSupport() async {
@@ -167,11 +259,6 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
                 onTap: () => Navigator.pushNamed(context, '/driver_excluded_zones'),
               ),
               _MenuTile(
-                icon: Icons.location_off_outlined,
-                label: 'Bairros indisponíveis',
-                onTap: () => Navigator.pushNamed(context, '/driver_unavailable_neighborhoods'),
-              ),
-              _MenuTile(
                 icon: Icons.price_change_outlined,
                 label: 'Preços personalizados',
                 onTap: () => Navigator.pushNamed(context, '/custom_pricing'),
@@ -183,8 +270,8 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               ),
               _MenuTile(
                 icon: Icons.map_outlined,
-                label: 'Áreas de atuação',
-                onTap: () => Navigator.pushNamed(context, '/driver_operation_zones'),
+                label: 'Regiões com Dinâmico',
+                onTap: () => _navigateToOperationZones(),
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
@@ -194,11 +281,7 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
                 label: 'Histórico de viagens',
                 onTap: () => Navigator.pushNamed(context, '/trip_history'),
               ),
-              _MenuTile(
-                icon: Icons.stacked_line_chart_outlined,
-                label: 'Estatísticas',
-                onTap: () => Navigator.pushNamed(context, '/statistics'),
-              ),
+
               _MenuTile(
                 icon: Icons.account_balance_wallet_outlined,
                 label: 'Carteira',

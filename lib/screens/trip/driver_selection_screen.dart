@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../models/supabase/driver.dart';
@@ -10,6 +11,7 @@ import '../../models/trip_request_data.dart';
 import '../../models/vehicle_category.dart';
 import '../../services/driver_availability_service.dart';
 import '../../services/driver_matching_service.dart';
+import '../../services/driver_operation_zones_service.dart';
 import '../../services/driver_service.dart';
 import '../../services/individual_pricing_service.dart';
 import '../../services/trip_request_manager.dart';
@@ -128,6 +130,7 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
   final DriverMatchingService _driverMatchingService = DriverMatchingService(Supabase.instance.client);
   final IndividualPricingService _individualPricingService = IndividualPricingService();
   final TripRequestManager _tripRequestManager = TripRequestManager(Supabase.instance.client);
+  final DriverOperationZonesService _operationZonesService = DriverOperationZonesService(Supabase.instance.client);
   late final DriverAvailabilityService _availabilityService;
 
   List<DriverWithUserData> _driversWithUserData = [];
@@ -218,8 +221,8 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
           final driverWithUser = await _driverService.getDriverWithUserData(driverWithDistance.driver.id);
           
           if (driverWithUser != null) {
-            // Calcular preço individual para este motorista
-            final estimatedFare = IndividualPricingService.calculateDriverPrice(
+            // Calcular preço individual para este motorista COM multiplicadores de zona
+            final estimatedFare = await IndividualPricingService.calculateDriverPrice(
               driver: driverWithDistance.driver,
               totalDistanceKm: driverWithDistance.distanceKm + widget.tripRequestData.estimatedDistanceKm,
               totalDurationMinutes: driverWithDistance.estimatedArrivalMinutes + widget.tripRequestData.estimatedDurationMinutes,
@@ -233,6 +236,16 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
                 isCondoDestination: widget.tripRequestData.isCondoDestination,
               ),
               numberOfStops: widget.tripRequestData.numberOfStops,
+              // NOVO: Incluir localizações para cálculo de multiplicador de zona
+              originLocation: LatLng(
+                widget.tripRequestData.originLatitude,
+                widget.tripRequestData.originLongitude,
+              ),
+              destinationLocation: LatLng(
+                widget.tripRequestData.destinationLatitude,
+                widget.tripRequestData.destinationLongitude,
+              ),
+              operationZonesService: _operationZonesService,
             );
 
             driversWithUserData.add(DriverWithUserData(

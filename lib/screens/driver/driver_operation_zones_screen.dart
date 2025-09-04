@@ -60,8 +60,25 @@ class _DriverOperationZonesScreenState extends State<DriverOperationZonesScreen>
     try {
       final user = await UserService.getCurrentUser();
       if (user?.userType == 'driver') {
-        _driverId = user!.id;
-        await _loadOperationZones();
+        // CORREÇÃO: Buscar o driver_id correto da tabela drivers
+        final supabase = SupabaseHelper.client!;
+        final driverResponse = await supabase
+            .from('drivers')
+            .select('id')
+            .eq('user_id', user!.id)
+            .maybeSingle();
+        
+        if (driverResponse != null) {
+          _driverId = driverResponse['id'] as String;
+          await _loadOperationZones();
+        } else {
+          if (mounted) {
+            _showErrorSnackBar(
+              'Cadastro de motorista não encontrado.\n\n'
+              'Complete seu cadastro de motorista primeiro através do menu inicial.'
+            );
+          }
+        }
       }
     } catch (e) {
       if (mounted) {

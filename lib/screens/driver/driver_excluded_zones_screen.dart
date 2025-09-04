@@ -377,14 +377,14 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
                         children: [
                           Icon(
                             Icons.location_off,
-                            color: colorScheme.onPrimaryContainer,
+                            color: Colors.white,
                             size: AppSpacing.iconMd,
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           Text(
                             'Zonas de Exclusão',
                             style: textTheme.titleLarge?.copyWith(
-                              color: colorScheme.onPrimaryContainer,
+                              color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -394,7 +394,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
                       Text(
                         'Defina os bairros onde você não deseja realizar atendimentos. Você não receberá solicitações de corridas nessas áreas.',
                         style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onPrimaryContainer,
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.sm),

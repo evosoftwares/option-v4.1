@@ -61,3 +61,9 @@ class DocumentationRequiredException extends ValidationException {
   const DocumentationRequiredException([String? details]) 
       : super('Documentação obrigatória não completa${details != null ? ': $details' : ''}', 'DOCUMENTATION_REQUIRED');
 }
+
+/// Exceção para acesso não autorizado
+class UnauthorizedException extends AuthenticationException {
+  const UnauthorizedException([String? details]) 
+      : super('Acesso não autorizado${details != null ? ': $details' : ''}', 'UNAUTHORIZED');
+}

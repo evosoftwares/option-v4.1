@@ -1,8 +1,11 @@
 import 'dart:math' as math;
 
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 import '../models/supabase/driver.dart';
 import '../models/trip_preferences.dart';
 import '../models/vehicle_category.dart';
+import 'driver_operation_zones_service.dart';
 
 /// Serviço para cálculo de preços individuais por motorista
 /// Utiliza os campos custom_price_per_km e custom_price_per_minute
@@ -10,7 +13,7 @@ class IndividualPricingService {
   
   /// Calcula o preço individual para um motorista específico
   /// Implementa a fórmula exata conforme documento de negócio:
-  /// PreçoTotal = ComponenteDistancia + ComponenteTempo + TaxasAdicionais
+  /// PreçoTotal = (ComponenteDistancia + ComponenteTempo + TaxasAdicionais) * MultiplicadorZona
   /// 
   /// Parâmetros:
   /// - [driver]: Motorista para calcular o preço
@@ -19,9 +22,86 @@ class IndividualPricingService {
   /// - [categoryData]: Dados da categoria para fallback de preços
   /// - [preferences]: Preferências da viagem para cálculo de taxas adicionais
   /// - [numberOfStops]: Número de paradas adicionais
+  /// - [originLocation]: Localização de origem da corrida (opcional)
+  /// - [destinationLocation]: Localização de destino da corrida (opcional)
+  /// - [operationZonesService]: Serviço para buscar áreas de atuação (opcional)
   /// 
   /// Retorna o preço total calculado para este motorista
-  static double calculateDriverPrice({
+  static Future<double> calculateDriverPrice({
+    required Driver driver,
+    required double totalDistanceKm,
+    required int totalDurationMinutes,
+    required VehicleCategoryData categoryData,
+    TripPreferences? preferences,
+    int numberOfStops = 0,
+    LatLng? originLocation,
+    LatLng? destinationLocation,
+    DriverOperationZonesService? operationZonesService,
+  }) async {
+    // 1. COMPONENTE DISTÂNCIA: PreçoKM_Aplicado * DistânciaTotal
+    final distanceComponent = calculateComponenteDistancia(
+      driver: driver,
+      totalDistanceKm: totalDistanceKm,
+      categoryData: categoryData,
+    );
+    
+    // 2. COMPONENTE TEMPO: PreçoMin_Aplicado * TempoTotal
+    final timeComponent = calculateComponenteTempo(
+      driver: driver,
+      totalDurationMinutes: totalDurationMinutes,
+      categoryData: categoryData,
+    );
+    
+    // 3. TAXAS ADICIONAIS
+    final additionalFees = _calculateDriverSpecificAdditionalFees(
+      driver: driver,
+      preferences: preferences ?? const TripPreferences(),
+      numberOfStops: numberOfStops,
+    );
+    
+    // 4. PREÇO BASE: ComponenteDistancia + ComponenteTempo + TaxasAdicionais
+    final basePrice = distanceComponent + timeComponent + additionalFees;
+    
+    // 5. MULTIPLICADOR DE ZONA: Verifica se a corrida está em área de atuação do motorista
+    double zoneMultiplier = 1.0;
+    if (operationZonesService != null && (originLocation != null || destinationLocation != null)) {
+      try {
+        // Verificar origem primeiro
+        if (originLocation != null) {
+          final originMultiplier = await operationZonesService.getPriceMultiplierForPoint(
+            driver.id,
+            originLocation,
+          );
+          if (originMultiplier > 1.0) {
+            zoneMultiplier = originMultiplier;
+          }
+        }
+        
+        // Se não achou na origem, verificar destino
+        if (zoneMultiplier == 1.0 && destinationLocation != null) {
+          final destinationMultiplier = await operationZonesService.getPriceMultiplierForPoint(
+            driver.id,
+            destinationLocation,
+          );
+          zoneMultiplier = destinationMultiplier;
+        }
+      } catch (e) {
+        // Em caso de erro, usar multiplicador padrão (1.0)
+        print('⚠️ Erro ao calcular multiplicador de zona para driver ${driver.id}: $e');
+      }
+    }
+    
+    // 6. PREÇO TOTAL: PreçoBase * MultiplicadorZona
+    final totalPrice = basePrice * zoneMultiplier;
+    
+    // Garantir preço mínimo (configurável via platform_settings)
+    return math.max(totalPrice, 8); // TODO: Usar PlatformSettingsService.getMinFare()
+  }
+
+  /// Versão síncrona para compatibilidade com código existente
+  /// NÃO considera multiplicadores de zona - use a versão async para funcionalidade completa
+  @Deprecated('Use calculateDriverPrice com parâmetros de localização para preços com zonas')
+  static double calculateDriverPriceSync({
     required Driver driver,
     required double totalDistanceKm,
     required int totalDurationMinutes,
@@ -121,7 +201,7 @@ class IndividualPricingService {
       final driverETA = driverETAs[driver.id] ?? 0;
       final totalDurationMinutes = driverETA + tripDurationMinutes;
       
-      final price = calculateDriverPrice(
+      final price = calculateDriverPriceSync(
         driver: driver,
         totalDistanceKm: totalDistanceKm,
         totalDurationMinutes: totalDurationMinutes,

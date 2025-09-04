@@ -19,7 +19,7 @@ import 'screens/driver/driver_home_screen.dart';
 import 'screens/driver/driver_operation_zones_screen.dart';
 import 'screens/driver/driver_requests_screen.dart';
 import 'screens/driver/driver_trip_screen.dart';
-import 'screens/driver/driver_unavailable_neighborhoods_screen.dart';
+
 import 'screens/driver/statistics_screen.dart';
 import 'screens/driver/vehicle_screen.dart';
 import 'screens/driver/working_hours_screen.dart';
@@ -184,7 +184,7 @@ class MyApp extends StatelessWidget {
           '/saved_places': (context) => const SavedPlacesScreen(),
           '/about': (context) => const AboutScreen(),
           '/driver_excluded_zones': (context) => const DriverExcludedZonesScreen(),
-          '/driver_unavailable_neighborhoods': (context) => const DriverUnavailableNeighborhoodsScreen(),
+
           '/driver_documents': (context) => const DriverDocumentsScreen(),
           '/vehicle': (context) => const VehicleScreen(),
           '/working_hours': (context) => const WorkingHoursScreen(),

@@ -55,22 +55,23 @@ class _DriverStepperContentState extends State<_DriverStepperContent> {
         return Scaffold(
           backgroundColor: colorScheme.surface,
           appBar: AppBar(
-            backgroundColor: colorScheme.primary,
-            foregroundColor: colorScheme.onPrimary,
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
             title: const Text(
               'Cadastro de Motorista',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
+                color: Colors.white,
               ),
             ),
             leading: controller.currentStep > 0
                 ? IconButton(
-                    icon: const Icon(Icons.arrow_back),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
                     onPressed: _previousStep,
                   )
                 : IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () {
                       Navigator.of(context).pushReplacementNamed('/driver_home');
                     },

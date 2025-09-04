@@ -3,31 +3,6 @@ import 'package:flutter/material.dart';
 /// Modelo para horários de trabalho do motorista (versão simplificada do driver_schedules)
 /// Representa os intervalos de tempo em que o motorista está disponível para trabalhar
 class WorkingHours {
-
-  /// Converte de JSON do Supabase
-  factory WorkingHours.fromJson(Map<String, dynamic> json) {
-    return WorkingHours(
-      id: json['id'].toString(),
-      driverId: json['driver_id'] as String,
-      dayOfWeek: json['day_of_week'] as int,
-      startTime: json['start_time'] as String,
-      endTime: json['end_time'] as String,
-      isActive: json['is_active'] as bool? ?? true,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-    );
-  }
-  const WorkingHours({
-    required this.id,
-    required this.driverId,
-    required this.dayOfWeek,
-    required this.startTime,
-    required this.endTime,
-    required this.isActive,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-
   /// ID único do registro
   final String id;
 
@@ -51,6 +26,29 @@ class WorkingHours {
 
   /// Data de última atualização
   final DateTime updatedAt;
+
+  const WorkingHours({
+    required this.id,
+    required this.driverId,
+    required this.dayOfWeek,
+    required this.startTime,
+    required this.endTime,
+    required this.isActive,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  /// Converte de JSON do Supabase
+  factory WorkingHours.fromJson(Map<String, dynamic> json) => WorkingHours(
+      id: json['id'].toString(),
+      driverId: json['driver_id'] as String,
+      dayOfWeek: json['day_of_week'] as int,
+      startTime: json['start_time'] as String,
+      endTime: json['end_time'] as String,
+      isActive: json['is_active'] as bool? ?? true,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
 
   /// Converte para JSON do Supabase
   Map<String, dynamic> toJson() => {
@@ -108,12 +106,21 @@ class WorkingHours {
 
   /// Verifica se o horário atual está dentro do intervalo de trabalho
   /// Considera casos que cruzam a meia-noite (ex: 22:00 às 06:00)
+  /// IMPORTANTE: Só retorna true se HOJE for o dia da semana programado E estiver no horário correto
   bool isWorkingNow() {
-    final now = TimeOfDay.now();
+    final now = DateTime.now();
+    final currentDayOfWeek = now.weekday % 7; // Converte para 0=domingo
+    
+    // Primeiro verifica se hoje é o dia da semana programado
+    if (currentDayOfWeek != dayOfWeek) {
+      return false;
+    }
+    
+    final currentTime = TimeOfDay.fromDateTime(now);
     final start = parseStartTime();
     final end = parseEndTime();
     
-    final nowMinutes = now.hour * 60 + now.minute;
+    final nowMinutes = currentTime.hour * 60 + currentTime.minute;
     final startMinutes = start.hour * 60 + start.minute;
     final endMinutes = end.hour * 60 + end.minute;
     
@@ -149,18 +156,4 @@ class WorkingHours {
   @override
   String toString() => 'WorkingHours(id: $id, driverId: $driverId, dayOfWeek: $dayOfWeek, startTime: $startTime, endTime: $endTime)';
 
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is WorkingHours &&
-        other.id == id &&
-        other.driverId == driverId &&
-        other.dayOfWeek == dayOfWeek &&
-        other.startTime == startTime &&
-        other.endTime == endTime &&
-        other.isActive == isActive;
-  }
-
-  @override
-  int get hashCode => Object.hash(id, driverId, dayOfWeek, startTime, endTime, isActive);
 }

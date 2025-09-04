@@ -7,6 +7,7 @@ import '../exceptions/app_exceptions.dart';
 import '../models/supabase/location.dart';
 import '../models/supabase/trip.dart';
 import '../models/supabase/trip_request.dart';
+import 'auth_service.dart';
 
 class TripService {
 
@@ -36,6 +37,30 @@ class TripService {
     String? destinationNeighborhood,
   }) async {
     try {
+      // Validar autenticação e autorização
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      final currentUserId = AuthService.getCurrentUserId();
+      
+      // Verificar se o usuário pode criar trip request para este passageiro
+      await AuthService.validateUserAccess(
+        resourceUserId: passengerId,
+        operation: 'create_trip_request',
+      );
+      
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'TRIP_REQUEST_CREATED',
+        description: 'Nova solicitação de viagem criada',
+        metadata: {
+          'passenger_id': passengerId,
+          'origin_address': originAddress,
+          'destination_address': destinationAddress,
+          'vehicle_category': vehicleCategory,
+        },
+      );
       final response = await _supabase
           .from('trip_requests')
           .insert({
@@ -111,10 +136,41 @@ class TripService {
     int? limit,
   }) async {
     try {
+      // Validar autenticação
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      final currentUserId = AuthService.getCurrentUserId();
+      if (currentUserId == null) {
+        throw const UnauthorizedException('ID do usuário não disponível');
+      }
+      
+      // Se passengerId não foi fornecido, usar o usuário atual
+      String? filterPassengerId = passengerId;
+      if (filterPassengerId == null) {
+        // Buscar o passenger_id do usuário atual
+        final passenger = await _supabase
+            .from('passengers')
+            .select('id')
+            .eq('auth_user_id', currentUserId)
+            .maybeSingle();
+        filterPassengerId = passenger?['id'];
+      } else {
+        // Validar acesso ao passageiro especificado
+        await AuthService.validateUserAccess(
+          resourceUserId: filterPassengerId,
+          operation: 'read_trip_requests',
+        );
+      }
       dynamic query = _supabase.from('trip_requests').select();
 
-      if (passengerId != null) {
-        query = query.eq('passenger_id', passengerId);
+      // SEMPRE filtrar por passenger_id para segurança
+      if (filterPassengerId != null) {
+        query = query.eq('passenger_id', filterPassengerId);
+      } else {
+        // Se não encontrou passenger_id, retornar lista vazia
+        return [];
       }
 
       if (status != null) {
@@ -171,9 +227,33 @@ class TripService {
 
   Future<TripRequest?> getTripRequest(String id) async {
     try {
-      final response =
-          await _supabase.from('trip_requests').select().eq('id', id).single();
-
+      // Validar autenticação
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      final currentUserId = AuthService.getCurrentUserId();
+      
+      // Buscar a trip request primeiro para validar ownership
+      final response = await _supabase
+          .from('trip_requests')
+          .select('*, passengers!inner(auth_user_id)')
+          .eq('id', id)
+          .maybeSingle();
+      
+      if (response == null) {
+        return null;
+      }
+      
+      // Validar se o usuário tem acesso a esta trip request
+      final passengerAuthUserId = response['passengers']['auth_user_id'];
+      if (passengerAuthUserId != currentUserId) {
+        // Verificar se é um motorista que pode ver esta solicitação
+        final isDriver = await AuthService.hasRole('driver');
+        if (!isDriver) {
+          throw const UnauthorizedException('Acesso negado a esta solicitação de viagem.');
+        }
+      }
       return TripRequest.fromJson(response);
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') {
@@ -222,6 +302,37 @@ class TripService {
     String? driverId,
   }) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      final currentUserId = AuthService.getCurrentUserId();
+      
+      // Buscar a trip request para validar ownership
+      final existingRequest = await getTripRequest(id);
+      if (existingRequest == null) {
+        throw const DatabaseException('Solicitação de viagem não encontrada');
+      }
+      
+      // Validar se o usuário pode atualizar esta solicitação
+      final canUpdate = currentUserId == existingRequest.passengerId ||
+          (driverId != null && currentUserId == driverId) ||
+          await AuthService.hasRole('admin');
+      
+      if (!canUpdate) {
+        await AuthService.logSecurityEvent(
+          eventType: 'UNAUTHORIZED_TRIP_UPDATE',
+          description: 'Tentativa de atualizar solicitação sem permissão',
+          metadata: {
+            'trip_request_id': id,
+            'current_user_id': currentUserId,
+            'passenger_id': existingRequest.passengerId,
+            'target_status': status,
+          },
+        );
+        throw const UnauthorizedException('Você não tem permissão para atualizar esta solicitação');
+      }
       final updateData = {
         'status': status,
         'updated_at': DateTime.now().toIso8601String(),
@@ -238,6 +349,18 @@ class TripService {
           .eq('id', id)
           .select()
           .single();
+
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'TRIP_REQUEST_STATUS_UPDATED',
+        description: 'Status da solicitação de viagem atualizado',
+        metadata: {
+          'trip_request_id': id,
+          'old_status': existingRequest.status,
+          'new_status': status,
+          'driver_id': driverId,
+        },
+      );
 
       return TripRequest.fromJson(response);
     } on PostgrestException catch (e) {
@@ -267,6 +390,28 @@ class TripService {
     double? discountApplied,
   }) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      final currentUserId = AuthService.getCurrentUserId();
+      
+      // Validar se o usuário pode criar viagem (deve ser o motorista ou admin)
+      final canCreate = currentUserId == driverId || await AuthService.hasRole('admin');
+      
+      if (!canCreate) {
+        await AuthService.logSecurityEvent(
+          eventType: 'UNAUTHORIZED_TRIP_CREATION',
+          description: 'Tentativa de criar viagem sem permissão',
+          metadata: {
+            'current_user_id': currentUserId,
+            'target_driver_id': driverId,
+            'passenger_id': passengerId,
+          },
+        );
+        throw const UnauthorizedException('Apenas o motorista designado pode criar a viagem');
+      }
       final response = await _supabase
           .from('trips')
           .insert({
@@ -291,6 +436,19 @@ class TripService {
           .select()
           .single();
 
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'TRIP_CREATED',
+        description: 'Nova viagem criada',
+        metadata: {
+          'trip_id': response['id'],
+          'trip_request_id': tripRequestId,
+          'driver_id': driverId,
+          'passenger_id': passengerId,
+          'base_fare': baseFare,
+        },
+      );
+
       return Trip.fromJson(response);
     } on PostgrestException catch (e) {
       throw PostgrestErrorMapper.mapError(e, context: {'operation': 'createTrip', 'tripRequestId': tripRequestId, 'driverId': driverId, 'passengerId': passengerId});
@@ -302,8 +460,45 @@ class TripService {
 
   Future<Trip?> getTrip(String id) async {
     try {
-      final response =
-          await _supabase.from('trips').select().eq('id', id).single();
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      final currentUserId = AuthService.getCurrentUserId();
+      
+      // Buscar a viagem com informações de relacionamento para validação
+      final response = await _supabase
+          .from('trips')
+          .select('*, passengers!inner(auth_user_id), drivers!inner(auth_user_id)')
+          .eq('id', id)
+          .maybeSingle();
+      
+      if (response == null) {
+        return null;
+      }
+      
+      // Validar se o usuário pode acessar esta viagem
+      final passengerAuthUserId = response['passengers']['auth_user_id'];
+      final driverAuthUserId = response['drivers']['auth_user_id'];
+      
+      final canAccess = currentUserId == passengerAuthUserId ||
+          currentUserId == driverAuthUserId ||
+          await AuthService.hasRole('admin');
+      
+      if (!canAccess) {
+        await AuthService.logSecurityEvent(
+          eventType: 'UNAUTHORIZED_TRIP_ACCESS',
+          description: 'Tentativa de acessar viagem sem permissão',
+          metadata: {
+            'trip_id': id,
+            'current_user_id': currentUserId,
+            'driver_auth_user_id': driverAuthUserId,
+            'passenger_auth_user_id': passengerAuthUserId,
+          },
+        );
+        throw const UnauthorizedException('Você não tem permissão para acessar esta viagem');
+      }
 
       return Trip.fromJson(response);
     } on PostgrestException catch (e) {
@@ -324,14 +519,42 @@ class TripService {
     int? limit,
   }) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      final currentUserId = AuthService.getCurrentUserId();
+      
+      // Validar acesso aos filtros especificados
+      if (passengerId != null) {
+        await AuthService.validateUserAccess(
+          resourceUserId: passengerId,
+          operation: 'read_trips',
+        );
+      }
+      
+      if (driverId != null) {
+        await AuthService.validateUserAccess(
+          resourceUserId: driverId,
+          operation: 'read_trips',
+        );
+      }
+      
       dynamic query = _supabase.from('trips').select();
 
-      if (passengerId != null) {
-        query = query.eq('passenger_id', passengerId);
-      }
+      // Se nenhum filtro específico, filtrar pelo usuário atual
+      if (passengerId == null && driverId == null) {
+        // Buscar viagens onde o usuário atual é passageiro ou motorista
+        query = query.or('passenger_id.eq.$currentUserId,driver_id.eq.$currentUserId');
+      } else {
+        if (passengerId != null) {
+          query = query.eq('passenger_id', passengerId);
+        }
 
-      if (driverId != null) {
-        query = query.eq('driver_id', driverId);
+        if (driverId != null) {
+          query = query.eq('driver_id', driverId);
+        }
       }
 
       if (status != null) {
@@ -472,6 +695,35 @@ class TripService {
     required double finalFare,
   }) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      final currentUserId = AuthService.getCurrentUserId();
+      
+      // Buscar a viagem para validar ownership
+      final existingTrip = await getTrip(tripId);
+      if (existingTrip == null) {
+        throw const DatabaseException('Viagem não encontrada');
+      }
+      
+      // Validar se o usuário pode completar esta viagem (deve ser o motorista)
+      final canComplete = currentUserId == existingTrip.driverId || await AuthService.hasRole('admin');
+      
+      if (!canComplete) {
+        await AuthService.logSecurityEvent(
+          eventType: 'UNAUTHORIZED_TRIP_COMPLETION',
+          description: 'Tentativa de completar viagem sem permissão',
+          metadata: {
+            'trip_id': tripId,
+            'current_user_id': currentUserId,
+            'driver_id': existingTrip.driverId,
+          },
+        );
+        throw const UnauthorizedException('Apenas o motorista pode completar a viagem');
+      }
+      
       final response = await _supabase
           .from('trips')
           .update({
@@ -485,6 +737,20 @@ class TripService {
           .eq('id', tripId)
           .select()
           .single();
+
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'TRIP_COMPLETED',
+        description: 'Viagem completada',
+        metadata: {
+          'trip_id': tripId,
+          'driver_id': existingTrip.driverId,
+          'passenger_id': existingTrip.passengerId,
+          'actual_distance': actualDistanceKm,
+          'actual_duration': actualDurationMinutes,
+          'final_fare': finalFare,
+        },
+      );
 
       return Trip.fromJson(response);
     } on PostgrestException catch (e) {

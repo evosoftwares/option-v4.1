@@ -7,6 +7,31 @@ class DriverOperationZonesService {
   DriverOperationZonesService(this._supabase);
 
   final SupabaseClient _supabase;
+  
+  /// Verifica se o driver existe na tabela drivers
+  Future<bool> _ensureDriverExists(String userId) async {
+    try {
+      // Primeiro, verificar se existe um driver para este user_id
+      final driver = await _supabase
+          .from('drivers')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+      
+      if (driver != null) {
+        return true; // Driver já existe
+      }
+      
+      // Se não existe, mostrar mensagem de erro informativa
+      throw Exception('Cadastro de motorista não encontrado. Por favor, complete seu cadastro de motorista primeiro através do menu inicial.');
+      
+    } catch (e) {
+      if (e.toString().contains('Cadastro de motorista não encontrado')) {
+        rethrow;
+      }
+      throw Exception('Erro ao verificar cadastro: $e');
+    }
+  }
 
   /// Busca todas as áreas de atuação de um motorista
   Future<List<DriverOperationZone>> getDriverOperationZones(String driverId) async {
@@ -60,6 +85,14 @@ class DriverOperationZonesService {
     }
 
     try {
+      // VALIDAÇÃO CRÍTICA: Verificar se o driver existe na tabela drivers  
+      // Primeiro, obter o user_id atual
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('Usuário não autenticado');
+      }
+      
+      await _ensureDriverExists(currentUser.id);
       // Verificar se já existe uma zona com o mesmo nome
       final existingZones = await _supabase
           .from('driver_operation_zones')

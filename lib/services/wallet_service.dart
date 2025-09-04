@@ -12,6 +12,7 @@ import '../models/payment_method.dart';
 import '../models/user.dart' as app_user;
 import 'asaas_service.dart';
 import 'security_service.dart';
+import 'auth_service.dart';
 
 class WalletService {
 
@@ -21,8 +22,21 @@ class WalletService {
   final SupabaseClient _supabase;
   final AsaasService _asaas;
 
+  /// Busca o ID do motorista para um usuário com validações de segurança
   Future<String?> getDriverIdForUser(String userId) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      final currentUserId = AuthService.getCurrentUserId();
+      
+      // Validar se o usuário pode acessar este recurso
+      await AuthService.validateUserAccess(
+        resourceUserId: userId,
+        operation: 'read_driver_info',
+      );
       // Add timeout to prevent hanging
       final data = await _supabase
           .from('drivers')
@@ -81,13 +95,47 @@ class WalletService {
     }
   }
 
+  /// Busca a carteira do motorista com validações de segurança
   Future<Map<String, dynamic>?> getDriverWallet(String driverId) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      final currentUserId = AuthService.getCurrentUserId();
+      
+      // Buscar o user_id do motorista para validação
+      final driverData = await _supabase
+          .from('drivers')
+          .select('user_id')
+          .eq('id', driverId)
+          .maybeSingle();
+      
+      if (driverData == null) {
+        throw const DatabaseException('Motorista não encontrado');
+      }
+      
+      // Validar acesso
+      await AuthService.validateUserAccess(
+        resourceUserId: driverData['user_id'],
+        operation: 'read_wallet',
+      );
       final data = await _supabase
           .from('driver_wallets')
           .select()
           .eq('driver_id', driverId)
           .maybeSingle();
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'DRIVER_WALLET_ACCESSED',
+        description: 'Carteira do motorista acessada',
+        metadata: {
+          'driver_id': driverId,
+          'driver_user_id': driverData['user_id'],
+        },
+      );
+      
       return data;
     } on PostgrestException catch (e) {
       throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getDriverWallet', 'driverId': driverId});
@@ -171,14 +219,49 @@ class WalletService {
     }
   }
 
+  /// Busca transações da carteira com validações de segurança
   Future<List<Map<String, dynamic>>> getWalletTransactions(String driverId, {int limit = 50}) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      // Buscar o user_id do motorista para validação
+      final driverData = await _supabase
+          .from('drivers')
+          .select('user_id')
+          .eq('id', driverId)
+          .maybeSingle();
+      
+      if (driverData == null) {
+        throw const DatabaseException('Motorista não encontrado');
+      }
+      
+      // Validar acesso
+      await AuthService.validateUserAccess(
+        resourceUserId: driverData['user_id'],
+        operation: 'read_wallet_transactions',
+      );
+      
       final data = await _supabase
           .from('wallet_transactions')
           .select()
           .eq('wallet_id', driverId)
           .order('created_at', ascending: false)
           .limit(limit);
+      
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'WALLET_TRANSACTIONS_ACCESSED',
+        description: 'Transações da carteira acessadas',
+        metadata: {
+          'driver_id': driverId,
+          'driver_user_id': driverData['user_id'],
+          'limit': limit,
+        },
+      );
+      
       return (data as List).cast<Map<String, dynamic>>();
     } on PostgrestException catch (e) {
       throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getWalletTransactions', 'driverId': driverId});
@@ -207,6 +290,7 @@ class WalletService {
     }
   }
 
+  /// Solicita saque com validações de segurança
   Future<Map<String, dynamic>> requestWithdrawal({
     required String driverId,
     required double amount,
@@ -214,6 +298,28 @@ class WalletService {
     Map<String, dynamic>? bankAccountInfo,
   }) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      // Buscar o user_id do motorista para validação
+      final driverData = await _supabase
+          .from('drivers')
+          .select('user_id')
+          .eq('id', driverId)
+          .maybeSingle();
+      
+      if (driverData == null) {
+        throw const DatabaseException('Motorista não encontrado');
+      }
+      
+      // Validar acesso
+      await AuthService.validateUserAccess(
+        resourceUserId: driverData['user_id'],
+        operation: 'request_withdrawal',
+      );
+      
       final payload = {
         'driver_id': driverId,
         'wallet_id': driverId,
@@ -223,11 +329,26 @@ class WalletService {
         'status': 'requested',
         'requested_at': DateTime.now().toIso8601String(),
       };
+      
       final data = await _supabase
           .from('withdrawals')
           .insert(payload)
           .select()
           .single();
+      
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'WITHDRAWAL_REQUESTED',
+        description: 'Saque solicitado',
+        metadata: {
+          'driver_id': driverId,
+          'driver_user_id': driverData['user_id'],
+          'amount': amount,
+          'method': method,
+          'withdrawal_id': data['id'],
+        },
+      );
+      
       return data;
     } on PostgrestException catch (e) {
       throw PostgrestErrorMapper.mapError(e, context: {'operation': 'requestWithdrawal', 'driverId': driverId, 'amount': amount});
@@ -238,8 +359,19 @@ class WalletService {
 
   // ========== PASSENGER WALLET METHODS ==========
 
+  /// Busca o ID do passageiro para um usuário com validações de segurança
   Future<String?> getPassengerIdForUser(String userId) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      // Validar se o usuário pode acessar este recurso
+      await AuthService.validateUserAccess(
+        resourceUserId: userId,
+        operation: 'read_passenger_info',
+      );
       // First, try to find existing passenger record with timeout
       final data = await _supabase
           .from('passengers')
@@ -268,13 +400,45 @@ class WalletService {
     }
   }
 
+  /// Busca a carteira do passageiro com validações de segurança
   Future<PassengerWallet?> getPassengerWallet(String passengerId) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      // Buscar o user_id do passageiro para validação
+      final passengerData = await _supabase
+          .from('passengers')
+          .select('user_id')
+          .eq('id', passengerId)
+          .maybeSingle();
+      
+      if (passengerData == null) {
+        throw const DatabaseException('Passageiro não encontrado');
+      }
+      
+      // Validar acesso
+      await AuthService.validateUserAccess(
+        resourceUserId: passengerData['user_id'],
+        operation: 'read_passenger_wallet',
+      );
       final data = await _supabase
           .from('passenger_wallets')
           .select()
           .eq('passenger_id', passengerId)
           .maybeSingle();
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'PASSENGER_WALLET_ACCESSED',
+        description: 'Carteira do passageiro acessada',
+        metadata: {
+          'passenger_id': passengerId,
+          'passenger_user_id': passengerData['user_id'],
+        },
+      );
+      
       return data != null ? PassengerWallet.fromMap(data) : null;
     } on PostgrestException catch (e) {
       throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getPassengerWallet', 'passengerId': passengerId});
@@ -306,12 +470,34 @@ class WalletService {
     }
   }
 
+  /// Busca transações da carteira do passageiro com validações de segurança
   Future<List<PassengerWalletTransaction>> getPassengerWalletTransactions(
     String passengerId, {
     int limit = 50,
     int page = 0,
   }) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      // Buscar o user_id do passageiro para validação
+      final passengerData = await _supabase
+          .from('passengers')
+          .select('user_id')
+          .eq('id', passengerId)
+          .maybeSingle();
+      
+      if (passengerData == null) {
+        throw const DatabaseException('Passageiro não encontrado');
+      }
+      
+      // Validar acesso
+      await AuthService.validateUserAccess(
+        resourceUserId: passengerData['user_id'],
+        operation: 'read_passenger_wallet_transactions',
+      );
       final offset = page * limit;
       final data = await _supabase
           .from('passenger_wallet_transactions')
@@ -319,6 +505,18 @@ class WalletService {
           .eq('passenger_id', passengerId)
           .order('created_at', ascending: false)
           .range(offset, offset + limit - 1);
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'PASSENGER_WALLET_TRANSACTIONS_ACCESSED',
+        description: 'Transações da carteira do passageiro acessadas',
+        metadata: {
+          'passenger_id': passengerId,
+          'passenger_user_id': passengerData['user_id'],
+          'limit': limit,
+          'page': page,
+        },
+      );
+      
       return (data as List)
           .map((item) => PassengerWalletTransaction.fromMap(item as Map<String, dynamic>))
           .toList();
@@ -329,6 +527,7 @@ class WalletService {
     }
   }
 
+  /// Adiciona crédito à carteira do passageiro com validações de segurança
   Future<PassengerWalletTransaction> addCredit({
     required String passengerId,
     required double amount,
@@ -338,6 +537,27 @@ class WalletService {
     Map<String, dynamic>? metadata,
   }) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      // Buscar o user_id do passageiro para validação
+      final passengerData = await _supabase
+          .from('passengers')
+          .select('user_id')
+          .eq('id', passengerId)
+          .maybeSingle();
+      
+      if (passengerData == null) {
+        throw const DatabaseException('Passageiro não encontrado');
+      }
+      
+      // Validar acesso
+      await AuthService.validateUserAccess(
+        resourceUserId: passengerData['user_id'],
+        operation: 'add_credit',
+      );
       final walletId = passengerId; // Assuming wallet_id is same as passenger_id
       final payload = {
         'wallet_id': walletId,
@@ -366,6 +586,21 @@ class WalletService {
           })
           .eq('passenger_id', passengerId);
 
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'CREDIT_ADDED',
+        description: 'Crédito adicionado à carteira do passageiro',
+        metadata: {
+          'passenger_id': passengerId,
+          'passenger_user_id': passengerData['user_id'],
+          'amount': amount,
+          'description': description,
+          'payment_method_id': paymentMethodId,
+          'asaas_payment_id': asaasPaymentId,
+          'transaction_id': transactionData['id'],
+        },
+      );
+      
       return PassengerWalletTransaction.fromMap(transactionData);
     } on PostgrestException catch (e) {
       throw PostgrestErrorMapper.mapError(e, context: {'operation': 'addCredit', 'passengerId': passengerId, 'amount': amount});
@@ -374,6 +609,7 @@ class WalletService {
     }
   }
 
+  /// Debita valor da carteira do passageiro para pagamento de viagem com validações de segurança
   Future<PassengerWalletTransaction> debitTrip({
     required String passengerId,
     required String tripId,
@@ -381,6 +617,27 @@ class WalletService {
     String description = 'Pagamento de viagem',
   }) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      // Buscar o user_id do passageiro para validação
+      final passengerData = await _supabase
+          .from('passengers')
+          .select('user_id')
+          .eq('id', passengerId)
+          .maybeSingle();
+      
+      if (passengerData == null) {
+        throw const DatabaseException('Passageiro não encontrado');
+      }
+      
+      // Validar acesso
+      await AuthService.validateUserAccess(
+        resourceUserId: passengerData['user_id'],
+        operation: 'debit_trip_payment',
+      );
       final walletId = passengerId; // Assuming wallet_id is same as passenger_id
       final payload = {
         'wallet_id': walletId,
@@ -408,6 +665,20 @@ class WalletService {
           })
           .eq('passenger_id', passengerId);
 
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'TRIP_PAYMENT_DEBITED',
+        description: 'Pagamento de viagem debitado da carteira do passageiro',
+        metadata: {
+          'passenger_id': passengerId,
+          'passenger_user_id': passengerData['user_id'],
+          'trip_id': tripId,
+          'amount': amount,
+          'description': description,
+          'transaction_id': transactionData['id'],
+        },
+      );
+      
       return PassengerWalletTransaction.fromMap(transactionData);
     } on PostgrestException catch (e) {
       throw PostgrestErrorMapper.mapError(e, context: {'operation': 'debitTrip', 'passengerId': passengerId, 'tripId': tripId, 'amount': amount});
@@ -418,8 +689,19 @@ class WalletService {
 
 
 
+  /// Busca métodos de pagamento com validações de segurança
   Future<List<PaymentMethod>> getPaymentMethods(String userId) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      // Validar acesso
+      await AuthService.validateUserAccess(
+        resourceUserId: userId,
+        operation: 'read_payment_methods',
+      );
       final data = await _supabase
           .from('payment_methods')
           .select()
@@ -427,6 +709,16 @@ class WalletService {
           .eq('is_active', true)
           .order('is_default', ascending: false)
           .order('created_at', ascending: false);
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'PAYMENT_METHODS_ACCESSED',
+        description: 'Métodos de pagamento acessados',
+        metadata: {
+          'user_id': userId,
+          'methods_count': (data as List).length,
+        },
+      );
+      
       return (data as List)
           .map((item) => PaymentMethod.fromMap(item as Map<String, dynamic>))
           .toList();
@@ -437,6 +729,7 @@ class WalletService {
     }
   }
 
+  /// Adiciona método de pagamento com validações de segurança
   Future<PaymentMethod> addPaymentMethod({
     required String userId,
     required PaymentMethodType type,
@@ -445,6 +738,16 @@ class WalletService {
     bool isDefault = false,
   }) async {
     try {
+      // Validações de segurança
+      if (!AuthService.isAuthenticated()) {
+        throw const UnauthorizedException('Usuário não autenticado');
+      }
+      
+      // Validar acesso
+      await AuthService.validateUserAccess(
+        resourceUserId: userId,
+        operation: 'add_payment_method',
+      );
       // If setting as default, unset other defaults
       if (isDefault) {
         await _supabase
@@ -468,6 +771,18 @@ class WalletService {
           .select()
           .single();
 
+      // Log de auditoria
+      await AuthService.logSecurityEvent(
+        eventType: 'PAYMENT_METHOD_ADDED',
+        description: 'Método de pagamento adicionado',
+        metadata: {
+          'user_id': userId,
+          'payment_method_type': type.value,
+          'is_default': isDefault,
+          'payment_method_id': data['id'],
+        },
+      );
+      
       return PaymentMethod.fromMap(data);
     } on PostgrestException catch (e) {
       throw PostgrestErrorMapper.mapError(e, context: {'operation': 'addPaymentMethod', 'userId': userId, 'type': type.value});
@@ -476,12 +791,58 @@ class WalletService {
     }
   }
 
+  /// Verifica se o passageiro tem saldo suficiente com validações de segurança
   Future<bool> hasEnoughBalance(String passengerId, double amount) async {
+    // Validações de segurança
+    if (!AuthService.isAuthenticated()) {
+      throw const UnauthorizedException('Usuário não autenticado');
+    }
+    
+    // Buscar o user_id do passageiro para validação
+    final passengerData = await _supabase
+        .from('passengers')
+        .select('user_id')
+        .eq('id', passengerId)
+        .maybeSingle();
+    
+    if (passengerData == null) {
+      throw const DatabaseException('Passageiro não encontrado');
+    }
+    
+    // Validar acesso
+    await AuthService.validateUserAccess(
+      resourceUserId: passengerData['user_id'],
+      operation: 'check_balance',
+    );
+    
     final wallet = await getPassengerWallet(passengerId);
     return wallet != null && wallet.availableBalance >= amount;
   }
 
+  /// Busca resumo da carteira do passageiro com validações de segurança
   Future<Map<String, dynamic>> getPassengerWalletSummary(String passengerId) async {
+    // Validações de segurança
+    if (!AuthService.isAuthenticated()) {
+      throw const UnauthorizedException('Usuário não autenticado');
+    }
+    
+    // Buscar o user_id do passageiro para validação
+    final passengerData = await _supabase
+        .from('passengers')
+        .select('user_id')
+        .eq('id', passengerId)
+        .maybeSingle();
+    
+    if (passengerData == null) {
+      throw const DatabaseException('Passageiro não encontrado');
+    }
+    
+    // Validar acesso
+    await AuthService.validateUserAccess(
+      resourceUserId: passengerData['user_id'],
+      operation: 'read_wallet_summary',
+    );
+    
     final wallet = await getPassengerWallet(passengerId);
     if (wallet == null) return {};
 
