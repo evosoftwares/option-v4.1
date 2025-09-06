@@ -149,7 +149,7 @@ class StepperController extends ChangeNotifier {
         fileName: fileName,
       );
       
-      // Upload to user-photos bucket
+      // Upload to user-photos folder no Firebase Storage
       final photoUrl = await FirebaseFileUploadService.uploadImage(
         file: _profilePhoto!,
         folder: 'user-photos',

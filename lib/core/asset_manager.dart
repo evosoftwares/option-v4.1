@@ -89,7 +89,7 @@ class DynamicAssetManager {
     _assets['logo_horizontal'] = const AssetInfo(
       key: 'logo_horizontal',
       localPath: 'assets/images/logo_horizontal_simple.webp',
-      cdnUrl: '/storage/v1/object/public/assets/logo_horizontal.webp',
+      cdnUrl: 'https://firebasestorage.googleapis.com/v0/b/uber-clone-testing.appspot.com/o/assets%2Flogo_horizontal.webp?alt=media',
       type: AssetType.image,
       priority: AssetPriority.critical,
       sizeKB: 8,
@@ -98,7 +98,7 @@ class DynamicAssetManager {
     _assets['logo_vertical'] = const AssetInfo(
       key: 'logo_vertical',
       localPath: 'assets/images/logo_vertical_simple.webp',
-      cdnUrl: '/storage/v1/object/public/assets/logo_vertical.webp',
+      cdnUrl: 'https://firebasestorage.googleapis.com/v0/b/uber-clone-testing.appspot.com/o/assets%2Flogo_vertical.webp?alt=media',
       type: AssetType.image,
       priority: AssetPriority.critical,
       sizeKB: 12,
@@ -107,7 +107,7 @@ class DynamicAssetManager {
     // Imagens carregadas sob demanda
     _assets['passenger_bg'] = const AssetInfo(
       key: 'passenger_bg',
-      cdnUrl: '/storage/v1/object/public/assets/passenger_background.webp',
+      cdnUrl: 'https://firebasestorage.googleapis.com/v0/b/uber-clone-testing.appspot.com/o/assets%2Fpassenger_background.webp?alt=media',
       type: AssetType.image,
       priority: AssetPriority.high,
       sizeKB: 45,
@@ -115,7 +115,7 @@ class DynamicAssetManager {
     
     _assets['driver_bg'] = const AssetInfo(
       key: 'driver_bg',
-      cdnUrl: '/storage/v1/object/public/assets/driver_background.webp',
+      cdnUrl: 'https://firebasestorage.googleapis.com/v0/b/uber-clone-testing.appspot.com/o/assets%2Fdriver_background.webp?alt=media',
       type: AssetType.image,
       priority: AssetPriority.high,
       sizeKB: 50,
@@ -125,14 +125,14 @@ class DynamicAssetManager {
     _assets['notification_sound'] = const AssetInfo(
       key: 'notification_sound',
       localPath: 'assets/sounds/notification.mp3',
-      cdnUrl: '/storage/v1/object/public/assets/notification.mp3',
+      cdnUrl: 'https://firebasestorage.googleapis.com/v0/b/uber-clone-testing.appspot.com/o/assets%2Fnotification.mp3?alt=media',
       type: AssetType.audio,
       sizeKB: 25,
     );
     
     _assets['trip_complete_sound'] = const AssetInfo(
       key: 'trip_complete_sound',
-      cdnUrl: '/storage/v1/object/public/assets/trip_complete.mp3',
+      cdnUrl: 'https://firebasestorage.googleapis.com/v0/b/uber-clone-testing.appspot.com/o/assets%2Ftrip_complete.mp3?alt=media',
       type: AssetType.audio,
       priority: AssetPriority.low,
       sizeKB: 30,

@@ -179,7 +179,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
       final photoUrl = await FirebaseFileUploadService.uploadImage(
         file: _selectedImage!,
-        folder: 'user-photos', // Usar o mesmo bucket do stepper para consistência
+        folder: 'user-photos', // Firebase Storage folder para fotos de usuário
         path: photoPath,
       );
 

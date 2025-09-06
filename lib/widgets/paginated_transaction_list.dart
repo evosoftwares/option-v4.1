@@ -14,7 +14,6 @@ library;
 import 'package:flutter/material.dart';
 import '../models/passenger_wallet_transaction.dart';
 import '../services/transaction_cache_service.dart';
-import '../services/wallet_service.dart';
 import '../utils/wallet_constants.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';

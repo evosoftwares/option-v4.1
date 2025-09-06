@@ -60,16 +60,32 @@ class _LoginScreenState extends State<LoginScreen> {
           },
         );
       } else {
-        // Buscar dados completos do usuário para verificar o tipo
+        // Buscar dados completos do usuário para verificar o tipo e status do perfil
         final currentUser = await UserService.getCurrentUser();
         
-        // Dados do usuário validados - prosseguir normalmente
-        
         if (!mounted) return;
-        if (currentUser != null && currentUser.userType == 'driver') {
-          Navigator.of(context).pushReplacementNamed('/driver_home');
+        if (currentUser == null) {
+          // Se não conseguiu buscar o usuário, algo está errado
+          throw const AuthException('Não foi possível carregar dados do usuário');
+        }
+        
+        // Verificar se o perfil está completo
+        if (!currentUser.profileComplete) {
+          print('🔄 [LOGIN] Usuário com perfil incompleto, redirecionando para stepper');
+          // Perfil incompleto - redirecionar para o stepper apropriado
+          if (currentUser.userType == 'driver') {
+            Navigator.of(context).pushReplacementNamed('/driver_stepper');
+          } else {
+            Navigator.of(context).pushReplacementNamed('/registration_stepper');
+          }
         } else {
-          Navigator.of(context).pushReplacementNamed('/home');
+          print('✅ [LOGIN] Usuário com perfil completo, redirecionando para home');
+          // Perfil completo - prosseguir para a tela principal
+          if (currentUser.userType == 'driver') {
+            Navigator.of(context).pushReplacementNamed('/driver_home');
+          } else {
+            Navigator.of(context).pushReplacementNamed('/home');
+          }
         }
       }
     } on AuthException catch (e) {

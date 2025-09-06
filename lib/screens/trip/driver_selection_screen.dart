@@ -73,7 +73,7 @@ class DriverSelectionScreen extends StatefulWidget {
         destinationAddress: destination['address'] ?? 'Destino',
         destinationLatitude: _safeToDouble(destination['latitude']),
         destinationLongitude: _safeToDouble(destination['longitude']),
-        vehicleCategory: args['vehicle_category'] ?? 'standard',
+        vehicleCategory: args['vehicle_category'] ?? 'Comum',
         needsPet: args['needsPet'] ?? false,
         needsGrocerySpace: args['needsGrocerySpace'] ?? false,
         isCondoOrigin: args['isCondoOrigin'] ?? false,

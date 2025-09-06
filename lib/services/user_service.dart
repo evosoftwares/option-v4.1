@@ -6,15 +6,20 @@ import '../core/error_handling/app_error.dart';
 import '../exceptions/app_exceptions.dart';
 import '../exceptions/validation_exception.dart' as validation;
 import '../models/user.dart';
+import '../models/vehicle_category.dart';
 import '../utils/supabase_helper.dart';
 import '../validators/user_data_validator.dart';
 
 class UserService {
   static SupabaseClient get _supabase {
+    print('🔍 [USER_SERVICE] Obtendo cliente Supabase...');
     final c = SupabaseHelper.client;
     if (c == null) {
+      print('❌ [USER_SERVICE] SupabaseHelper.client retornou null!');
+      print('❌ [USER_SERVICE] SupabaseHelper.isInitialized: ${SupabaseHelper.isInitialized}');
       throw Exception('Supabase não inicializado');
     }
+    print('✅ [USER_SERVICE] Cliente Supabase obtido com sucesso');
     return c;
   }
 
@@ -33,10 +38,21 @@ class UserService {
     print('  - email: $email');
     print('  - fullName: $fullName');
     print('  - phone: ${phone ?? 'null'}');
+    print('  - photoUrl: ${photoUrl ?? 'null'}');
     print('  - userType: $userType');
+
+    // 🔍 VALIDAÇÃO CRÍTICA: Telefone deve ser obrigatório ANTES de qualquer processamento
+    print('🔍 [$timestamp] [USER_SERVICE] VALIDAÇÃO INICIAL - Telefone recebido: ${phone ?? 'null'}');
+    if (phone == null || phone.trim().isEmpty) {
+      print('❌ [$timestamp] [USER_SERVICE] Telefone é nulo ou vazio na entrada!');
+      throw const DatabaseException('Telefone é obrigatório para criar usuário', 'PHONE_REQUIRED');
+    }
+    final initialPhone = phone.trim();
+    print('✅ [$timestamp] [USER_SERVICE] Telefone inicial válido: $initialPhone');
 
     // VALIDAÇÃO SIMPLIFICADA: Apenas validação básica necessária
     try {
+      print('🔍 [$timestamp] [USER_SERVICE] Iniciando UserDataValidator...');
       final validatedData = UserDataValidator.validateUserData(
         fullName: fullName,
         email: email,
@@ -45,6 +61,13 @@ class UserService {
         photoUrl: photoUrl,
       );
       
+      print('✅ [$timestamp] [USER_SERVICE] UserDataValidator concluído');
+      print('📊 [$timestamp] [USER_SERVICE] Dados antes da validação:');
+      print('  - fullName: $fullName');
+      print('  - email: $email');
+      print('  - phone: $phone');
+      print('  - photoUrl: $photoUrl');
+      
       // Usar dados validados
       fullName = validatedData['full_name'];
       email = validatedData['email'];
@@ -52,7 +75,14 @@ class UserService {
       phone = validatedData['phone'];
       photoUrl = validatedData['photo_url'];
       
+      print('📊 [$timestamp] [USER_SERVICE] Dados após validação:');
+      print('  - fullName: $fullName');
+      print('  - email: $email');
+      print('  - phone: $phone');
+      print('  - photoUrl: $photoUrl');
+      
     } on validation.ValidationException catch (e) {
+      print('❌ [$timestamp] [USER_SERVICE] ValidationException: ${e.message}');
       throw DatabaseException('Dados inválidos: ${e.message}');
     }
 
@@ -85,11 +115,16 @@ class UserService {
       print('ℹ️ [$timestamp] [USER_SERVICE] Erro ao verificar email existente (normal): $e');
     }
 
-    // Validação obrigatória do telefone conforme schema Supabase
+    // 🔍 VALIDAÇÃO FINAL: Verificar telefone novamente antes da inserção
+    print('🔍 [$timestamp] [USER_SERVICE] VALIDAÇÃO FINAL - Telefone antes da inserção: ${phone ?? 'null'}');
     if (phone == null || phone.trim().isEmpty) {
+      print('❌ [$timestamp] [USER_SERVICE] Telefone se tornou nulo/vazio após validação!');
+      print('📊 [$timestamp] [USER_SERVICE] Telefone inicial: $initialPhone');
+      print('📊 [$timestamp] [USER_SERVICE] Telefone atual: ${phone ?? 'null'}');
       throw const DatabaseException('Telefone é obrigatório para criar usuário', 'PHONE_REQUIRED');
     }
     final finalPhone = phone.trim();
+    print('✅ [$timestamp] [USER_SERVICE] Telefone final confirmado: $finalPhone');
 
     try {
       final userData = {
@@ -100,6 +135,7 @@ class UserService {
         'photo_url': photoUrl,
         'user_type': userType,
         'status': 'active',
+        'profile_complete': false, // New users start with incomplete profile
       };
 
       print('📝 [$timestamp] [USER_SERVICE] Usando telefone: $finalPhone');
@@ -491,16 +527,12 @@ class UserService {
       // Create basic driver record with placeholder values - will be filled during driver onboarding
       final driverData = {
         'user_id': user.id,
-        'cnh_number': 'PENDENTE_CADASTRO',
-        'cnh_expiry_date': DateTime.now().add(const Duration(days: 365)).toIso8601String().split('T')[0],
-        'cnh_photo_url': '',
         'vehicle_brand': 'PENDENTE',
         'vehicle_model': 'PENDENTE', 
         'vehicle_year': 2020,
         'vehicle_color': 'PENDENTE',
         'vehicle_plate': 'PENDENTE_${user.id.substring(0, 8)}',
-        'vehicle_category': 'standard',
-        'crlv_photo_url': '',
+        'vehicle_category': VehicleCategory.comum.id, // Usar enum para garantir consistência
         'approval_status': 'pending',
         'approved_by': null,
         'approved_at': null,
@@ -540,6 +572,41 @@ class UserService {
     } catch (e) {
       print('❌ Erro inesperado ao criar motorista: $e');
       throw DatabaseException('Erro inesperado ao criar registro de motorista: ${e.toString()}');
+    }
+  }
+
+  /// Marca o perfil do usuário como completo
+  static Future<void> markProfileComplete(String userId) async {
+    final timestamp = DateTime.now().toIso8601String();
+    print('🏁 [$timestamp] [USER_SERVICE] Marcando perfil como completo para usuário: $userId');
+    
+    try {
+      await _supabase
+          .from('app_users')
+          .update({
+            'profile_complete': true,
+            'updated_at': timestamp,
+          })
+          .eq('id', userId);
+      
+      print('✅ [$timestamp] [USER_SERVICE] Perfil marcado como completo com sucesso');
+    } on PostgrestException catch (e) {
+      print('❌ [$timestamp] [USER_SERVICE] PostgrestException ao marcar perfil: ${e.code} - ${e.message}');
+      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'markProfileComplete', 'userId': userId});
+    } catch (e) {
+      print('❌ [$timestamp] [USER_SERVICE] Erro ao marcar perfil como completo: $e');
+      throw DatabaseException('Erro ao marcar perfil como completo: ${e.toString()}');
+    }
+  }
+
+  /// Verifica se o perfil do usuário está completo
+  static Future<bool> isProfileComplete(String userId) async {
+    try {
+      final user = await getUserById(userId);
+      return user?.profileComplete ?? false;
+    } catch (e) {
+      print('❌ [USER_SERVICE] Erro ao verificar completude do perfil: $e');
+      return false; // Em caso de erro, assume que não está completo
     }
   }
 }

@@ -1,7 +1,10 @@
 /// Enum que define as categorias de veículos disponíveis no sistema
-/// Baseado na coluna vehicle_category das tabelas drivers e trips
+/// Baseado na coluna category da tabela platform_settings (referenciada por drivers.vehicle_category)
 enum VehicleCategory {
-  /// Categoria econômica para viagens simples
+  /// Categoria comum (mais básica e popular)
+  comum('Comum', 'Comum', 'Categoria padrão para veículos comuns'),
+  
+  /// Categoria econômica para viagens simples  
   economico('economico', 'Econômico', 'Viagem simples e econômica'),
   
   /// Categoria standard com conforto equilibrado
@@ -17,7 +20,10 @@ enum VehicleCategory {
   executivo('executivo', 'Executivo', 'Categoria executiva'),
   
   /// Categoria van para grupos e bagagens
-  van('van', 'Van', 'Grupos e bagagens');
+  van('van', 'Van', 'Grupos e bagagens'),
+  
+  /// Categoria guincho
+  towTruck('tow_truck', 'Guincho', 'Veículos de guincho');
 
   const VehicleCategory(this.id, this.displayName, this.description);
 
@@ -47,6 +53,7 @@ enum VehicleCategory {
 
   /// Retorna as categorias mais comuns (para UI)
   static List<VehicleCategory> get popularCategories => [
+    VehicleCategory.comum,
     VehicleCategory.economico,
     VehicleCategory.standard,
     VehicleCategory.premium,
@@ -65,11 +72,19 @@ class VehicleCategoryData {
     this.surgeMultiplier = 1.0,
     this.availableDrivers = 0,
     this.isAvailable = true,
+    this.minFare,
   });
 
   /// Cria uma instância com dados padrão para desenvolvimento
   factory VehicleCategoryData.defaultForCategory(VehicleCategory category) {
     switch (category) {
+      case VehicleCategory.comum:
+        return VehicleCategoryData(
+          category: category,
+          basePricePerKm: 1.0,
+          basePricePerMinute: 0.12,
+          availableDrivers: 15,
+        );
       case VehicleCategory.economico:
         return VehicleCategoryData(
           category: category,
@@ -112,6 +127,13 @@ class VehicleCategoryData {
           basePricePerMinute: 0.30,
           availableDrivers: 1,
         );
+      case VehicleCategory.towTruck:
+        return VehicleCategoryData(
+          category: category,
+          basePricePerKm: 3.0,
+          basePricePerMinute: 0.50,
+          availableDrivers: 1,
+        );
     }
   }
   final VehicleCategory category;
@@ -120,6 +142,7 @@ class VehicleCategoryData {
   final double surgeMultiplier;
   final int availableDrivers;
   final bool isAvailable;
+  final double? minFare;
 
   /// Calcula o preço estimado para uma distância e tempo
   double calculateEstimatedPrice(double distanceKm, int durationMinutes) {
@@ -135,6 +158,7 @@ class VehicleCategoryData {
     double? surgeMultiplier,
     int? availableDrivers,
     bool? isAvailable,
+    double? minFare,
   }) => VehicleCategoryData(
       category: category ?? this.category,
       basePricePerKm: basePricePerKm ?? this.basePricePerKm,
@@ -142,6 +166,7 @@ class VehicleCategoryData {
       surgeMultiplier: surgeMultiplier ?? this.surgeMultiplier,
       availableDrivers: availableDrivers ?? this.availableDrivers,
       isAvailable: isAvailable ?? this.isAvailable,
+      minFare: minFare ?? this.minFare,
     );
 
   @override

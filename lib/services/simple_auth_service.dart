@@ -4,10 +4,14 @@ import '../utils/supabase_helper.dart';
 /// Serviço de auth extremamente simplificado para contornar erro 500
 class SimpleAuthService {
   static SupabaseClient get _supabase {
+    print('🔍 [SIMPLE_AUTH] Obtendo cliente Supabase...');
     final c = SupabaseHelper.client;
     if (c == null) {
+      print('❌ [SIMPLE_AUTH] SupabaseHelper.client retornou null!');
+      print('❌ [SIMPLE_AUTH] SupabaseHelper.isInitialized: ${SupabaseHelper.isInitialized}');
       throw Exception('Supabase não inicializado');
     }
+    print('✅ [SIMPLE_AUTH] Cliente Supabase obtido com sucesso');
     return c;
   }
 

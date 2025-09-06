@@ -67,3 +67,11 @@ class UnauthorizedException extends AuthenticationException {
   const UnauthorizedException([String? details]) 
       : super('Acesso não autorizado${details != null ? ': $details' : ''}', 'UNAUTHORIZED');
 }
+
+/// Exceção para erros relacionados a motoristas
+class DriverException extends AppException {
+  const DriverException(super.message, [super.code]);
+  
+  @override
+  String toString() => 'DriverException: $message${code != null ? ' (Code: $code)' : ''}';
+}

@@ -12,7 +12,6 @@ import 'screens/auth/register_screen.dart';
 import 'screens/auth/user_type_screen.dart';
 import 'screens/debug/supabase_debug_screen.dart';
 import 'screens/driver/ac_policy_screen.dart';
-import 'screens/driver/custom_pricing_screen.dart';
 import 'screens/driver/driver_documents_screen.dart';
 import 'screens/driver/driver_excluded_zones_screen.dart';
 import 'screens/driver/driver_home_screen.dart';
@@ -22,7 +21,6 @@ import 'screens/driver/driver_trip_screen.dart';
 
 import 'screens/driver/statistics_screen.dart';
 import 'screens/driver/vehicle_screen.dart';
-import 'screens/driver/working_hours_screen.dart';
 import 'screens/emergency/emergency_contacts_screen.dart';
 import 'screens/emergency/emergency_screen.dart';
 import 'screens/menu/driver_menu_screen.dart';
@@ -46,6 +44,7 @@ import 'screens/wallet/wallet_screen.dart';
 import 'services/onesignal_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/supabase_helper.dart';
+import 'debug/test_notification_screen.dart';
 
 // Global navigator key for navigation from services
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -81,13 +80,20 @@ Future<void> main() async {
     print('📋 Certifique-se de que SUPABASE_URL e SUPABASE_ANON_KEY estão configuradas');
   }
 
-  // Comentando OneSignal temporariamente para debug
-  // try {
-  //   await OneSignalService().initialize();
-  //   print('✅ OneSignal inicializado com sucesso!');
-  // } catch (e) {
-  //   print('❌ Erro ao inicializar OneSignal: $e');
-  // }
+  // Inicializando OneSignal para notificações push
+  print('🚀 [MAIN] Inicializando OneSignal Service...');
+  try {
+    print('🔧 [MAIN] Chamando OneSignalService().initialize()...');
+    await OneSignalService().initialize();
+    print('🎉 [MAIN] OneSignal inicializado com SUCESSO TOTAL!');
+    print('📊 [MAIN] OneSignal status: ${OneSignalService().isInitialized ? 'ATIVO' : 'INATIVO'}');
+    print('💡 [MAIN] Player ID atual: ${OneSignalService().currentPlayerId ?? 'Aguardando...'}');
+    print('💡 [MAIN] Push Token atual: ${OneSignalService().currentPushToken != null ? 'Disponível' : 'Aguardando...'}');
+  } catch (e, stackTrace) {
+    print('💥 [MAIN] ERRO CRÍTICO ao inicializar OneSignal: $e');
+    print('📍 [MAIN] Stack trace: $stackTrace');
+    print('⚠️ [MAIN] Aplicativo continuará sem notificações push');
+  }
 
   runApp(const MyApp());
 }
@@ -187,8 +193,6 @@ class MyApp extends StatelessWidget {
 
           '/driver_documents': (context) => const DriverDocumentsScreen(),
           '/vehicle': (context) => const VehicleScreen(),
-          '/working_hours': (context) => const WorkingHoursScreen(),
-          '/custom_pricing': (context) => const CustomPricingScreen(),
           '/ac_policy': (context) => const AcPolicyScreen(),
           '/statistics': (context) => const StatisticsScreen(),
           '/driver_operation_zones': (context) => const DriverOperationZonesScreen(),
@@ -196,6 +200,7 @@ class MyApp extends StatelessWidget {
           '/emergency': (context) => const EmergencyScreen(),
           '/emergency_contacts': (context) => const EmergencyContactsScreen(),
           '/debug_supabase': (context) => const SupabaseDebugScreen(),
+          '/test_notification': (context) => const TestNotificationScreen(),
         },
         onGenerateRoute: (settings) {
           print('🎯 onGenerateRoute chamado para: ${settings.name}');

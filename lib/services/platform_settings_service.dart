@@ -51,38 +51,68 @@ class PlatformSettingsService {
 
   /// Busca todas as configurações
   Future<List<PlatformSettings>> getAllSettings() async {
+    final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    print('⚙️ [PLATFORM-SETTINGS-$sessionId] Iniciando getAllSettings()');
+    
     try {
+      // Log do usuário atual
+      final currentUser = _supabase.auth.currentUser;
+      print('👤 [PLATFORM-SETTINGS-$sessionId] Usuário: ${currentUser?.id}');
+      print('📧 [PLATFORM-SETTINGS-$sessionId] Email: ${currentUser?.email}');
+      
+      print('🔍 [PLATFORM-SETTINGS-$sessionId] Fazendo consulta na tabela platform_settings...');
       final response = await _supabase
           .from('platform_settings')
           .select()
           .order('category', ascending: true);
 
+      print('📊 [PLATFORM-SETTINGS-$sessionId] Resposta recebida: ${response.toString()}');
+      print('📊 [PLATFORM-SETTINGS-$sessionId] Tipo da resposta: ${response.runtimeType}');
+      print('📊 [PLATFORM-SETTINGS-$sessionId] Número de registros: ${(response as List<dynamic>).length}');
+
       final settings = (response as List<dynamic>)
-          .map((json) => PlatformSettings.fromJson(json as Map<String, dynamic>))
+          .map((json) {
+            print('🔧 [PLATFORM-SETTINGS-$sessionId] Processando JSON: $json');
+            return PlatformSettings.fromJson(json as Map<String, dynamic>);
+          })
           .toList();
+
+      print('📋 [PLATFORM-SETTINGS-$sessionId] Settings processados: ${settings.length}');
+      for (int i = 0; i < settings.length; i++) {
+        final setting = settings[i];
+        print('   📋 [$i] ${setting.category}: km=${setting.basePricePerKm}, min=${setting.minFare}');
+      }
 
       // Atualiza cache com todas as configurações
       for (final setting in settings) {
         _settingsCache[setting.category] = setting;
+        print('💾 [PLATFORM-SETTINGS-$sessionId] Cached: ${setting.category}');
       }
       _lastCacheUpdate = DateTime.now();
+      print('✅ [PLATFORM-SETTINGS-$sessionId] Cache atualizado');
 
       return settings;
     } on PostgrestException catch (e) {
+      print('❌ [PLATFORM-SETTINGS-$sessionId] PostgrestException: ${e.code} - ${e.message}');
+      print('❌ [PLATFORM-SETTINGS-$sessionId] Details: ${e.details}');
+      print('❌ [PLATFORM-SETTINGS-$sessionId] Hint: ${e.hint}');
       throw DatabaseException(
         'Erro ao buscar configurações da plataforma. Por favor, tente novamente mais tarde.',
         e.code,
       );
     } catch (e) {
+      print('❌ [PLATFORM-SETTINGS-$sessionId] Erro inesperado: ${e.toString()}');
+      print('❌ [PLATFORM-SETTINGS-$sessionId] Tipo do erro: ${e.runtimeType}');
+      print('❌ [PLATFORM-SETTINGS-$sessionId] Stack trace: ${StackTrace.current}');
       throw const DatabaseException(
         'Erro inesperado ao buscar configurações da plataforma. Por favor, tente novamente mais tarde.',
       );
     }
   }
 
-  /// Busca configurações padrão (categoria 'standard')
+  /// Busca configurações padrão (categoria 'Comum')
   Future<PlatformSettings> getDefaultSettings() async {
-    final settings = await getSettingsByCategory('standard');
+    final settings = await getSettingsByCategory('Comum');
     if (settings == null) {
       throw const DatabaseException(
         'Configurações padrão da plataforma não encontradas.',
@@ -92,47 +122,47 @@ class PlatformSettingsService {
   }
 
   /// Métodos de conveniência para obter valores específicos
-  Future<double> getBasePricePerKm([String category = 'standard']) async {
+  Future<double> getBasePricePerKm([String category = 'Comum']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.basePricePerKm ?? 1.5; // Fallback hardcoded
   }
 
-  Future<double> getBasePricePerMinute([String category = 'standard']) async {
+  Future<double> getBasePricePerMinute([String category = 'Comum']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.basePricePerMinute ?? 0.20; // Fallback hardcoded
   }
 
-  Future<double> getPlatformCommissionPercent([String category = 'standard']) async {
+  Future<double> getPlatformCommissionPercent([String category = 'Comum']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.platformCommissionPercent ?? 10.0; // Fallback hardcoded
   }
 
-  Future<double> getMinFare([String category = 'standard']) async {
+  Future<double> getMinFare([String category = 'Comum']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.minFare ?? 8.0; // Fallback hardcoded
   }
 
-  Future<double> getMinCancellationFee([String category = 'standard']) async {
+  Future<double> getMinCancellationFee([String category = 'Comum']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.minCancellationFee ?? 10.0; // Fallback hardcoded
   }
 
-  Future<double> getCancellationFeePercent([String category = 'standard']) async {
+  Future<double> getCancellationFeePercent([String category = 'Comum']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.cancellationFeePercent ?? 20.0; // Fallback hardcoded
   }
 
-  Future<int> getNoShowWaitMinutes([String category = 'standard']) async {
+  Future<int> getNoShowWaitMinutes([String category = 'Comum']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.noShowWaitMinutes ?? 3; // Fallback hardcoded
   }
 
-  Future<int> getDriverAcceptanceTimeoutSeconds([String category = 'standard']) async {
+  Future<int> getDriverAcceptanceTimeoutSeconds([String category = 'Comum']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.driverAcceptanceTimeoutSeconds ?? 10; // Fallback hardcoded
   }
 
-  Future<int> getSearchRadiusKm([String category = 'standard']) async {
+  Future<int> getSearchRadiusKm([String category = 'Comum']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.searchRadiusKm ?? 10; // Fallback hardcoded
   }

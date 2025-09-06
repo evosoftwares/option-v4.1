@@ -4,12 +4,12 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../controllers/driver_status_manager.dart';
 import '../../models/user.dart' as app_user;
-import '../../services/driver_service.dart';
 import '../../services/driver_wallet_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../utils/user_utils.dart';
+import '../../utils/menu_logger.dart';
 
 class DriverMenuScreen extends StatefulWidget {
   const DriverMenuScreen({super.key});
@@ -25,6 +25,7 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
   @override
   void initState() {
     super.initState();
+    MenuLogger.logMenuLoad('DRIVER');
     _userFuture = UserService.getCurrentUser();
     _loadWalletStats();
   }
@@ -45,6 +46,8 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
   }
 
   Future<void> _logout() async {
+    MenuLogger.logLogoutAttempt('DRIVER');
+    
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -52,11 +55,17 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
         content: const Text('Tem certeza que deseja sair?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () {
+              MenuLogger.logLogoutConfirmation('DRIVER', false);
+              Navigator.of(context).pop(false);
+            },
             child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () {
+              MenuLogger.logLogoutConfirmation('DRIVER', true);
+              Navigator.of(context).pop(true);
+            },
             child: const Text('Sair'),
           ),
         ],
@@ -65,10 +74,12 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
 
     if (confirm ?? false) {
       try {
+        MenuLogger.logLogoutSuccess('DRIVER');
         await Supabase.instance.client.auth.signOut();
         if (!mounted) return;
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
       } catch (e) {
+        MenuLogger.logLogoutError('DRIVER', e);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -81,9 +92,12 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
 
   /// Verifica se o cadastro do motorista está completo antes de navegar para áreas
   Future<void> _navigateToOperationZones() async {
+    MenuLogger.logScreenNavigation('DRIVER', 'Áreas de Atuação', navigationData: {'verification': 'required'});
+    
     try {
       final user = await UserService.getCurrentUser();
       if (user == null) {
+        MenuLogger.logNavigationError('DRIVER', 'Áreas de Atuação', 'User not found');
         _showRegistrationIncompleteDialog('Usuário não encontrado. Faça login novamente.');
         return;
       }
@@ -97,6 +111,7 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
           .maybeSingle();
 
       if (driverResponse == null) {
+        MenuLogger.logNavigationError('DRIVER', 'Áreas de Atuação', 'Driver record not found');
         _showRegistrationIncompleteDialog(
           'Cadastro de motorista não encontrado.\n\n'
           'Complete seu cadastro primeiro através do botão "Finalizar Cadastro" no menu principal.'
@@ -114,6 +129,7 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
           model?.startsWith('PENDENTE') == true || 
           plate?.startsWith('PENDENTE') == true || 
           color?.startsWith('PENDENTE') == true) {
+        MenuLogger.logNavigationError('DRIVER', 'Áreas de Atuação', 'Incomplete driver registration');
         _showRegistrationIncompleteDialog(
           'Cadastro incompleto detectado.\n\n'
           'Você precisa finalizar seu cadastro de motorista antes de configurar áreas de atuação.\n\n'
@@ -126,10 +142,12 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
       }
 
       // Se chegou até aqui, o cadastro está completo - navegar normalmente
+      MenuLogger.logScreenNavigation('DRIVER', 'Áreas de Atuação');
       if (mounted) {
         Navigator.pushNamed(context, '/driver_operation_zones');
       }
     } catch (e) {
+      MenuLogger.logNavigationError('DRIVER', 'Áreas de Atuação', e);
       _showRegistrationIncompleteDialog(
         'Erro ao verificar cadastro: $e\n\n'
         'Tente novamente em alguns instantes.'
@@ -171,6 +189,8 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
   }
 
   Future<void> _openWhatsAppSupport() async {
+    MenuLogger.logHelpAccess('DRIVER', 'WhatsApp Support');
+    
     const phoneNumber = '556592577217';
     const message = 'Olá! Preciso de ajuda com o app Option - Sou motorista.';
     final encodedMessage = Uri.encodeComponent(message);
@@ -179,8 +199,10 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
     final uri = Uri.parse(whatsappUrl);
     
     if (await canLaunchUrl(uri)) {
+      MenuLogger.logExternalAppLaunch('DRIVER', 'WhatsApp', 'Open support chat');
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
+      MenuLogger.logNavigationError('DRIVER', 'WhatsApp Support', 'Cannot launch URL');
       if (!mounted) {
         return;
       }
@@ -227,51 +249,52 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               _MenuTile(
                 icon: Icons.person_outline,
                 label: 'Perfil',
-                onTap: () => Navigator.pushNamed(context, '/profile_edit').then((result) {
-                  if (result == true) {
-                    setState(() {
-                      _userFuture = UserService.getCurrentUser();
-                    });
-                  }
-                }),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('DRIVER', 'Perfil');
+                  Navigator.pushNamed(context, '/profile_edit').then((result) {
+                    if (result == true) {
+                      MenuLogger.logProfileUpdateSuccess('DRIVER');
+                      setState(() {
+                        _userFuture = UserService.getCurrentUser();
+                      });
+                    }
+                  });
+                },
               ),
               _MenuTile(
                 icon: Icons.directions_car_outlined,
                 label: 'Veículo',
-                onTap: () => Navigator.pushNamed(context, '/vehicle'),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('DRIVER', 'Veículo');
+                  Navigator.pushNamed(context, '/vehicle');
+                },
               ),
               _MenuTile(
                 icon: Icons.assignment_turned_in_outlined,
                 label: 'Documentos',
-                onTap: () => Navigator.pushNamed(context, '/driver_documents'),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('DRIVER', 'Documentos');
+                  Navigator.pushNamed(context, '/driver_documents');
+                },
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
               const _SectionTitle(title: 'Trabalho'),
               _MenuTile(
-                icon: Icons.schedule_outlined,
-                label: 'Horários de trabalho',
-                onTap: () => Navigator.pushNamed(context, '/working_hours'),
-              ),
-              _MenuTile(
                 icon: Icons.remove_circle_outline,
                 label: 'Zonas excluídas',
-                onTap: () => Navigator.pushNamed(context, '/driver_excluded_zones'),
-              ),
-              _MenuTile(
-                icon: Icons.price_change_outlined,
-                label: 'Preços personalizados',
-                onTap: () => Navigator.pushNamed(context, '/custom_pricing'),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('DRIVER', 'Zonas excluídas');
+                  Navigator.pushNamed(context, '/driver_excluded_zones');
+                },
               ),
               _MenuTile(
                 icon: Icons.ac_unit_outlined,
                 label: 'Política de ar-condicionado',
-                onTap: () => Navigator.pushNamed(context, '/ac_policy'),
-              ),
-              _MenuTile(
-                icon: Icons.map_outlined,
-                label: 'Regiões com Dinâmico',
-                onTap: () => _navigateToOperationZones(),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('DRIVER', 'Política de ar-condicionado');
+                  Navigator.pushNamed(context, '/ac_policy');
+                },
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
@@ -279,7 +302,10 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               _MenuTile(
                 icon: Icons.history,
                 label: 'Histórico de viagens',
-                onTap: () => Navigator.pushNamed(context, '/trip_history'),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('DRIVER', 'Histórico de viagens');
+                  Navigator.pushNamed(context, '/trip_history');
+                },
               ),
 
               _MenuTile(
@@ -290,12 +316,18 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
                   builder: (context, walletSnapshot) {
                     final stats = walletSnapshot.data;
                     final availableBalance = stats?['available_balance'] as double? ?? 0.0;
+                    if (stats != null) {
+                      MenuLogger.logWalletBalanceDisplay('DRIVER', availableBalance);
+                    }
                     return _WalletPill(
                       amountText: 'R\$ ${availableBalance.toStringAsFixed(2).replaceAll('.', ',')}',
                     );
                   },
                 ),
-                onTap: () => Navigator.pushNamed(context, '/wallet'),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('DRIVER', 'Carteira');
+                  Navigator.pushNamed(context, '/wallet');
+                },
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
@@ -304,12 +336,18 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               // _MenuTile(
               //   icon: Icons.emergency,
               //   label: 'Emergência',
-              //   onTap: () => Navigator.pushNamed(context, '/emergency'),
+              //   onTap: () {
+              //     MenuLogger.logScreenNavigation('DRIVER', 'Emergência');
+              //     Navigator.pushNamed(context, '/emergency');
+              //   },
               // ),
               _MenuTile(
                 icon: Icons.notifications_none,
                 label: 'Notificações',
-                onTap: () => Navigator.pushNamed(context, '/notifications'),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('DRIVER', 'Notificações');
+                  Navigator.pushNamed(context, '/notifications');
+                },
               ),
               _MenuTile(
                 icon: Icons.help_outline,
@@ -319,7 +357,10 @@ class _DriverMenuScreenState extends State<DriverMenuScreen> {
               _MenuTile(
                 icon: Icons.info_outline,
                 label: 'Sobre o app',
-                onTap: () => Navigator.pushNamed(context, '/about'),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('DRIVER', 'Sobre o app');
+                  Navigator.pushNamed(context, '/about');
+                },
               ),
               _MenuTile(
                 icon: Icons.logout,
@@ -423,9 +464,25 @@ class _HeaderCard extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
+class _SectionTitle extends StatefulWidget {
   const _SectionTitle({required this.title});
   final String title;
+
+  @override
+  State<_SectionTitle> createState() => _SectionTitleState();
+}
+
+class _SectionTitleState extends State<_SectionTitle> {
+  @override
+  void initState() {
+    super.initState();
+    // Log section view when the section title is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        MenuLogger.logMenuSectionView('DRIVER', widget.title);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -433,7 +490,7 @@ class _SectionTitle extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Text(
-        title,
+        widget.title,
         style: AppTypography.titleMedium.copyWith(color: cs.onSurfaceVariant),
       ),
     );

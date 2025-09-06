@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../controllers/driver_status_controller.dart';
+import '../exceptions/app_exceptions.dart';
 import '../models/driver_status.dart';
 import '../theme/app_colors.dart';
-import 'working_hours_dialog.dart';
 
 class DriverBottomSheet extends StatefulWidget {
 
@@ -86,6 +86,7 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
   }
 
   Future<void> _onGoButtonPressed() async {
+    print('🔵 [DRIVER_BOTTOM_SHEET] _onGoButtonPressed iniciado');
     HapticFeedback.mediumImpact();
     
     _scaleController.forward().then((_) {
@@ -93,11 +94,14 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
     });
 
     final status = widget.statusController.status;
+    print('🔵 [DRIVER_BOTTOM_SHEET] Status atual: ${status.status}, isOnline: ${status.isOnline}, isTransitioning: ${status.isTransitioning}');
     
     // Se está online, vai offline diretamente
     if (status.isOnline) {
+      print('🔵 [DRIVER_BOTTOM_SHEET] Motorista está online, chamando toggleOnlineStatus para ficar offline');
       await widget.statusController.toggleOnlineStatus();
       if (mounted) {
+        print('🔵 [DRIVER_BOTTOM_SHEET] Exibindo Snackbar de offline');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Row(
@@ -112,66 +116,93 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
           ),
         );
       }
+      print('🔵 [DRIVER_BOTTOM_SHEET] _onGoButtonPressed concluído (ficou offline)');
       return;
     }
     
-    // Se está offline, verifica horário de trabalho antes de ficar online
-    final canGoOnline = await widget.statusController.tryGoOnlineWithValidation();
-    
-    if (canGoOnline && mounted) {
-      // Sucesso ao ficar online
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.online_prediction, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Você está agora online e pronto para receber viagens!'),
-            ],
-          ),
-          backgroundColor: Colors.green.shade600,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } else if (!canGoOnline && mounted) {
-      // Tentativa fora do horário - mostrar feedback visual
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.schedule, color: Colors.white),
-              SizedBox(width: 8),
-              Expanded(child: Text('Fora do horário de trabalho configurado')),
-            ],
-          ),
-          backgroundColor: Colors.red.shade600,
-          duration: const Duration(seconds: 3),
-          action: SnackBarAction(
-            label: 'Configurar',
-            textColor: Colors.white,
-            onPressed: () {
-              // Mostrar diálogo de horário de trabalho
-              showWorkingHoursDialog(
-                context: context,
-                statusController: widget.statusController,
-                onWorkingHoursUpdated: () {
-                  // Callback quando horários são atualizados
-                },
-              );
-            },
-          ),
-        ),
-      );
+    // Se está offline, tenta ficar online diretamente
+    try {
+      print('🔵 [DRIVER_BOTTOM_SHEET] Motorista está offline, chamando toggleOnlineStatus para ficar online');
+      await widget.statusController.toggleOnlineStatus();
       
-      // Também mostrar diálogo após um pequeno delay
-      await Future.delayed(const Duration(milliseconds: 500));
       if (mounted) {
-        await showWorkingHoursDialog(
-          context: context,
-          statusController: widget.statusController,
-          onWorkingHoursUpdated: () {
-            // Callback quando horários são atualizados
-          },
+        // Sucesso ao ficar online
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.online_prediction, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Você está agora online e pronto para receber viagens!'),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } on DocumentationRequiredException catch (e) {
+      // Erro específico de documentação - mostrar feedback claro
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.description, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(e.message),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.orange.shade700,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Upload',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.pushNamed(context, '/driver_documents');
+              },
+            ),
+          ),
+        );
+      }
+    } on ValidationException catch (e) {
+      // Outros erros de validação
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(e.message),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      // Erro genérico
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text('Erro ao tentar ficar online. Tente novamente.'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
     }

@@ -1,1 +1,0 @@
-Always use MCP Sequential Thinking

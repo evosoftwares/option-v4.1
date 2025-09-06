@@ -91,10 +91,7 @@ class _AcPolicyScreenState extends State<AcPolicyScreen> {
       final driverId = driverResponse['id'] as String;
       final driverService = DriverService(supabase);
 
-      await driverService.updateDriver(
-        driverId,
-        acPolicy: _selectedPolicy,
-      );
+      await DriverService.updateAcPolicy(driverId, _selectedPolicy!);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

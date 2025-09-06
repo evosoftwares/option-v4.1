@@ -10,8 +10,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../config/app_config.dart';
 import '../../controllers/driver_status_controller.dart';
-import '../../widgets/working_hours_dialog.dart';
 import '../../controllers/driver_status_manager.dart';
+import '../../exceptions/app_exceptions.dart';
 import '../../models/driver_status.dart';
 import '../../models/supabase/trip.dart';
 import '../../services/driver_service.dart';
@@ -42,6 +42,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   BitmapDescriptor? _carIcon;
+  BitmapDescriptor? _blackCarIcon;
 
   late final LocationService _locationService;
   late final DriverStatusController _statusController;
@@ -76,14 +77,17 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   }
 
   Future<void> _loadCarIcon() async {
+    // Inicializar ícone preto de fallback
+    _blackCarIcon = BitmapDescriptor.defaultMarkerWithHue(0); // 0 = vermelho, mais escuro disponível
+    
     try {
-      _carIcon = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(size: Size(48, 48)),
+      _carIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(50, 50)),
         'assets/images/car_marker.png',
       );
     } catch (e) {
-      // Fallback para o ícone padrão se houver erro
-      _carIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+      // Usar ícone preto de fallback se não houver o asset
+      _carIcon = _blackCarIcon;
     }
   }
 
@@ -238,7 +242,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
             Marker(
               markerId: const MarkerId('driver_location'),
               position: here,
-              icon: _carIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+              icon: _carIcon ?? _blackCarIcon ?? BitmapDescriptor.defaultMarker,
               infoWindow: const InfoWindow(title: 'Sua localização'),
             ),
           );
@@ -455,7 +459,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
           Marker(
             markerId: MarkerId(id),
             position: pos,
-            icon: _carIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            icon: _carIcon ?? _blackCarIcon ?? BitmapDescriptor.defaultMarker,
             infoWindow:
                 title != null ? InfoWindow(title: title) : InfoWindow.noText,
           ),
@@ -495,7 +499,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     }
   }
 
-  Future<void> _onGoButtonPressed() async {
+    Future<void> _onGoButtonPressed() async {
+    print('🔵 [DRIVER_HOME] _onGoButtonPressed iniciado');
     HapticFeedback.mediumImpact();
 
     _buttonController.forward().then((_) {
@@ -503,93 +508,497 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     });
 
     final status = _statusController.status;
+    print('🔵 [DRIVER_HOME] Status atual: ${status.status}, isOnline: ${status.isOnline}, isTransitioning: ${status.isTransitioning}');
     
     // Se está online, vai offline diretamente
     if (status.isOnline) {
+      print('🔵 [DRIVER_HOME] Motorista está online, chamando toggleOnlineStatus para ficar offline');
       await _statusController.toggleOnlineStatus();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.offline_bolt, color: Colors.white),
-                SizedBox(width: 8),
-                Text('Você está agora offline'),
-              ],
-            ),
-            backgroundColor: Colors.orange.shade600,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        print('🔵 [DRIVER_HOME] Exibindo notificação de offline');
+        _showOfflineNotification();
       }
+      print('🔵 [DRIVER_HOME] _onGoButtonPressed concluído (ficou offline)');
       return;
     }
     
-    // Se está offline, verifica horário de trabalho antes de ficar online
-    final canGoOnline = await _statusController.tryGoOnlineWithValidation();
-    
-    if (canGoOnline && mounted) {
-      // Sucesso ao ficar online
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.online_prediction, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Você está agora online e pronto para receber viagens!'),
-            ],
-          ),
-          backgroundColor: Colors.green.shade600,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } else if (!canGoOnline && mounted) {
-      // Tentativa fora do horário - mostrar feedback visual
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.schedule, color: Colors.white),
-              SizedBox(width: 8),
-              Expanded(child: Text('Fora do horário de trabalho configurado')),
-            ],
-          ),
-          backgroundColor: Colors.red.shade600,
-          duration: const Duration(seconds: 3),
-          action: SnackBarAction(
-            label: 'Configurar',
-            textColor: Colors.white,
-            onPressed: () {
-              // Mostrar diálogo de horário de trabalho
-              showWorkingHoursDialog(
-                context: context,
-                statusController: _statusController,
-                onWorkingHoursUpdated: () {
-                  // Callback quando horários são atualizados
-                },
-              );
-            },
-          ),
-        ),
-      );
+    // Se está offline, tenta ficar online diretamente
+    print('🔵 [DRIVER_HOME] Motorista está offline, tentando ficar online');
+    try {
+      print('🔵 [DRIVER_HOME] Chamando toggleOnlineStatus...');
+      await _statusController.toggleOnlineStatus();
+      print('🔵 [DRIVER_HOME] toggleOnlineStatus concluído com sucesso');
       
-      // Também mostrar diálogo após um pequeno delay
-      await Future.delayed(const Duration(milliseconds: 500));
       if (mounted) {
-        await showWorkingHoursDialog(
-          context: context,
-          statusController: _statusController,
-          onWorkingHoursUpdated: () {
-            // Callback quando horários são atualizados
-          },
-        );
+        print('🔵 [DRIVER_HOME] Ficou online, exibindo notificação de sucesso');
+        // Sucesso ao ficar online - mostrar notificação visual
+        _showSuccessOnlineNotification();
+      }
+      print('🔵 [DRIVER_HOME] _onGoButtonPressed concluído (processo de ficar online)');
+    } on DocumentationRequiredException catch (e) {
+      print('🔵 [DRIVER_HOME] Erro de documentação necessária: ${e.message}');
+      // Mostrar dialog visual para documentos
+      if (mounted) {
+        await _showDocumentationRequiredDialog(e.message);
+      }
+    } on ValidationException catch (e) {
+      print('🔵 [DRIVER_HOME] Erro de validação: ${e.message}');
+      // Mostrar dialog visual para erros de validação
+      if (mounted) {
+        await _showValidationErrorDialog(e.message);
+      }
+    } catch (e, stackTrace) {
+      print('🔵 [DRIVER_HOME] Erro genérico: $e');
+      print('🔵 [DRIVER_HOME] Stack trace: $stackTrace');
+      // Mostrar dialog visual para erro genérico
+      if (mounted) {
+        await _showGenericErrorDialog('Erro ao tentar ficar online. Verifique sua conexão e tente novamente.');
       }
     }
   }
 
+  /// Mostra notificação visual de sucesso ao ficar online
+  void _showSuccessOnlineNotification() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 200),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  size: 32,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Online!',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Você está pronto para receber viagens!',
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Auto close after 2 seconds
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
+  /// Mostra notificação visual ao ficar offline
+  void _showOfflineNotification() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 200),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.pause_rounded,
+                  size: 32,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Offline',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Você não receberá novas viagens',
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Auto close after 1.5 seconds
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
+  /// Mostra dialog visual para documentos obrigatórios não aprovados
+  Future<void> _showDocumentationRequiredDialog(String message) async {
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.orange.shade50, Colors.white],
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.upload_file_rounded,
+                  size: 32,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Documentos Pendentes',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.info_outline, color: Colors.orange),
+                    const SizedBox(height: 8),
+                    Text(
+                      message,
+                      style: const TextStyle(fontSize: 15, height: 1.4),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Entendi'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.pushNamed(context, '/driver-documents');
+                      },
+                      icon: const Icon(Icons.upload_rounded, size: 18),
+                      label: const Text('Enviar Documentos'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Mostra dialog visual para erros de validação
+  Future<void> _showValidationErrorDialog(String message) async {
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.red.shade50, Colors.white],
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.warning_rounded,
+                  size: 32,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Não é Possível Ficar Online',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red),
+                    const SizedBox(height: 8),
+                    Text(
+                      message,
+                      style: const TextStyle(fontSize: 15, height: 1.4),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: const Text('Entendi'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Mostra dialog visual para erros genéricos
+  Future<void> _showGenericErrorDialog(String message) async {
+    return showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.blue.shade50, Colors.white],
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.refresh_rounded,
+                  size: 32,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Ops! Algo deu errado',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.info_outline, color: Colors.blue),
+                    const SizedBox(height: 8),
+                    Text(
+                      message,
+                      style: const TextStyle(fontSize: 15, height: 1.4),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('Tentar Novamente'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildGoButton(DriverStatus status) {
     final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     Color buttonColor;
     Color textColor;
@@ -658,7 +1067,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                       ],
                       Text(
                         buttonText,
-                        style: textTheme.titleLarge?.copyWith(
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: textColor,
                           fontWeight: AppTypography.bold,
                         ),
@@ -688,7 +1097,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,

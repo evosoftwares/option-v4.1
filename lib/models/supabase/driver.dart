@@ -3,27 +3,23 @@ class Driver {
   const Driver({
     required this.id,
     required this.userId,
-    required this.cnhNumber,
-    required this.cnhExpiryDate,
-    this.cnhPhotoUrl,
     required this.brand,
     required this.model,
     required this.year,
     required this.color,
     required this.plate,
     required this.category,
-    this.crlvPhotoUrl,
-    required this.approvalStatus,
+    this.approvalStatus = 'pending',
     this.approvedBy,
     this.approvedAt,
-    required this.isOnline,
-    required this.acceptsPet,
-    required this.petFee,
-    required this.acceptsGrocery,
-    required this.groceryFee,
-    required this.acceptsCondo,
-    required this.condoFee,
-    required this.stopFee,
+    this.isOnline = false,
+    this.acceptsPet = false,
+    this.petFee = 0.0,
+    this.acceptsGrocery = false,
+    this.groceryFee = 0.0,
+    this.acceptsCondo = false,
+    this.condoFee = 0.0,
+    this.stopFee = 0.0,
     this.acPolicy,
     this.customPricePerKm,
     this.customPricePerMinute,
@@ -36,9 +32,9 @@ class Driver {
     this.currentLatitude,
     this.currentLongitude,
     this.lastLocationUpdate,
-    required this.ratings,
-    required this.trips,
-    required this.cancellations,
+    this.ratings = 0.0,
+    this.trips = 0,
+    this.cancellations = 0,
     required this.createdAt,
     required this.updatedAt,
     this.fcmToken,
@@ -58,17 +54,13 @@ class Driver {
     return Driver(
       id: json['id'] as String,
       userId: json['user_id'] as String,
-      cnhNumber: json['cnh_number'] as String,
-      cnhExpiryDate: DateTime.parse(json['cnh_expiry_date'] as String),
-      cnhPhotoUrl: json['cnh_photo_url'] as String?,
-      brand: json['vehicle_brand'] as String,
-      model: json['vehicle_model'] as String,
+      brand: json['vehicle_brand'] as String? ?? '',
+      model: json['vehicle_model'] as String? ?? '',
       year: toIntOrZero(json['vehicle_year']),
-      color: json['vehicle_color'] as String,
-      plate: json['vehicle_plate'] as String,
-      category: json['vehicle_category'] as String,
-      crlvPhotoUrl: json['crlv_photo_url'] as String?,
-      approvalStatus: json['approval_status'] as String,
+      color: json['vehicle_color'] as String? ?? '',
+      plate: json['vehicle_plate'] as String? ?? '',
+      category: json['vehicle_category'] as String? ?? '',
+      approvalStatus: json['approval_status'] as String? ?? 'pending',
       isOnline: json['is_online'] as bool? ?? false,
       acceptsPet: json['accepts_pet'] as bool? ?? false,
       acceptsGrocery: json['accepts_grocery'] as bool? ?? false,
@@ -98,8 +90,12 @@ class Driver {
       ratings: toDoubleOrZero(json['average_rating']),
       trips: toIntOrZero(json['total_trips']),
       cancellations: toIntOrZero(json['consecutive_cancellations']),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null 
+          ? DateTime.parse(json['updated_at'] as String)
+          : DateTime.now(),
       fcmToken: json['fcm_token'] as String?,
       devicePlatform: json['device_platform'] as String?,
       lastNotificationAt: json['last_notification_at'] != null 
@@ -109,16 +105,12 @@ class Driver {
   }
   final String id;
   final String userId;
-  final String cnhNumber;
-  final DateTime cnhExpiryDate;
-  final String? cnhPhotoUrl;
   final String brand;
   final String model;
   final int year;
   final String color;
   final String plate;
   final String category;
-  final String? crlvPhotoUrl;
   final String approvalStatus;
   final bool isOnline;
   final bool acceptsPet;
@@ -154,16 +146,12 @@ class Driver {
   Map<String, dynamic> toJson() => {
       'id': id,
       'user_id': userId,
-      'cnh_number': cnhNumber,
-      'cnh_expiry_date': cnhExpiryDate.toIso8601String(),
-      'cnh_photo_url': cnhPhotoUrl,
       'vehicle_brand': brand,
       'vehicle_model': model,
       'vehicle_year': year,
       'vehicle_color': color,
       'vehicle_plate': plate,
       'vehicle_category': category,
-      'crlv_photo_url': crlvPhotoUrl,
       'approval_status': approvalStatus,
       'is_online': isOnline,
       'accepts_pet': acceptsPet,
@@ -200,16 +188,12 @@ class Driver {
   Driver copyWith({
     String? id,
     String? userId,
-    String? cnhNumber,
-    DateTime? cnhExpiryDate,
-    String? cnhPhotoUrl,
     String? brand,
     String? model,
     int? year,
     String? color,
     String? plate,
     String? category,
-    String? crlvPhotoUrl,
     String? approvalStatus,
     String? approvedBy,
     DateTime? approvedAt,
@@ -244,16 +228,12 @@ class Driver {
   }) => Driver(
       id: id ?? this.id,
       userId: userId ?? this.userId,
-      cnhNumber: cnhNumber ?? this.cnhNumber,
-      cnhExpiryDate: cnhExpiryDate ?? this.cnhExpiryDate,
-      cnhPhotoUrl: cnhPhotoUrl ?? this.cnhPhotoUrl,
       brand: brand ?? this.brand,
       model: model ?? this.model,
       year: year ?? this.year,
       color: color ?? this.color,
       plate: plate ?? this.plate,
       category: category ?? this.category,
-      crlvPhotoUrl: crlvPhotoUrl ?? this.crlvPhotoUrl,
       approvalStatus: approvalStatus ?? this.approvalStatus,
       approvedBy: approvedBy ?? this.approvedBy,
       approvedAt: approvedAt ?? this.approvedAt,

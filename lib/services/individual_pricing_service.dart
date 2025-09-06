@@ -7,8 +7,8 @@ import '../models/trip_preferences.dart';
 import '../models/vehicle_category.dart';
 import 'driver_operation_zones_service.dart';
 
-/// Serviço para cálculo de preços individuais por motorista
-/// Utiliza os campos custom_price_per_km e custom_price_per_minute
+/// Serviço para cálculo de preços por motorista
+/// Utiliza preços base da plataforma (platform_settings) + taxas adicionais do motorista
 class IndividualPricingService {
   
   /// Calcula o preço individual para um motorista específico
@@ -95,7 +95,7 @@ class IndividualPricingService {
     final totalPrice = basePrice * zoneMultiplier;
     
     // Garantir preço mínimo (configurável via platform_settings)
-    return math.max(totalPrice, 8); // TODO: Usar PlatformSettingsService.getMinFare()
+    return math.max(totalPrice, categoryData.minFare ?? 8.0);
   }
 
   /// Versão síncrona para compatibilidade com código existente
@@ -134,45 +134,39 @@ class IndividualPricingService {
     final totalPrice = distanceComponent + timeComponent + additionalFees;
     
     // Garantir preço mínimo (configurável via platform_settings)
-    return math.max(totalPrice, 8); // TODO: Usar PlatformSettingsService.getMinFare()
+    return math.max(totalPrice, categoryData.minFare ?? 8.0);
   }
   
   /// Calcula o componente de distância da fórmula de precificação
-  /// ComponenteDistancia = PreçoKM_Aplicado * DistânciaTotal
+  /// ComponenteDistancia = ValorBaseKM * DistânciaTotal
   /// 
-  /// PreçoKM_Aplicado é o Preço por KM Personalizado do Condutor
-  /// Se não definido, usa o ValorBaseKM da plataforma
+  /// Usa sempre o ValorBaseKM da plataforma (platform_settings)
+  /// Não considera mais preços personalizados de motorista
   static double calculateComponenteDistancia({
     required Driver driver,
     required double totalDistanceKm,
     required VehicleCategoryData categoryData,
   }) {
-    final pricePerKmApplied = driver.customPricePerKm != null && driver.customPricePerKm! > 0
-        ? driver.customPricePerKm!
-        : categoryData.basePricePerKm;
-    
-    return pricePerKmApplied * totalDistanceKm;
+    // Sempre usa o preço base da plataforma
+    return categoryData.basePricePerKm * totalDistanceKm;
   }
   
   /// Calcula o componente de tempo da fórmula de precificação
-  /// ComponenteTempo = PreçoMin_Aplicado * TempoTotal
+  /// ComponenteTempo = ValorBaseMin * TempoTotal
   /// 
-  /// PreçoMin_Aplicado é o Preço por Minuto Personalizado do Condutor
-  /// Se não definido, usa o ValorBaseMin da plataforma
+  /// Usa sempre o ValorBaseMin da plataforma (platform_settings)
+  /// Não considera mais preços personalizados de motorista
   static double calculateComponenteTempo({
     required Driver driver,
     required int totalDurationMinutes,
     required VehicleCategoryData categoryData,
   }) {
-    final pricePerMinuteApplied = driver.customPricePerMinute != null && driver.customPricePerMinute! > 0
-        ? driver.customPricePerMinute!
-        : categoryData.basePricePerMinute;
-    
-    return pricePerMinuteApplied * totalDurationMinutes;
+    // Sempre usa o preço base da plataforma
+    return categoryData.basePricePerMinute * totalDurationMinutes;
   }
   
   /// Calcula preços individuais para uma lista de motoristas
-  /// Cada motorista pode ter preços e taxas diferentes
+  /// Cada motorista pode ter taxas adicionais diferentes (preços base são iguais)
   /// 
   /// Parâmetros:
   /// - [drivers]: Lista de motoristas para calcular preços
@@ -278,8 +272,8 @@ class IndividualPricingService {
   }
   
   /// Verifica se o motorista tem preços personalizados
-  static bool _hasCustomPricing(Driver driver) => (driver.customPricePerKm != null && driver.customPricePerKm! > 0) ||
-           (driver.customPricePerMinute != null && driver.customPricePerMinute! > 0);
+  /// Sempre retorna false pois preços base agora são definidos pela plataforma
+  static bool _hasCustomPricing(Driver driver) => false;
   
   /// Ordena motoristas por preço (menor para maior)
   static List<DriverPriceInfo> sortByPrice(List<DriverPriceInfo> driverPrices) =>
@@ -340,7 +334,7 @@ class DriverPriceInfo {
   /// Preço calculado para este motorista
   final double calculatedPrice;
   
-  /// Se o motorista usa preços personalizados
+  /// Se o motorista usa preços personalizados (sempre false agora)
   final bool usesCustomPricing;
   
   /// Distância do motorista até o passageiro em KM

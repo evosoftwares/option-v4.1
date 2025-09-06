@@ -228,7 +228,11 @@ class NotificationService {
         
         // 4. Tentar OneSignal primeiro (método preferido)
         if (playerId != null && playerId.isNotEmpty) {
-          print('📱 Tentando OneSignal Push (Player ID: ${playerId.substring(0, 8)}...)');
+          print('📱 [NOTIFICATION_SERVICE] Tentando OneSignal Push');
+          print('📱 [NOTIFICATION_SERVICE] Player ID: ${playerId.substring(0, 12)}...');
+          print('📱 [NOTIFICATION_SERVICE] Título: $title');
+          print('📱 [NOTIFICATION_SERVICE] Body: $body');
+          print('📱 [NOTIFICATION_SERVICE] Data: $notificationData');
           
           final success = await OneSignalService().sendNotificationToPlayerId(
             playerId: playerId,
@@ -239,7 +243,8 @@ class NotificationService {
           
           if (success) {
             notificationSent = true;
-            print('✅ OneSignal push enviado com sucesso');
+            print('🎉 [NOTIFICATION_SERVICE] OneSignal push ENVIADO COM SUCESSO!');
+            print('✅ [NOTIFICATION_SERVICE] Notificação entregue via OneSignal');
           } else {
             failureReason += 'OneSignal failed; ';
             print('❌ OneSignal push falhou');

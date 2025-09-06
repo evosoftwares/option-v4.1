@@ -479,6 +479,106 @@ class VehicleRegistrationStep extends StatelessWidget {
                           ],
                         ),
                       ),
+                      
+                      const SizedBox(height: AppSpacing.md),
+                      
+                      // Vehicle Category
+                      AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.category,
+                                  color: AppColors.lightPrimary,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Text(
+                                    'Categoria do Veículo',
+                                    style: AppTypography.titleMedium,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (controller.isCategoriesLoading)
+                                  const SizedBox(
+                                    height: 16,
+                                    width: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            DropdownButtonFormField<String>(
+                              initialValue: controller.selectedCategory?.category,
+                              decoration: InputDecoration(
+                                labelText: 'Categoria',
+                                hintText: 'Selecione a categoria do veículo',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: controller.categoryHasError 
+                                      ? Colors.red 
+                                      : Colors.grey,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: controller.categoryHasError 
+                                      ? Colors.red 
+                                      : Colors.grey,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: controller.categoryHasError 
+                                      ? Colors.red 
+                                      : AppColors.lightPrimary,
+                                    width: 2,
+                                  ),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.category,
+                                  color: controller.categoryHasError 
+                                    ? Colors.red 
+                                    : null,
+                                ),
+                                errorText: controller.categoryErrorMessage,
+                              ),
+                              items: controller.availableCategories.map((platformSettings) {
+                                 return DropdownMenuItem<String>(
+                                   value: platformSettings.category,
+                                   child: Text(
+                                     platformSettings.category.toUpperCase(),
+                                     style: AppTypography.bodyMedium,
+                                   ),
+                                 );
+                               }).toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  controller.selectCategory(value);
+                                }
+                              },
+                              onTap: () {
+                                controller.setCategoryTouched();
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'Selecione a categoria que melhor descreve seu veículo',
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.lightOnSurfaceVariant,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),

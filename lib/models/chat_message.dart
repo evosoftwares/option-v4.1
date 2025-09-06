@@ -24,20 +24,33 @@ class ChatMessage {
     required String currentUserId,
     required bool isDriverSender,
   }) {
-    final isFromCurrent = tripChat.senderId == currentUserId;
-    final senderType = isDriverSender ? MessageSender.driver : MessageSender.passenger;
-    final status = tripChat.isRead ? MessageStatus.read : MessageStatus.delivered;
+    try {
+      debugPrint('🔄 ChatMessage.fromTripChat: tripChat=${tripChat.id}, currentUserId=$currentUserId, isDriverSender=$isDriverSender');
+      
+      final isFromCurrent = tripChat.senderId == currentUserId;
+      final senderType = isDriverSender ? MessageSender.driver : MessageSender.passenger;
+      final status = tripChat.isRead ? MessageStatus.read : MessageStatus.delivered;
 
-    return ChatMessage(
-      id: tripChat.id,
-      tripId: tripChat.tripId,
-      senderId: tripChat.senderId,
-      message: tripChat.message,
-      senderType: senderType,
-      status: status,
-      timestamp: tripChat.createdAt,
-      isFromCurrentUser: isFromCurrent,
-    );
+      final result = ChatMessage(
+        id: tripChat.id,
+        tripId: tripChat.tripId,
+        senderId: tripChat.senderId,
+        message: tripChat.message,
+        senderType: senderType,
+        status: status,
+        timestamp: tripChat.createdAt,
+        isFromCurrentUser: isFromCurrent,
+      );
+      
+      debugPrint('✅ ChatMessage.fromTripChat concluído: ${result.id}, isFromCurrentUser: ${result.isFromCurrentUser}');
+      return result;
+    } catch (e) {
+      debugPrint('❌ Erro em ChatMessage.fromTripChat: $e');
+      debugPrint('📋 TripChat: ${tripChat.toString()}');
+      debugPrint('📋 currentUserId: $currentUserId');
+      debugPrint('📋 isDriverSender: $isDriverSender');
+      rethrow;
+    }
   }
 
   factory ChatMessage.sending({

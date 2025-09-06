@@ -74,8 +74,6 @@ class DatabaseConstraintsUsageExample {
   /// Exemplo de criação de motorista com validação de constraints
   static Future<Map<String, dynamic>> createDriverWithValidation({
     required String userId,
-    required String cnhNumber,
-    required DateTime cnhExpiryDate,
     required String vehicleBrand,
     required String vehicleModel,
     required int vehicleYear,
@@ -108,8 +106,6 @@ class DatabaseConstraintsUsageExample {
     // Preparar dados para validação
     final driverData = {
       'user_id': userId,
-      'cnh_number': cnhNumber,
-      'cnh_expiry_date': cnhExpiryDate.toIso8601String(),
       'vehicle_brand': vehicleBrand,
       'vehicle_model': vehicleModel,
       'vehicle_year': vehicleYear,
@@ -412,12 +408,7 @@ class DatabaseConstraintsUsageExample {
       ]);
     }
     
-    if (errorMessage.contains('cnh_number')) {
-      suggestions.addAll([
-        'CNH deve ter exatamente 11 dígitos',
-        'Apenas números são permitidos',
-      ]);
-    }
+
     
     if (errorMessage.contains('vehicle_plate')) {
       suggestions.addAll([

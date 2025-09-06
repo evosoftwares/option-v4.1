@@ -36,7 +36,7 @@ class DriverCompletionStep extends StatelessWidget {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      // Documents Summary
+                      // Code of Conduct Confirmation
                       AppCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,31 +44,36 @@ class DriverCompletionStep extends StatelessWidget {
                             Row(
                               children: [
                                 Icon(
-                                  Icons.description,
+                                  Icons.policy,
                                   color: AppColors.lightPrimary,
                                   size: 24,
                                 ),
                                 const SizedBox(width: AppSpacing.sm),
                                 Text(
-                                  'Documentos',
+                                  'Código de Conduta',
                                   style: AppTypography.titleLarge,
                                 ),
                               ],
                             ),
                             const SizedBox(height: AppSpacing.md),
                             
-                            _buildDocumentStatus(
-                              title: 'CNH (Carteira Nacional de Habilitação)',
-                              isUploaded: controller.cnhUrl != null,
-                              isUploading: controller.isUploadingCnh,
-                              error: controller.cnhError,
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            _buildDocumentStatus(
-                              title: 'CRLV (Certificado de Registro e Licenciamento)',
-                              isUploaded: controller.crlvUrl != null,
-                              isUploading: controller.isUploadingCrlv,
-                              error: controller.crlvError,
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Text(
+                                    'Você concordou com o código de conduta para motoristas',
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      color: AppColors.lightOnSurface,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -130,8 +135,8 @@ class DriverCompletionStep extends StatelessWidget {
                             const SizedBox(height: AppSpacing.md),
                             
                             Text(
-                              '• Seus documentos serão analisados pela nossa equipe\n'
-                              '• Você receberá uma notificação quando a análise for concluída\n'
+                              '• Seu veículo será registrado em nosso sistema\n'
+                              '• Você receberá uma notificação quando o cadastro for concluído\n'
                               '• O processo pode levar até 24 horas\n'
                               '• Após aprovação, você poderá começar a aceitar corridas',
                               style: AppTypography.bodyMedium.copyWith(

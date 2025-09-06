@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/app_config.dart';
 import '../exceptions/app_exceptions.dart';
 import '../models/passenger_wallet_transaction.dart';
 import '../models/payment_method.dart';
 import '../models/user.dart' as app_user;
 import 'asaas_service.dart';
 import 'wallet_service.dart';
+import 'webhook_service.dart';
 
 class PassengerPaymentService {
   PassengerPaymentService({
@@ -19,12 +21,14 @@ class PassengerPaymentService {
   }) : _supabase = client ?? Supabase.instance.client,
        _asaas = asaasService ?? AsaasService(),
        _wallet = walletService ?? WalletService(),
-       _http = httpClient ?? http.Client();
+       _http = httpClient ?? http.Client(),
+       _webhookService = WebhookService(client ?? Supabase.instance.client);
 
   final SupabaseClient _supabase;
   final AsaasService _asaas;
   final WalletService _wallet;
   final http.Client _http;
+  final WebhookService _webhookService;
 
   /// Create a payment for adding credit to passenger wallet
   Future<Map<String, dynamic>> createCreditPayment({
@@ -149,13 +153,29 @@ class PassengerPaymentService {
     }
   }
 
-  /// Process webhook notification from Asaas
+  /// Process webhook notification from Asaas with duplicate validation
   Future<void> processPaymentWebhook(Map<String, dynamic> webhookData) async {
     try {
+      final eventId = webhookData['id'] as String?;
+      final eventType = webhookData['event'] as String?;
       final payment = webhookData['payment'] as Map<String, dynamic>?;
       
-      if (payment == null) return;
-      
+      if (payment == null || eventId == null || eventType == null) return;
+
+      // Check if this webhook has already been processed
+      if (await _isWebhookProcessed(eventId)) {
+        print('Webhook already processed: $eventId');
+        return;
+      }
+
+      // Record this webhook as processed
+      await _webhookService.recordProcessedEvent(
+        eventId: eventId,
+        eventType: eventType,
+        paymentId: payment['id'] as String,
+        payload: webhookData,
+      );
+
       final asaasPaymentId = payment['id'] as String;
       final status = payment['status'] as String;
 
@@ -252,15 +272,20 @@ class PassengerPaymentService {
     }
   }
 
+  /// Check if webhook has already been processed
+  Future<bool> _isWebhookProcessed(String eventId) async {
+    return await _webhookService.isEventProcessed(eventId);
+  }
+
   /// Check payment status from Asaas
   Future<Map<String, dynamic>> checkPaymentStatus(String asaasPaymentId) async {
     try {
       final response = await _http.get(
-        Uri.parse('https://sandbox.asaas.com/api/v3/payments/$asaasPaymentId'), // TODO: Use config
+        Uri.parse('${AppConfig.asaasBaseUrl}/payments/$asaasPaymentId'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'access_token': 'YOUR_ASAAS_API_KEY', // TODO: Use config
+          'access_token': AppConfig.asaasApiKey,
         },
       );
 

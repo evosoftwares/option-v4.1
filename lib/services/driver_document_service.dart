@@ -15,7 +15,7 @@ class DriverDocumentService {
     return client;
   }
   static const String _tableName = 'driver_documents';
-  static const String _bucketName = 'user-photos';
+  // Firebase Storage - não precisa de bucket específico
 
   /// Cria um novo documento do motorista
   static Future<DriverDocument> createDocument({
@@ -54,7 +54,7 @@ class DriverDocumentService {
       // Fazer upload da imagem
       final fileUrl = await FirebaseFileUploadService.uploadImage(
         file: imageFile,
-        folder: _bucketName,
+        folder: 'driver-documents',
         path: filePath,
       );
 
@@ -66,7 +66,7 @@ class DriverDocumentService {
       // Criar registro no banco de dados
       final documentData = {
         'driver_id': driverId,
-        'document_type': documentType.name,
+        'document_type': documentType.value,
         'file_url': fileUrl,
         'file_size': imageInfo['size'],
         'mime_type': imageInfo['mimeType'],
@@ -78,6 +78,26 @@ class DriverDocumentService {
       };
 
       print('🔄 Criando registro no banco de dados...');
+      print('📋 Dados que serão enviados:');
+      print('   - document_type: ${documentType.value}');
+      print('   - driver_id: $driverId');
+      print('   - file_url: $fileUrl');
+      print('   - status: ${DocumentStatus.pending.name}');
+      
+      // Verificar se o driver_id existe na tabela drivers
+      print('🔍 Verificando se driver_id existe na tabela drivers...');
+      final driverCheck = await _supabase
+          .from('drivers')
+          .select('id, user_id')
+          .eq('id', driverId)
+          .maybeSingle();
+      
+      if (driverCheck == null) {
+        print('❌ ERRO: driver_id $driverId NÃO EXISTE na tabela drivers!');
+        throw DocumentException('Driver ID $driverId não encontrado na tabela drivers');
+      } else {
+        print('✅ Driver encontrado: id=${driverCheck['id']}, user_id=${driverCheck['user_id']}');
+      }
       final response = await _supabase
           .from(_tableName)
           .insert(documentData)
@@ -121,7 +141,7 @@ class DriverDocumentService {
     }
   }
 
-  /// Obtém os documentos atuais de um motorista (um por tipo)
+  /// Obtém os documentos atuais de um motorista (um por tipo) com URLs frescas
   static Future<List<DriverDocument>> getCurrentDriverDocuments(String driverId) async {
     print('🔄 DriverDocumentService.getCurrentDriverDocuments iniciado');
     print('  - driverId: $driverId');
@@ -134,8 +154,18 @@ class DriverDocumentService {
           .eq('is_current', true)
           .order('created_at', ascending: false);
 
-      print('✅ Documentos atuais encontrados: ${response.length}');
-      return response.map(DriverDocument.fromJson).toList();
+      final documents = response.map(DriverDocument.fromJson).toList();
+      
+      // Atualiza URLs para versões assinadas frescas
+      for (int i = 0; i < documents.length; i++) {
+        final freshUrl = await _getFreshSignedUrl(documents[i].fileUrl, documents[i].id);
+        if (freshUrl != null) {
+          documents[i] = documents[i].copyWith(fileUrl: freshUrl);
+        }
+      }
+
+      print('✅ Documentos atuais encontrados com URLs frescas: ${documents.length}');
+      return documents;
 
     } on PostgrestException catch (e) {
       print('❌ Erro ao buscar documentos atuais: ${e.message}');
@@ -157,7 +187,7 @@ class DriverDocumentService {
           .from(_tableName)
           .select()
           .eq('driver_id', driverId)
-          .eq('document_type', documentType.name)
+          .eq('document_type', documentType.value)
           .eq('is_current', true)
           .maybeSingle();
 
@@ -233,15 +263,13 @@ class DriverDocumentService {
 
       final fileUrl = docResponse['file_url'] as String;
       
-      // Extrair o caminho do arquivo da URL
-      final uri = Uri.parse(fileUrl);
-      final pathSegments = uri.pathSegments;
-      final filePath = pathSegments.skip(3).join('/'); // Remove /storage/v1/object/public/bucket-name/
-
-      // Remover arquivo do storage
+      // Extrair o caminho do arquivo da URL do Firebase Storage
+      final fileName = fileUrl.split('/').last.split('?').first; // Remove query parameters
+      
+      // Remover arquivo do Firebase Storage
       await FirebaseFileUploadService.deleteFile(
-        folder: _bucketName,
-        path: filePath,
+        folder: 'driver-documents',
+        path: fileName,
       );
 
       // Marcar documento como não atual
@@ -272,13 +300,27 @@ class DriverDocumentService {
 
     try {
       final documents = await getCurrentDriverDocuments(driverId);
+      print('📋 Documentos encontrados: ${documents.length}');
+      for (final doc in documents) {
+        print('  - ${doc.documentType}: ${doc.status} (current: ${doc.isCurrent})');
+      }
       
-      // Documentos obrigatórios
+      // Buscar dados do driver para obter data de criação
+      final driverResponse = await _supabase
+          .from('drivers')
+          .select('created_at')
+          .eq('id', driverId)
+          .single();
+      
+      final driverCreatedAt = DateTime.parse(driverResponse['created_at'] as String);
+      
+      // Documentos obrigatórios (remover CNH e CRLV da lista de documentos a serem enviados)
       final requiredTypes = [
-        DocumentType.cnhFront,
-        DocumentType.cnhBack,
-        DocumentType.crlv,
         DocumentType.vehicleFront,
+        DocumentType.vehicleBack,
+        DocumentType.vehicleLeft,
+        DocumentType.vehicleRight,
+        DocumentType.vehicleInterior,
       ];
 
       final documentsByType = <String, DriverDocument>{};
@@ -293,7 +335,7 @@ class DriverDocumentService {
       final expiredDocuments = <String>[];
 
       for (final type in requiredTypes) {
-        final typeName = type.name;
+        final typeName = type.value;  // Usar .value em vez de .name
         final doc = documentsByType[typeName];
         
         if (doc == null) {
@@ -318,6 +360,20 @@ class DriverDocumentService {
         }
       }
 
+      // Verificar CNH e CRLV na tabela driver_documents
+      final cnhFrontDoc = documentsByType[DocumentType.cnhFront.value];
+      final cnhBackDoc = documentsByType[DocumentType.cnhBack.value];
+      final crlvDoc = documentsByType[DocumentType.crlv.value];
+      
+      if (cnhFrontDoc != null && cnhFrontDoc.status == 'approved' &&
+          cnhBackDoc != null && cnhBackDoc.status == 'approved') {
+        approvedDocuments.addAll([DocumentType.cnhFront.value, DocumentType.cnhBack.value]);
+      }
+      
+      if (crlvDoc != null && crlvDoc.status == 'approved') {
+        approvedDocuments.add(DocumentType.crlv.value);
+      }
+
       final isComplete = missingDocuments.isEmpty && 
                         pendingDocuments.isEmpty && 
                         rejectedDocuments.isEmpty && 
@@ -325,7 +381,7 @@ class DriverDocumentService {
 
       final result = {
         'isComplete': isComplete,
-        'totalRequired': requiredTypes.length,
+        'totalRequired': requiredTypes.length + 3, // Adicionar CNH (frente e verso) e CRLV
         'totalApproved': approvedDocuments.length,
         'missingDocuments': missingDocuments,
         'pendingDocuments': pendingDocuments,
@@ -334,7 +390,14 @@ class DriverDocumentService {
         'approvedDocuments': approvedDocuments,
       };
 
-      print('✅ Status da documentação calculado: $result');
+      print('✅ Status da documentação calculado:');
+      print('  - isComplete: $isComplete');
+      print('  - totalRequired: ${requiredTypes.length + 3}');
+      print('  - totalApproved: ${approvedDocuments.length}');
+      print('  - approvedDocuments: $approvedDocuments');
+      print('  - pendingDocuments: $pendingDocuments'); 
+      print('  - missingDocuments: $missingDocuments');
+      print('  - rejectedDocuments: $rejectedDocuments');
       return result;
 
     } catch (e) {
@@ -356,7 +419,7 @@ class DriverDocumentService {
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('driver_id', driverId)
-          .eq('document_type', documentType.name)
+          .eq('document_type', documentType.value)
           .eq('is_current', true);
 
       print('✅ Documentos anteriores marcados como não atuais');
@@ -387,8 +450,18 @@ class DriverDocumentService {
           .lte('expiry_date', expiryThreshold.toIso8601String())
           .order('expiry_date', ascending: true);
 
-      print('✅ Documentos próximos do vencimento: ${response.length}');
-      return response.map(DriverDocument.fromJson).toList();
+      final documents = response.map(DriverDocument.fromJson).toList();
+      
+      // Atualiza URLs para versões assinadas frescas
+      for (int i = 0; i < documents.length; i++) {
+        final freshUrl = await _getFreshSignedUrl(documents[i].fileUrl, documents[i].id);
+        if (freshUrl != null) {
+          documents[i] = documents[i].copyWith(fileUrl: freshUrl);
+        }
+      }
+
+      print('✅ Documentos próximos do vencimento: ${documents.length}');
+      return documents;
 
     } on PostgrestException catch (e) {
       print('❌ Erro ao buscar documentos próximos do vencimento: ${e.message}');
@@ -396,6 +469,24 @@ class DriverDocumentService {
     } catch (e) {
       print('❌ Erro inesperado: $e');
       throw DocumentException('Erro inesperado ao buscar documentos próximos do vencimento: $e');
+    }
+  }
+
+  /// Gera URL assinada fresca do Supabase Storage
+  static Future<String?> _getFreshSignedUrl(String fileUrl, String docId) async {
+    try {
+      // Remove o bucket da URL se presente
+      final cleanPath = fileUrl.replaceFirst(RegExp(r'^[^/]+/'), '');
+      
+      // Gera URL assinada válida por 1 hora
+      final response = await _supabase.storage
+          .from('driver-documents')
+          .createSignedUrl(cleanPath, 3600); // 1 hour
+
+      return response;
+    } catch (e) {
+      print('❌ Erro ao gerar URL assinada para documento $docId: $e');
+      return fileUrl; // Retorna URL original se falhar
     }
   }
 }

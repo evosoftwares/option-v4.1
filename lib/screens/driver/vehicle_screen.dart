@@ -3,11 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../models/vehicle_category.dart';
+import '../../models/supabase/platform_settings.dart';
 import '../../services/driver_service.dart';
+import '../../services/platform_settings_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../utils/plate_formatter.dart';
-import '../../validators/database_constraints_validator.dart';
 
 class VehicleScreen extends StatefulWidget {
   const VehicleScreen({super.key});
@@ -25,13 +26,17 @@ class _VehicleScreenState extends State<VehicleScreen> {
   
   int? _selectedYear;
   VehicleCategory? _selectedCategory;
+  String? _selectedCategoryId; // ID da categoria selecionada do platform_settings
+  List<PlatformSettings> _availableCategories = [];
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isLoadingCategories = false;
 
   @override
   void initState() {
     super.initState();
     _loadVehicleData();
+    _loadAvailableCategories();
   }
 
   @override
@@ -69,6 +74,7 @@ class _VehicleScreenState extends State<VehicleScreen> {
           _selectedYear = response['vehicle_year'];
           if (response['vehicle_category'] != null) {
             _selectedCategory = VehicleCategory.fromId(response['vehicle_category']);
+            _selectedCategoryId = response['vehicle_category'];
           }
           _isLoading = false;
         });
@@ -79,6 +85,65 @@ class _VehicleScreenState extends State<VehicleScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         _showErrorSnackBar('Erro ao carregar dados do veículo');
+      }
+    }
+  }
+
+  Future<void> _loadAvailableCategories() async {
+    if (!mounted) return;
+    
+    final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    print('📦 [CATEGORIES-$sessionId] Iniciando carregamento de categorias disponíveis');
+    
+    setState(() => _isLoadingCategories = true);
+    
+    try {
+      // Log do usuário atual
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      print('👤 [CATEGORIES-$sessionId] Usuário: ${currentUser?.id}');
+      print('📧 [CATEGORIES-$sessionId] Email: ${currentUser?.email}');
+      
+      // Verificar se a tabela platform_settings existe e tem dados
+      print('🔍 [CATEGORIES-$sessionId] Verificando tabela platform_settings...');
+      final directQuery = await Supabase.instance.client
+          .from('platform_settings')
+          .select('id, category, base_price_per_km, min_fare')
+          .limit(10);
+      
+      print('📊 [CATEGORIES-$sessionId] Registros encontrados diretamente: ${directQuery.length}');
+      for (int i = 0; i < directQuery.length; i++) {
+        final record = directQuery[i];
+        print('   📋 [$i] Category: ${record['category']}, Min Fare: ${record['min_fare']}');
+      }
+      
+      // Usar o PlatformSettingsService
+      print('🔧 [CATEGORIES-$sessionId] Usando PlatformSettingsService...');
+      final platformSettingsService = PlatformSettingsService(Supabase.instance.client);
+      final categories = await platformSettingsService.getAllSettings();
+      
+      print('📊 [CATEGORIES-$sessionId] Categorias carregadas via service: ${categories.length}');
+      for (int i = 0; i < categories.length; i++) {
+        final category = categories[i];
+        print('   📋 [$i] ID: ${category.id}, Category: ${category.category}, MinFare: ${category.minFare}');
+      }
+      
+      if (mounted) {
+        setState(() {
+          _availableCategories = categories;
+          _isLoadingCategories = false;
+        });
+        print('✅ [CATEGORIES-$sessionId] Estado atualizado com ${categories.length} categorias');
+      } else {
+        print('⚠️ [CATEGORIES-$sessionId] Widget não montado - não atualizando estado');
+      }
+    } catch (e) {
+      print('❌ [CATEGORIES-$sessionId] Erro ao carregar categorias: $e');
+      print('❌ [CATEGORIES-$sessionId] Tipo do erro: ${e.runtimeType}');
+      print('❌ [CATEGORIES-$sessionId] Stack trace: ${StackTrace.current}');
+      
+      if (mounted) {
+        setState(() => _isLoadingCategories = false);
+        _showErrorSnackBar('Erro ao carregar categorias disponíveis: ${e.toString()}');
       }
     }
   }
@@ -107,14 +172,14 @@ class _VehicleScreenState extends State<VehicleScreen> {
 
       // Usar o DriverService para atualizar
       final driverService = DriverService(supabase);
-      await driverService.updateDriver(
+      await DriverService.updateDriver(
         driverId,
-        brand: _brandController.text.trim(),
-        model: _modelController.text.trim(),
-        year: _selectedYear,
-        color: _colorController.text.trim(),
-        category: _selectedCategory!.id,
-        plate: _plateController.text.trim(),
+        brand: _brandController.text,
+        model: _modelController.text,
+        year: _selectedYear ?? 0,
+        plate: _plateController.text,
+        color: _colorController.text,
+        category: _selectedCategoryId ?? '',
       );
 
       if (mounted) {
@@ -236,11 +301,9 @@ class _VehicleScreenState extends State<VehicleScreen> {
               return 'Marca é obrigatória';
             }
             
-            // Usar DatabaseConstraintsValidator para validação adicional
-            try {
-              DatabaseConstraintsValidator.validateDriver({'vehicle_brand': value.trim()});
-            } catch (e) {
-              return e.toString().replaceAll('ValidationException: ', '');
+            final valueStr = value.trim();
+            if (valueStr.length > 50) {
+              return 'Marca não pode ter mais de 50 caracteres';
             }
             
             return null;
@@ -257,11 +320,9 @@ class _VehicleScreenState extends State<VehicleScreen> {
               return 'Modelo é obrigatório';
             }
             
-            // Usar DatabaseConstraintsValidator para validação adicional
-            try {
-              DatabaseConstraintsValidator.validateDriver({'vehicle_model': value.trim()});
-            } catch (e) {
-              return e.toString().replaceAll('ValidationException: ', '');
+            final valueStr = value.trim();
+            if (valueStr.length > 50) {
+              return 'Modelo não pode ter mais de 50 caracteres';
             }
             
             return null;
@@ -281,11 +342,9 @@ class _VehicleScreenState extends State<VehicleScreen> {
               return 'Cor é obrigatória';
             }
             
-            // Usar DatabaseConstraintsValidator para validação adicional
-            try {
-              DatabaseConstraintsValidator.validateDriver({'vehicle_color': value.trim()});
-            } catch (e) {
-              return e.toString().replaceAll('ValidationException: ', '');
+            final valueStr = value.trim();
+            if (valueStr.length > 30) {
+              return 'Cor não pode ter mais de 30 caracteres';
             }
             
             return null;
@@ -399,11 +458,9 @@ class _VehicleScreenState extends State<VehicleScreen> {
               return 'Ano é obrigatório';
             }
             
-            // Usar DatabaseConstraintsValidator para validação adicional
-            try {
-              DatabaseConstraintsValidator.validateDriver({'vehicle_year': value});
-            } catch (e) {
-              return e.toString().replaceAll('ValidationException: ', '');
+            final currentYear = DateTime.now().year;
+            if (value < 1990 || value > currentYear + 1) {
+              return 'Ano deve estar entre 1990 e ${currentYear + 1}';
             }
             
             return null;
@@ -440,32 +497,45 @@ class _VehicleScreenState extends State<VehicleScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Categoria',
-          style: AppTypography.labelLarge.copyWith(
-            color: cs.onSurface,
-          ),
+        Row(
+          children: [
+            Text(
+              'Categoria',
+              style: AppTypography.labelLarge.copyWith(
+                color: cs.onSurface,
+              ),
+            ),
+            if (_isLoadingCategories) ...[
+              const SizedBox(width: AppSpacing.sm),
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        DropdownButtonFormField<VehicleCategory>(
-          initialValue: _selectedCategory,
-          onChanged: (value) => setState(() => _selectedCategory = value),
+        DropdownButtonFormField<String>(
+          initialValue: _selectedCategoryId,
+          onChanged: (value) {
+            setState(() {
+              _selectedCategoryId = value;
+              // Manter compatibilidade com o código antigo
+              _selectedCategory = VehicleCategory.fromId(value);
+            });
+          },
           validator: (value) {
-            if (value == null) {
+            if (value == null || value.isEmpty) {
               return 'Categoria é obrigatória';
-            }
-            
-            // Usar DatabaseConstraintsValidator para validação adicional
-            try {
-              DatabaseConstraintsValidator.validateDriver({'vehicle_category': value.id});
-            } catch (e) {
-              return e.toString().replaceAll('ValidationException: ', '');
             }
             
             return null;
           },
           decoration: InputDecoration(
-            hintText: 'Selecione a categoria',
+            hintText: _availableCategories.isEmpty 
+                ? 'Carregando categorias...' 
+                : 'Selecione a categoria',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               borderSide: BorderSide(color: cs.outline),
@@ -479,12 +549,17 @@ class _VehicleScreenState extends State<VehicleScreen> {
               borderSide: BorderSide(color: cs.primary, width: 2),
             ),
             filled: true,
-            fillColor: cs.surfaceContainerHighest.withOpacity(0.3),
+            fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.3),
           ),
-          items: VehicleCategory.values.map((category) => DropdownMenuItem<VehicleCategory>(
-              value: category,
-              child: Text(category.displayName),
-            ),).toList(),
+          items: _availableCategories.map((platformSettings) {
+            return DropdownMenuItem<String>(
+              value: platformSettings.category,
+              child: Text(
+                platformSettings.category.toUpperCase(),
+                style: AppTypography.bodyMedium,
+              ),
+            );
+          }).toList(),
         ),
       ],
     );

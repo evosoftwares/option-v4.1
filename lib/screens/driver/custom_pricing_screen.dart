@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../services/driver_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
@@ -15,8 +14,6 @@ class CustomPricingScreen extends StatefulWidget {
 
 class _CustomPricingScreenState extends State<CustomPricingScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _pricePerKmController = TextEditingController();
-  final _pricePerMinuteController = TextEditingController();
   final _petFeeController = TextEditingController();
   final _groceryFeeController = TextEditingController();
   final _condoFeeController = TextEditingController();
@@ -24,7 +21,6 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
   
   bool _isLoading = true;
   bool _isSaving = false;
-  bool _useCustomPricing = false;
 
   @override
   void initState() {
@@ -34,8 +30,6 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
 
   @override
   void dispose() {
-    _pricePerKmController.dispose();
-    _pricePerMinuteController.dispose();
     _petFeeController.dispose();
     _groceryFeeController.dispose();
     _condoFeeController.dispose();
@@ -54,19 +48,12 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
 
       final response = await supabase
           .from('drivers')
-          .select('custom_price_per_km, custom_price_per_minute, pet_fee, grocery_fee, condo_fee, stop_fee')
+          .select('pet_fee, grocery_fee, condo_fee, stop_fee')
           .eq('user_id', userId)
           .maybeSingle();
 
       if (response != null && mounted) {
         setState(() {
-          final pricePerKm = response['custom_price_per_km'] as double?;
-          final pricePerMinute = response['custom_price_per_minute'] as double?;
-          
-          _useCustomPricing = pricePerKm != null || pricePerMinute != null;
-          
-          _pricePerKmController.text = pricePerKm?.toStringAsFixed(2) ?? '1.50';
-          _pricePerMinuteController.text = pricePerMinute?.toStringAsFixed(2) ?? '0.20';
           _petFeeController.text = (response['pet_fee'] as double?)?.toStringAsFixed(2) ?? '5.00';
           _groceryFeeController.text = (response['grocery_fee'] as double?)?.toStringAsFixed(2) ?? '3.00';
           _condoFeeController.text = (response['condo_fee'] as double?)?.toStringAsFixed(2) ?? '2.00';
@@ -105,18 +92,6 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
           .single();
 
       final driverId = driverResponse['id'] as String;
-      final driverService = DriverService(supabase);
-
-      // Preparar dados para atualização
-      final updateData = <String, dynamic>{};
-      
-      if (_useCustomPricing) {
-        updateData['custom_price_per_km'] = double.parse(_pricePerKmController.text);
-        updateData['custom_price_per_minute'] = double.parse(_pricePerMinuteController.text);
-      } else {
-        updateData['custom_price_per_km'] = null;
-        updateData['custom_price_per_minute'] = null;
-      }
 
       // Taxas adicionais são sempre salvas
       final petFee = double.tryParse(_petFeeController.text);
@@ -127,7 +102,6 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
       await supabase
           .from('drivers')
           .update({
-            ...updateData,
             'pet_fee': petFee,
             'grocery_fee': groceryFee,
             'condo_fee': condoFee,
@@ -138,7 +112,7 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Preços personalizados salvos com sucesso!'),
+              content: const Text('Taxas adicionais salvas com sucesso!'),
               backgroundColor: Theme.of(context).colorScheme.primary,
             ),
           );
@@ -146,7 +120,7 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
       }
     } catch (e) {
       if (mounted) {
-        _showErrorSnackBar('Erro ao salvar preços personalizados');
+        _showErrorSnackBar('Erro ao salvar taxas adicionais');
       }
     } finally {
       if (mounted) {
@@ -172,7 +146,7 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        title: const Text('Preços Personalizados'),
+        title: const Text('Taxas Adicionais'),
         backgroundColor: cs.surface,
         foregroundColor: cs.onSurface,
         actions: [
@@ -227,7 +201,7 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
-              'Configure seus preços personalizados para ter mais controle sobre seus ganhos. Os preços padrão da plataforma serão usados quando não definidos.',
+              'Configure suas taxas adicionais para serviços especiais. Os preços base são definidos pela plataforma.',
               style: AppTypography.bodyMedium.copyWith(
                 color: cs.onSurfaceVariant,
               ),
@@ -241,56 +215,41 @@ class _CustomPricingScreenState extends State<CustomPricingScreen> {
   Widget _buildBasePricingSection() {
     final cs = Theme.of(context).colorScheme;
     
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'Preços Base',
-                style: AppTypography.headlineSmall,
+    return Container(
+      padding: AppSpacing.paddingLg,
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+        border: Border.all(color: cs.outline.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.info_outlined,
+                color: cs.primary,
+                size: 20,
               ),
-            ),
-            Switch(
-              value: _useCustomPricing,
-              onChanged: (value) {
-                setState(() {
-                  _useCustomPricing = value;
-                });
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          _useCustomPricing 
-              ? 'Seus preços personalizados serão aplicados'
-              : 'Preços padrão da plataforma serão usados',
-          style: AppTypography.bodyMedium.copyWith(
-            color: cs.onSurfaceVariant,
+              const SizedBox(width: AppSpacing.sm),
+              const Expanded(
+                child: Text(
+                  'Preços Base',
+                  style: AppTypography.headlineSmall,
+                ),
+              ),
+            ],
           ),
-        ),
-        
-        if (_useCustomPricing) ...[
-          const SizedBox(height: AppSpacing.lg),
-          _buildPriceField(
-            controller: _pricePerKmController,
-            label: 'Preço por Km',
-            hint: 'Ex: 1.50',
-            prefix: r'R$ ',
-            suffix: ' / km',
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _buildPriceField(
-            controller: _pricePerMinuteController,
-            label: 'Preço por Minuto',
-            hint: 'Ex: 0.20',
-            prefix: r'R$ ',
-            suffix: ' / min',
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Os preços base são definidos pela plataforma através das categorias do sistema e não podem ser alterados pelo motorista. Eles garantem consistência e transparência nas tarifas.',
+            style: AppTypography.bodyMedium.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
           ),
         ],
-      ],
+      ),
     );
   }
 

@@ -299,32 +299,56 @@ class FirebaseFileUploadService {
     bool compress = true,
   }) async {
     try {
-      print('🔄 FirebaseFileUploadService.uploadImage iniciado');
+      print('🔄 FirebaseFileUploadService._uploadImageInternal iniciado');
       print('  - file: ${file.path}');
       print('  - folder: $folder');
       print('  - path: $path');
       print('  - compress: $compress');
+      print('  - file existe: ${file.existsSync()}');
+      
+      // Validar se o Firebase foi inicializado
+      try {
+        print('🔍 Verificando inicialização do Firebase...');
+        print('🔍 _storage: ${_storage.runtimeType}');
+        print('🔍 _storage.app: ${_storage.app.name}');
+      } catch (e) {
+        print('❌ Firebase não inicializado ou erro ao acessar: $e');
+        throw FirebaseFileUploadException('Firebase Storage não inicializado. Erro: $e');
+      }
       
       // Validar se o arquivo existe
       if (!await file.exists()) {
+        print('❌ Arquivo não encontrado: ${file.path}');
         throw FirebaseFileUploadException('Arquivo não encontrado: ${file.path}');
       }
+      
+      print('✅ Arquivo existe: ${file.path}');
 
       // Validar tamanho do arquivo
       final fileSize = await file.length();
+      print('📊 Tamanho do arquivo: ${fileSize} bytes (${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB)');
+      print('📊 Limite máximo: ${maxFileSizeBytes} bytes (${(maxFileSizeBytes / 1024 / 1024).toStringAsFixed(2)}MB)');
+      
       if (fileSize > maxFileSizeBytes) {
+        print('❌ Arquivo muito grande: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
         throw FirebaseFileUploadException(
           'Arquivo muito grande: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB. Máximo permitido: ${(maxFileSizeBytes / 1024 / 1024).toStringAsFixed(2)}MB',
         );
       }
+      print('✅ Tamanho do arquivo válido');
 
       // Validar tipo MIME
       final mimeType = _getMimeType(file.path);
+      print('🎨 Tipo MIME detectado: $mimeType');
+      print('🎨 Tipos permitidos: ${allowedMimeTypes.join(', ')}');
+      
       if (!allowedMimeTypes.contains(mimeType)) {
+        print('❌ Tipo de arquivo não permitido: $mimeType');
         throw FirebaseFileUploadException(
           'Tipo de arquivo não permitido: $mimeType. Tipos permitidos: ${allowedMimeTypes.join(', ')}',
         );
       }
+      print('✅ Tipo MIME válido');
 
       Uint8List fileBytes;
       

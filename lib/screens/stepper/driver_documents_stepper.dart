@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/supabase/driver_document.dart';
 import '../../services/driver_document_service.dart';
 import '../../widgets/stepper_progress_indicator.dart';
-import 'driver_cnh_step.dart';
-import 'driver_crlv_step.dart';
+import 'driver_vehicle_photo_step.dart';
 
 /// Stepper para documentos obrigatórios do motorista
 class DriverDocumentsStepper extends StatefulWidget {
@@ -26,12 +25,23 @@ class _DriverDocumentsStepperState extends State<DriverDocumentsStepper> {
   bool _isLoading = false;
   String? _error;
 
+  // Atualizar as labels para incluir apenas documentos do veículo
   final List<String> _stepLabels = [
-    'CNH Frente',
-    'CNH Verso', 
-    'CRLV',
+    'Foto do Veículo - Frente',
+    'Foto do Veículo - Trás',
+    'Foto do Veículo - Esquerda',
+    'Foto do Veículo - Direita',
+    'Interior do Veículo',
   ];
 
+  // Tipos de documentos do veículo correspondentes
+  final List<DocumentType> _documentTypes = [
+    DocumentType.vehicleFront,
+    DocumentType.vehicleBack,
+    DocumentType.vehicleLeft,
+    DocumentType.vehicleRight,
+    DocumentType.vehicleInterior,
+  ];
 
   @override
   void dispose() {
@@ -178,26 +188,40 @@ class _DriverDocumentsStepperState extends State<DriverDocumentsStepper> {
               ),
             ),
             
-            // Conteúdo do stepper
+            // Conteúdo do stepper - atualizado para mostrar apenas documentos do veículo
             Expanded(
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  DriverCNHStep(
+                  // Steps de fotos do veículo
+                  DriverVehiclePhotoStep(
                     driverId: widget.driverId,
-                    documentType: DocumentType.cnhFront,
+                    documentType: _documentTypes[0],
                     onNext: _nextStep,
                     isLoading: _isLoading,
                   ),
-                  DriverCNHStep(
+                  DriverVehiclePhotoStep(
                     driverId: widget.driverId,
-                    documentType: DocumentType.cnhBack,
+                    documentType: _documentTypes[1],
                     onNext: _nextStep,
                     isLoading: _isLoading,
                   ),
-                  DriverCRLVStep(
+                  DriverVehiclePhotoStep(
                     driverId: widget.driverId,
+                    documentType: _documentTypes[2],
+                    onNext: _nextStep,
+                    isLoading: _isLoading,
+                  ),
+                  DriverVehiclePhotoStep(
+                    driverId: widget.driverId,
+                    documentType: _documentTypes[3],
+                    onNext: _nextStep,
+                    isLoading: _isLoading,
+                  ),
+                  DriverVehiclePhotoStep(
+                    driverId: widget.driverId,
+                    documentType: _documentTypes[4],
                     onNext: _completeDocumentation,
                     isLoading: _isLoading,
                   ),

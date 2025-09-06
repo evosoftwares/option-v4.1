@@ -38,140 +38,256 @@ class OneSignalService {
   
   /// Inicializa o serviço OneSignal
   Future<void> initialize() async {
-    if (_isInitialized) return;
+    if (_isInitialized) {
+      _logger.w('🔵 [ONESIGNAL] Tentativa de inicialização dupla detectada - ignorando');
+      return;
+    }
+    
+    _logger.i('🚀 [ONESIGNAL] Iniciando processo de inicialização...');
+    _logger.i('🔍 [ONESIGNAL] App ID: $_appId');
+    _logger.i('🔍 [ONESIGNAL] Platform: ${kIsWeb ? 'Web' : Platform.operatingSystem}');
     
     try {
       // Ignorar plataformas não suportadas (somente Android/iOS e Web são suportados)
       if (!kIsWeb && !(Platform.isAndroid || Platform.isIOS)) {
-        _logger.w('Plataforma não suportada para OneSignal. Ignorando inicialização.');
+        _logger.w('❌ [ONESIGNAL] Plataforma ${Platform.operatingSystem} não suportada para OneSignal');
+        _logger.w('⚠️ [ONESIGNAL] Plataformas suportadas: Android, iOS, Web');
         _isInitialized = true;
         return;
       }
 
+      _logger.i('✅ [ONESIGNAL] Plataforma suportada confirmada');
+
       // Verificar se é plataforma web
       if (kIsWeb) {
-        _logger.i('Inicializando OneSignal para plataforma web');
-        // Para web, o OneSignal é inicializado via JavaScript no index.html
-        // Apenas configurar handlers básicos
+        _logger.i('🌐 [ONESIGNAL] Detectada plataforma WEB - configurando handlers web');
         await _setupWebNotificationHandlers();
       } else {
+        _logger.i('📱 [ONESIGNAL] Detectada plataforma MOBILE - configuração completa');
+        
         // Habilitar debug logging ANTES da inicialização (apenas mobile)
+        _logger.i('🔧 [ONESIGNAL] Habilitando debug logging verbose...');
         OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+        _logger.i('✅ [ONESIGNAL] Debug logging configurado com sucesso');
         
         // Inicializar OneSignal
+        _logger.i('🔧 [ONESIGNAL] Inicializando OneSignal SDK...');
         OneSignal.initialize(_appId);
+        _logger.i('✅ [ONESIGNAL] OneSignal SDK inicializado com App ID: $_appId');
         
         // Solicitar permissões
+        _logger.i('🔧 [ONESIGNAL] Solicitando permissões de notificação...');
         await _requestPermissions();
+        _logger.i('✅ [ONESIGNAL] Permissões processadas');
         
         // Configurar handlers de notificação
+        _logger.i('🔧 [ONESIGNAL] Configurando handlers de notificação...');
         await _setupNotificationHandlers();
+        _logger.i('✅ [ONESIGNAL] Handlers de notificação configurados');
         
         // Registrar token/player ID
+        _logger.i('🔧 [ONESIGNAL] Registrando dados do player...');
         await _registerPlayerData();
+        _logger.i('✅ [ONESIGNAL] Registro de dados do player iniciado');
         
         // Configurar listener para mudanças de ID
+        _logger.i('🔧 [ONESIGNAL] Configurando listeners de mudança de Player ID...');
         _setupPlayerIdListener();
+        _logger.i('✅ [ONESIGNAL] Listeners de Player ID configurados');
       }
       
       _isInitialized = true;
-      _logger.i('OneSignalService inicializado com sucesso');
+      _logger.i('🎉 [ONESIGNAL] OneSignalService inicializado com SUCESSO!');
+      _logger.i('📊 [ONESIGNAL] Status: Inicializado=${_isInitialized}, Platform=${kIsWeb ? 'Web' : Platform.operatingSystem}');
       
     } catch (e, stackTrace) {
-      _logger.e('Erro ao inicializar OneSignalService', error: e, stackTrace: stackTrace);
+      _logger.e('💥 [ONESIGNAL] ERRO CRÍTICO ao inicializar OneSignalService', error: e, stackTrace: stackTrace);
+      _logger.e('🔍 [ONESIGNAL] Error details: $e');
+      _logger.e('📍 [ONESIGNAL] Stack trace: $stackTrace');
       rethrow;
     }
   }
   
   /// Solicita permissões necessárias para notificações
   Future<void> _requestPermissions() async {
+    _logger.i('🔐 [ONESIGNAL] Iniciando processo de solicitação de permissões');
+    
     try {
       // Verificar se não é web antes de solicitar permissões
       if (!kIsWeb) {
+        _logger.i('🔐 [ONESIGNAL] Solicitando permissões via OneSignal SDK...');
+        
         // OneSignal vai solicitar permissões automaticamente, mas podemos forçar
-        await OneSignal.Notifications.requestPermission(true);
+        final granted = await OneSignal.Notifications.requestPermission(true);
+        _logger.i('🔐 [ONESIGNAL] Resultado permissão OneSignal: $granted');
         
         // Permissões adicionais para Android
         if (Platform.isAndroid) {
-          await Permission.notification.request();
+          _logger.i('🔐 [ONESIGNAL] Android detectado - solicitando permissões adicionais...');
+          final androidPermission = await Permission.notification.request();
+          _logger.i('🔐 [ONESIGNAL] Permissão Android status: ${androidPermission.name}');
+          
+          // Verificar permissões específicas do Android
+          final notificationStatus = await Permission.notification.status;
+          _logger.i('🔐 [ONESIGNAL] Status final permissão notificação: ${notificationStatus.name}');
+          
+          if (notificationStatus.isPermanentlyDenied) {
+            _logger.w('⚠️ [ONESIGNAL] Permissões permanentemente negadas pelo usuário');
+          } else if (notificationStatus.isDenied) {
+            _logger.w('⚠️ [ONESIGNAL] Permissões negadas pelo usuário');
+          } else if (notificationStatus.isGranted) {
+            _logger.i('✅ [ONESIGNAL] Permissões Android concedidas com sucesso');
+          }
+        } else if (Platform.isIOS) {
+          _logger.i('🍎 [ONESIGNAL] iOS detectado - permissões gerenciadas pelo sistema');
         }
+        
+        // Verificar estado final das permissões
+        _logger.i('🔍 [ONESIGNAL] Verificando estado final das permissões...');
+        
+        // Log do estado atual das permissões do OneSignal
+        _logger.i('📊 [ONESIGNAL] Permission granted: $granted');
+        
+      } else {
+        _logger.i('🌐 [ONESIGNAL] Web platform - permissões gerenciadas pelo browser');
       }
       
-      _logger.i('Permissões de notificação solicitadas');
+      _logger.i('✅ [ONESIGNAL] Processo de permissões concluído');
       
-    } catch (e) {
-      _logger.e('Erro ao solicitar permissões', error: e);
+    } catch (e, stackTrace) {
+      _logger.e('💥 [ONESIGNAL] ERRO ao solicitar permissões', error: e, stackTrace: stackTrace);
+      _logger.e('🔍 [ONESIGNAL] Permissões error details: $e');
     }
   }
   
   /// Configura handlers de notificação específicos para web
   Future<void> _setupWebNotificationHandlers() async {
+    _logger.i('🌐 [ONESIGNAL] Iniciando configuração de handlers WEB');
+    
     try {
-      _logger.i('Configurando handlers de notificação para web');
+      _logger.i('🌐 [ONESIGNAL] Configurando handlers de notificação para plataforma web');
+      _logger.i('🌐 [ONESIGNAL] Web SDK deve estar carregado via index.html');
+      
       // Para web, as notificações são gerenciadas pelo OneSignal Web SDK
       // que foi configurado no index.html
       
       // Aguardar dados do usuário OneSignal
-      _logger.i('💡 Aguardando dados do usuário OneSignal...');
+      _logger.i('💡 [ONESIGNAL] Aguardando dados do usuário OneSignal Web SDK...');
+      _logger.i('📝 [ONESIGNAL] Web handlers configurados via JavaScript (index.html)');
       
-    } catch (e) {
-      _logger.e('Erro ao configurar handlers web', error: e);
+      _logger.i('✅ [ONESIGNAL] Handlers web configurados com sucesso');
+      
+    } catch (e, stackTrace) {
+      _logger.e('💥 [ONESIGNAL] ERRO ao configurar handlers web', error: e, stackTrace: stackTrace);
     }
   }
   
   /// Configura os handlers para diferentes tipos de notificações
   Future<void> _setupNotificationHandlers() async {
+    _logger.i('🔔 [ONESIGNAL] Configurando handlers de notificações mobile');
+    
     // Handler para quando notificação é recebida (em foreground)
+    _logger.i('🔔 [ONESIGNAL] Configurando ForegroundWillDisplayListener...');
     OneSignal.Notifications.addForegroundWillDisplayListener((event) {
-      _logger.i('Notificação recebida em foreground: ${event.notification.notificationId}');
+      final notificationId = event.notification.notificationId;
+      final title = event.notification.title;
+      final body = event.notification.body;
+      
+      _logger.i('📬 [ONESIGNAL] NOTIFICAÇÃO RECEBIDA EM FOREGROUND');
+      _logger.i('📬 [ONESIGNAL] ID: $notificationId');
+      _logger.i('📬 [ONESIGNAL] Título: $title');
+      _logger.i('📬 [ONESIGNAL] Body: $body');
+      _logger.i('📬 [ONESIGNAL] Additional Data: ${event.notification.additionalData}');
+      _logger.i('📬 [ONESIGNAL] Timestamp: ${DateTime.now().toIso8601String()}');
+      
       _handleForegroundNotification(event);
     });
+    _logger.i('✅ [ONESIGNAL] ForegroundWillDisplayListener configurado');
     
     // Handler para quando notificação é clicada
+    _logger.i('🔔 [ONESIGNAL] Configurando ClickListener...');
     OneSignal.Notifications.addClickListener((event) {
-      _logger.i('Notificação clicada: ${event.notification.notificationId}');
+      final notificationId = event.notification.notificationId;
+      final title = event.notification.title;
+      final actionId = event.result.actionId;
+      
+      _logger.i('👆 [ONESIGNAL] NOTIFICAÇÃO CLICADA');
+      _logger.i('👆 [ONESIGNAL] ID: $notificationId');
+      _logger.i('👆 [ONESIGNAL] Título: $title');
+      _logger.i('👆 [ONESIGNAL] Action ID: $actionId');
+      _logger.i('👆 [ONESIGNAL] Additional Data: ${event.notification.additionalData}');
+      _logger.i('👆 [ONESIGNAL] Timestamp: ${DateTime.now().toIso8601String()}');
+      
       _handleNotificationClick(event);
     });
+    _logger.i('✅ [ONESIGNAL] ClickListener configurado');
     
     // Handler para mudanças na permissão
+    _logger.i('🔔 [ONESIGNAL] Configurando PermissionObserver...');
     OneSignal.Notifications.addPermissionObserver((permission) {
-      _logger.i('Permissão de notificação alterada: $permission');
+      _logger.i('🔐 [ONESIGNAL] PERMISSÃO DE NOTIFICAÇÃO ALTERADA');
+      _logger.i('🔐 [ONESIGNAL] Nova permissão: $permission');
+      _logger.i('🔐 [ONESIGNAL] Timestamp: ${DateTime.now().toIso8601String()}');
     });
+    _logger.i('✅ [ONESIGNAL] PermissionObserver configurado');
+    
+    _logger.i('🎉 [ONESIGNAL] Todos os handlers de notificação configurados com sucesso!');
   }
   
   /// Registra o Player ID e Push Token no Supabase
   Future<void> _registerPlayerData() async {
+    _logger.i('🆔 [ONESIGNAL] Iniciando processo de registro de Player Data');
+    
     try {
       // Verificar se não é web antes de acessar dados do player
       if (!kIsWeb) {
+        _logger.i('📱 [ONESIGNAL] Plataforma mobile detectada - configurando observers');
+        
         // Usar observer para obter dados quando disponíveis
         // Os valores podem ser null se chamados antes da inicialização
-        _logger.i('Aguardando dados do usuário OneSignal...');
+        _logger.i('⏳ [ONESIGNAL] Aguardando dados do usuário OneSignal via observers...');
+        _logger.i('📝 [ONESIGNAL] Player ID e Push Token serão obtidos via callbacks');
         
         // Configurar observers para capturar dados quando disponíveis
+        _logger.i('🔧 [ONESIGNAL] Configurando PlayerIdListener...');
         _setupPlayerIdListener();
+        
+        _logger.i('🔧 [ONESIGNAL] Configurando PushSubscriptionListener...');
         _setupPushSubscriptionListener();
+        
+        _logger.i('✅ [ONESIGNAL] Observers de Player Data configurados');
       } else {
-        _logger.i('Registro de dados do player ignorado na web - gerenciado pelo Web SDK');
+        _logger.i('🌐 [ONESIGNAL] Web platform - registro de dados gerenciado pelo Web SDK');
+        _logger.i('📝 [ONESIGNAL] Player data será capturado via JavaScript SDK');
       }
       
-    } catch (e) {
-      _logger.e('Erro ao registrar dados do player', error: e);
+      _logger.i('🎉 [ONESIGNAL] Processo de registro de Player Data iniciado com sucesso');
+      
+    } catch (e, stackTrace) {
+      _logger.e('💥 [ONESIGNAL] ERRO ao registrar dados do player', error: e, stackTrace: stackTrace);
+      _logger.e('🔍 [ONESIGNAL] Player data error details: $e');
     }
   }
   
   /// Salva o Player ID no Supabase
   Future<void> _savePlayerIdToSupabase(String playerId) async {
+    _logger.i('💾 [ONESIGNAL] Iniciando salvamento de Player ID no Supabase');
+    _logger.i('💾 [ONESIGNAL] Player ID: ${playerId.substring(0, 12)}...');
+    
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
-        _logger.w('Usuário não autenticado, Player ID não salvo no Supabase');
+        _logger.w('⚠️ [ONESIGNAL] Usuário não autenticado - Player ID não pode ser salvo');
+        _logger.w('💾 [ONESIGNAL] User auth status: null');
         return;
       }
       
+      _logger.i('💾 [ONESIGNAL] Usuário autenticado: ${user.id.substring(0, 8)}...');
       final platform = Platform.isIOS ? 'ios' : Platform.isAndroid ? 'android' : 'web';
+      _logger.i('💾 [ONESIGNAL] Platform detectada: $platform');
       
       // Verificar se é motorista ou passageiro
+      _logger.i('💾 [ONESIGNAL] Verificando tipo de usuário (motorista/passageiro)...');
       final driverResponse = await Supabase.instance.client
           .from('drivers')
           .select('id')
@@ -180,6 +296,9 @@ class OneSignalService {
       
       if (driverResponse != null) {
         // É um motorista
+        _logger.i('🚗 [ONESIGNAL] Usuário identificado como MOTORISTA');
+        _logger.i('💾 [ONESIGNAL] Salvando Player ID na tabela drivers...');
+        
         await Supabase.instance.client
             .from('drivers')
             .update({
@@ -189,8 +308,13 @@ class OneSignalService {
               'token_active': true,
             })
             .eq('user_id', user.id);
+            
+        _logger.i('✅ [ONESIGNAL] Player ID salvo na tabela drivers com sucesso');
       } else {
         // É um passageiro
+        _logger.i('👤 [ONESIGNAL] Usuário identificado como PASSAGEIRO');
+        _logger.i('💾 [ONESIGNAL] Salvando Player ID na tabela app_users...');
+        
         await Supabase.instance.client
             .from('app_users')
             .update({
@@ -200,25 +324,37 @@ class OneSignalService {
               'last_active_at': DateTime.now().toIso8601String(),
             })
             .eq('user_id', user.id);
+            
+        _logger.i('✅ [ONESIGNAL] Player ID salvo na tabela app_users com sucesso');
       }
       
-      _logger.i('Player ID salvo no Supabase com sucesso');
+      _logger.i('🎉 [ONESIGNAL] Player ID salvo no Supabase com SUCESSO TOTAL!');
+      _logger.i('📊 [ONESIGNAL] Dados salvos: Player ID, Platform, Timestamp, Status ativo');
       
-    } catch (e) {
-      _logger.e('Erro ao salvar Player ID no Supabase', error: e);
+    } catch (e, stackTrace) {
+      _logger.e('💥 [ONESIGNAL] ERRO CRÍTICO ao salvar Player ID no Supabase', error: e, stackTrace: stackTrace);
+      _logger.e('🔍 [ONESIGNAL] Player ID: ${playerId.substring(0, 12)}...');
+      _logger.e('🔍 [ONESIGNAL] Error details: $e');
     }
   }
   
   /// Salva o Push Token no Supabase
   Future<void> _savePushTokenToSupabase(String pushToken) async {
+    _logger.i('🔑 [ONESIGNAL] Iniciando salvamento de Push Token no Supabase');
+    _logger.i('🔑 [ONESIGNAL] Push Token: ${pushToken.substring(0, 20)}...');
+    
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
-        _logger.w('Usuário não autenticado, Push Token não salvo no Supabase');
+        _logger.w('⚠️ [ONESIGNAL] Usuário não autenticado - Push Token não pode ser salvo');
+        _logger.w('🔑 [ONESIGNAL] User auth status: null');
         return;
       }
       
+      _logger.i('🔑 [ONESIGNAL] Usuário autenticado: ${user.id.substring(0, 8)}...');
+      
       // Verificar se é motorista ou passageiro
+      _logger.i('🔑 [ONESIGNAL] Verificando tipo de usuário para Push Token...');
       final driverResponse = await Supabase.instance.client
           .from('drivers')
           .select('id')
@@ -227,6 +363,9 @@ class OneSignalService {
       
       if (driverResponse != null) {
         // É um motorista
+        _logger.i('🚗 [ONESIGNAL] Usuário identificado como MOTORISTA - salvando Push Token');
+        _logger.i('🔑 [ONESIGNAL] Salvando Push Token na tabela drivers...');
+        
         await Supabase.instance.client
             .from('drivers')
             .update({
@@ -235,8 +374,13 @@ class OneSignalService {
               'token_active': true,
             })
             .eq('user_id', user.id);
+            
+        _logger.i('✅ [ONESIGNAL] Push Token salvo na tabela drivers com sucesso');
       } else {
         // É um passageiro
+        _logger.i('👤 [ONESIGNAL] Usuário identificado como PASSAGEIRO - salvando Push Token');
+        _logger.i('🔑 [ONESIGNAL] Salvando Push Token na tabela app_users...');
+        
         await Supabase.instance.client
             .from('app_users')
             .update({
@@ -246,77 +390,161 @@ class OneSignalService {
               'last_active_at': DateTime.now().toIso8601String(),
             })
             .eq('user_id', user.id);
+            
+        _logger.i('✅ [ONESIGNAL] Push Token salvo na tabela app_users com sucesso');
       }
       
-      _logger.i('Push Token salvo no Supabase com sucesso');
+      _logger.i('🎉 [ONESIGNAL] Push Token salvo no Supabase com SUCESSO TOTAL!');
+      _logger.i('📊 [ONESIGNAL] Dados salvos: Push Token, Timestamp, Status ativo');
       
-    } catch (e) {
-      _logger.e('Erro ao salvar Push Token no Supabase', error: e);
+    } catch (e, stackTrace) {
+      _logger.e('💥 [ONESIGNAL] ERRO CRÍTICO ao salvar Push Token no Supabase', error: e, stackTrace: stackTrace);
+      _logger.e('🔍 [ONESIGNAL] Push Token: ${pushToken.substring(0, 20)}...');
+      _logger.e('🔍 [ONESIGNAL] Error details: $e');
     }
   }
   
   /// Salva o Player ID localmente
   Future<void> _savePlayerIdLocally(String playerId) async {
+    _logger.i('💽 [ONESIGNAL] Salvando Player ID localmente (SharedPreferences)');
+    
     try {
       final prefs = await SharedPreferences.getInstance();
+      final timestamp = DateTime.now().toIso8601String();
+      
+      _logger.i('💽 [ONESIGNAL] Salvando Player ID: ${playerId.substring(0, 12)}...');
       await prefs.setString('onesignal_player_id', playerId);
-      await prefs.setString('onesignal_player_id_timestamp', DateTime.now().toIso8601String());
-    } catch (e) {
-      _logger.e('Erro ao salvar Player ID localmente', error: e);
+      
+      _logger.i('💽 [ONESIGNAL] Salvando timestamp: $timestamp');
+      await prefs.setString('onesignal_player_id_timestamp', timestamp);
+      
+      _logger.i('✅ [ONESIGNAL] Player ID salvo localmente com sucesso');
+    } catch (e, stackTrace) {
+      _logger.e('💥 [ONESIGNAL] ERRO ao salvar Player ID localmente', error: e, stackTrace: stackTrace);
     }
   }
   
   /// Salva o Push Token localmente
   Future<void> _savePushTokenLocally(String pushToken) async {
+    _logger.i('💽 [ONESIGNAL] Salvando Push Token localmente (SharedPreferences)');
+    
     try {
       final prefs = await SharedPreferences.getInstance();
+      final timestamp = DateTime.now().toIso8601String();
+      
+      _logger.i('💽 [ONESIGNAL] Salvando Push Token: ${pushToken.substring(0, 20)}...');
       await prefs.setString('onesignal_push_token', pushToken);
-      await prefs.setString('onesignal_push_token_timestamp', DateTime.now().toIso8601String());
-    } catch (e) {
-      _logger.e('Erro ao salvar Push Token localmente', error: e);
+      
+      _logger.i('💽 [ONESIGNAL] Salvando timestamp: $timestamp');
+      await prefs.setString('onesignal_push_token_timestamp', timestamp);
+      
+      _logger.i('✅ [ONESIGNAL] Push Token salvo localmente com sucesso');
+    } catch (e, stackTrace) {
+      _logger.e('💥 [ONESIGNAL] ERRO ao salvar Push Token localmente', error: e, stackTrace: stackTrace);
     }
   }
   
   /// Configura listener para mudanças no Player ID
   void _setupPlayerIdListener() {
+    _logger.i('🔗 [ONESIGNAL] Configurando Player ID Listener');
+    
     // Verificar se não é web antes de configurar listeners
     if (!kIsWeb) {
+      _logger.i('🔗 [ONESIGNAL] Adicionando User Observer para mudanças de Player ID...');
+      
       OneSignal.User.addObserver((state) {
         final userState = state.jsonRepresentation();
-        _logger.i('OneSignal user state changed: $userState');
+        _logger.i('🔄 [ONESIGNAL] USER STATE CHANGED!');
+        _logger.i('🔄 [ONESIGNAL] Current user state: $userState');
+        _logger.i('🔄 [ONESIGNAL] Timestamp: ${DateTime.now().toIso8601String()}');
         
         // Tentar obter o OneSignal ID do estado atual
         try {
           final playerId = state.current.onesignalId;
+          _logger.i('🔍 [ONESIGNAL] Extraindo Player ID do estado...');
+          _logger.i('🔍 [ONESIGNAL] Player ID atual: ${playerId != null ? '${playerId.substring(0, 12)}...' : 'null'}');
+          _logger.i('🔍 [ONESIGNAL] Player ID anterior: ${_currentPlayerId != null ? '${_currentPlayerId!.substring(0, 12)}...' : 'null'}');
+          
           if (playerId != null && playerId != _currentPlayerId) {
-            _logger.i('Player ID atualizado: ${playerId.substring(0, 20)}...');
+            _logger.i('🆔 [ONESIGNAL] NOVO PLAYER ID DETECTADO!');
+            _logger.i('🆔 [ONESIGNAL] Player ID atualizado: ${playerId.substring(0, 12)}...');
+            _logger.i('🆔 [ONESIGNAL] Player ID completo length: ${playerId.length}');
+            
             _currentPlayerId = playerId;
+            
+            _logger.i('💾 [ONESIGNAL] Salvando novo Player ID no Supabase...');
             _savePlayerIdToSupabase(playerId);
+            
+            _logger.i('💽 [ONESIGNAL] Salvando novo Player ID localmente...');
             _savePlayerIdLocally(playerId);
+          } else if (playerId == null) {
+            _logger.w('⚠️ [ONESIGNAL] Player ID é null - aguardando inicialização');
+          } else {
+            _logger.i('🔄 [ONESIGNAL] Player ID não mudou - mantendo atual');
           }
-        } catch (e) {
-          _logger.w('Erro ao obter OneSignal ID do estado: $e');
+        } catch (e, stackTrace) {
+          _logger.e('💥 [ONESIGNAL] ERRO ao obter OneSignal ID do estado', error: e, stackTrace: stackTrace);
+          _logger.e('🔍 [ONESIGNAL] Estado completo: $userState');
         }
       });
+      
+      _logger.i('✅ [ONESIGNAL] Player ID Listener configurado com sucesso');
+    } else {
+      _logger.i('🌐 [ONESIGNAL] Web platform - Player ID listener não necessário');
     }
   }
   
   /// Configura listener para mudanças na subscription de push
   void _setupPushSubscriptionListener() {
+    _logger.i('🔔 [ONESIGNAL] Configurando Push Subscription Listener');
+    _logger.i('🔔 [ONESIGNAL] Adicionando observer para mudanças de subscription...');
+    
     OneSignal.User.pushSubscription.addObserver((state) {
-      _logger.i('Push subscription state changed');
-      _logger.i('Opted in: ${OneSignal.User.pushSubscription.optedIn}');
-      _logger.i('Subscription ID: ${OneSignal.User.pushSubscription.id}');
-      _logger.i('Push token: ${OneSignal.User.pushSubscription.token}');
+      _logger.i('🔔 [ONESIGNAL] PUSH SUBSCRIPTION STATE CHANGED!');
       
+      // Log detalhado do estado da subscription
+      final optedIn = OneSignal.User.pushSubscription.optedIn;
+      final subscriptionId = OneSignal.User.pushSubscription.id;
       final pushToken = OneSignal.User.pushSubscription.token;
+      
+      _logger.i('🔔 [ONESIGNAL] Opted in: $optedIn');
+      _logger.i('🔔 [ONESIGNAL] Subscription ID: $subscriptionId');
+      _logger.i('🔔 [ONESIGNAL] Push token: ${pushToken != null ? '${pushToken.substring(0, 20)}...' : 'null'}');
+      _logger.i('🔔 [ONESIGNAL] Timestamp: ${DateTime.now().toIso8601String()}');
+      
+      // Log do estado completo
+      _logger.i('📊 [ONESIGNAL] Push subscription state JSON: ${state.jsonRepresentation()}');
+      
       if (pushToken != null && pushToken != _currentPushToken) {
-        _logger.i('Push Token atualizado: ${pushToken.substring(0, 20)}...');
+        _logger.i('🔑 [ONESIGNAL] NOVO PUSH TOKEN DETECTADO!');
+        _logger.i('🔑 [ONESIGNAL] Push Token atualizado: ${pushToken.substring(0, 20)}...');
+        _logger.i('🔑 [ONESIGNAL] Push Token length: ${pushToken.length}');
+        _logger.i('🔑 [ONESIGNAL] Push Token anterior: ${_currentPushToken != null ? '${_currentPushToken!.substring(0, 20)}...' : 'null'}');
+        
         _currentPushToken = pushToken;
+        
+        _logger.i('💾 [ONESIGNAL] Salvando novo Push Token no Supabase...');
         _savePushTokenToSupabase(pushToken);
+        
+        _logger.i('💽 [ONESIGNAL] Salvando novo Push Token localmente...');
         _savePushTokenLocally(pushToken);
+      } else if (pushToken == null) {
+        _logger.w('⚠️ [ONESIGNAL] Push Token é null - aguardando subscription');
+      } else {
+        _logger.i('🔄 [ONESIGNAL] Push Token não mudou - mantendo atual');
+      }
+      
+      // Log adicional sobre permissões
+      if (optedIn == false) {
+        _logger.w('⚠️ [ONESIGNAL] Usuario não optou por notificações push');
+      } else if (optedIn == true) {
+        _logger.i('✅ [ONESIGNAL] Usuario optou por receber notificações push');
+      } else {
+        _logger.w('⚠️ [ONESIGNAL] Status de opt-in desconhecido: $optedIn');
       }
     });
+    
+    _logger.i('✅ [ONESIGNAL] Push Subscription Listener configurado com sucesso');
   }
   
   /// Verifica se o usuário atual é motorista
@@ -340,55 +568,98 @@ class OneSignalService {
 
   /// Manipula notificações recebidas em foreground
   Future<void> _handleForegroundNotification(OSNotificationWillDisplayEvent event) async {
+    _logger.i('🔍 [ONESIGNAL] Processando notificação recebida em foreground');
+    
     try {
       final notification = event.notification;
+      final notificationId = notification.notificationId;
+      final title = notification.title;
+      final body = notification.body;
+      final additionalData = notification.additionalData;
+      
+      _logger.i('🔍 [ONESIGNAL] Detalhes da notificação foreground:');
+      _logger.i('🔍 [ONESIGNAL] - ID: $notificationId');
+      _logger.i('🔍 [ONESIGNAL] - Título: $title');
+      _logger.i('🔍 [ONESIGNAL] - Body: $body');
+      _logger.i('🔍 [ONESIGNAL] - Additional Data: $additionalData');
       
       // Registrar no histórico
+      _logger.i('📝 [ONESIGNAL] Registrando notificação no histórico...');
       _logNotificationReceived(notification);
       
       // Verificar se é motorista
+      _logger.i('🔍 [ONESIGNAL] Verificando tipo de usuário (driver/passenger)...');
       final isDriver = await _isCurrentUserDriver();
+      _logger.i('🔍 [ONESIGNAL] Tipo de usuário: ${isDriver ? 'MOTORISTA' : 'PASSAGEIRO'}');
       
       // Exibir notificação local
+      _logger.i('🔔 [ONESIGNAL] Exibindo notificação local personalizada...');
       _localNotificationService.showRideOfferNotification(
-        title: notification.title ?? 'Nova notificação',
-        body: notification.body ?? '',
-        offerId: notification.additionalData?['offer_id'],
+        title: title ?? 'Nova notificação',
+        body: body ?? '',
+        offerId: additionalData?['offer_id'],
         isDriver: isDriver,
       );
+      _logger.i('✅ [ONESIGNAL] Notificação local exibida');
       
       // Permitir que a notificação seja exibida
+      _logger.i('📱 [ONESIGNAL] Permitindo exibição da notificação nativa...');
       event.notification.display();
+      _logger.i('✅ [ONESIGNAL] Notificação nativa permitida');
       
-    } catch (e) {
-      _logger.e('Erro ao processar notificação em foreground', error: e);
+      _logger.i('🎉 [ONESIGNAL] Processamento de notificação foreground CONCLUÍDO');
+      
+    } catch (e, stackTrace) {
+      _logger.e('💥 [ONESIGNAL] ERRO ao processar notificação em foreground', error: e, stackTrace: stackTrace);
+      _logger.e('🔍 [ONESIGNAL] Notification ID: ${event.notification.notificationId}');
     }
   }
   
   /// Manipula clique em notificação
   void _handleNotificationClick(OSNotificationClickEvent event) {
+    _logger.i('🖱️ [ONESIGNAL] Processando CLIQUE em notificação');
+    
     try {
       final notification = event.notification;
-      _logger.i('Notificação clicada: ${notification.additionalData}');
+      final notificationId = notification.notificationId;
+      final title = notification.title;
+      final additionalData = notification.additionalData ?? {};
+      final actionId = event.result.actionId;
+      
+      _logger.i('🖱️ [ONESIGNAL] Detalhes do clique:');
+      _logger.i('🖱️ [ONESIGNAL] - Notification ID: $notificationId');
+      _logger.i('🖱️ [ONESIGNAL] - Título: $title');
+      _logger.i('🖱️ [ONESIGNAL] - Action ID: $actionId');
+      _logger.i('🖱️ [ONESIGNAL] - Additional Data: $additionalData');
+      _logger.i('🖱️ [ONESIGNAL] - Timestamp: ${DateTime.now().toIso8601String()}');
       
       // Processar ação baseada no tipo de notificação
-      final notificationType = notification.additionalData?['type'];
+      final notificationType = additionalData['type'];
+      _logger.i('🔍 [ONESIGNAL] Tipo de notificação detectado: $notificationType');
+      
       switch (notificationType) {
         case 'trip_request':
-          _handleTripRequestNotification(notification.additionalData ?? {});
+          _logger.i('🚗 [ONESIGNAL] Processando notificação de TRIP REQUEST');
+          _handleTripRequestNotification(additionalData);
           break;
         case 'trip_update':
-          _handleTripUpdateNotification(notification.additionalData ?? {});
+          _logger.i('🔄 [ONESIGNAL] Processando notificação de TRIP UPDATE');
+          _handleTripUpdateNotification(additionalData);
           break;
         case 'chat_message':
-          _handleChatNotification(notification.additionalData ?? {});
+          _logger.i('💬 [ONESIGNAL] Processando notificação de CHAT MESSAGE');
+          _handleChatNotification(additionalData);
           break;
         default:
-          _logger.w('Tipo de notificação desconhecido: $notificationType');
+          _logger.w('⚠️ [ONESIGNAL] Tipo de notificação DESCONHECIDO: $notificationType');
+          _logger.w('⚠️ [ONESIGNAL] Dados completos: $additionalData');
       }
       
-    } catch (e) {
-      _logger.e('Erro ao processar clique em notificação', error: e);
+      _logger.i('✅ [ONESIGNAL] Processamento de clique em notificação CONCLUÍDO');
+      
+    } catch (e, stackTrace) {
+      _logger.e('💥 [ONESIGNAL] ERRO ao processar clique em notificação', error: e, stackTrace: stackTrace);
+      _logger.e('🔍 [ONESIGNAL] Event details: ${event.toString()}');
     }
   }
   
@@ -550,14 +821,25 @@ class OneSignalService {
     Map<String, dynamic>? data,
     String? imageUrl,
   }) async {
+    _logger.i('📤 [ONESIGNAL] ENVIANDO NOTIFICAÇÃO via REST API');
+    _logger.i('📤 [ONESIGNAL] Player ID: ${playerId.substring(0, 12)}...');
+    _logger.i('📤 [ONESIGNAL] Título: $title');
+    _logger.i('📤 [ONESIGNAL] Body: $body');
+    _logger.i('📤 [ONESIGNAL] Data: $data');
+    _logger.i('📤 [ONESIGNAL] Image URL: $imageUrl');
+    
     try {
       // Validar Player ID primeiro
+      _logger.i('🔍 [ONESIGNAL] Validando formato do Player ID...');
       if (!_isValidPlayerId(playerId)) {
-        _logger.w('Player ID inválido: $playerId');
+        _logger.e('❌ [ONESIGNAL] Player ID INVÁLIDO: $playerId');
+        _logger.e('❌ [ONESIGNAL] Formato esperado: UUID com hífens (36 chars)');
         return false;
       }
+      _logger.i('✅ [ONESIGNAL] Player ID validado com sucesso');
       
       // Preparar payload da notificação
+      _logger.i('🔧 [ONESIGNAL] Preparando payload da notificação...');
       final payload = {
         'app_id': _appId,
         'include_player_ids': [playerId],
@@ -565,23 +847,28 @@ class OneSignalService {
         'contents': {'en': body, 'pt': body},
         'data': data ?? {},
       };
+      _logger.i('🔧 [ONESIGNAL] Payload base criado');
       
       // Adicionar imagem se fornecida
       if (imageUrl != null && imageUrl.isNotEmpty) {
+        _logger.i('🖼️ [ONESIGNAL] Adicionando imagem ao payload: $imageUrl');
         payload['large_icon'] = imageUrl;
         payload['big_picture'] = imageUrl;
       }
       
       // Configurar som personalizado para motoristas (detectado pelos dados)
       if (data != null && data['type'] == 'trip_request') {
+        _logger.i('🔊 [ONESIGNAL] Configurando som personalizado para TRIP REQUEST');
         payload['android_sound'] = 'chegoucorridaoption';
         payload['ios_sound'] = 'chegoucorridaOption.mp3';
         payload['priority'] = 10; // Alta prioridade
         payload['android_channel_id'] = 'ride_offers';
+        _logger.i('🔊 [ONESIGNAL] Som personalizado configurado');
       }
       
-      _logger.i('Enviando notificação OneSignal para: ${playerId.substring(0, 8)}...');
-      _logger.d('Payload: ${jsonEncode(payload)}');
+      _logger.i('📡 [ONESIGNAL] Enviando para OneSignal REST API...');
+      _logger.i('📡 [ONESIGNAL] URL: $_baseUrl/notifications');
+      _logger.i('📡 [ONESIGNAL] Payload completo: ${jsonEncode(payload)}');
       
       // Fazer chamada HTTP para OneSignal REST API
       final response = await http.post(
@@ -593,15 +880,24 @@ class OneSignalService {
         body: jsonEncode(payload),
       );
       
+      _logger.i('📡 [ONESIGNAL] Resposta recebida da API');
+      _logger.i('📡 [ONESIGNAL] Status Code: ${response.statusCode}');
+      _logger.i('📡 [ONESIGNAL] Response Body: ${response.body}');
+      
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         final notificationId = responseData['id'];
+        final recipients = responseData['recipients'];
+        final errors = responseData['errors'];
         
-        _logger.i('✅ OneSignal notification sent successfully');
-        _logger.i('   Notification ID: $notificationId');
-        _logger.i('   Recipients: ${responseData['recipients']}');
+        _logger.i('🎉 [ONESIGNAL] NOTIFICAÇÃO ENVIADA COM SUCESSO!');
+        _logger.i('🎉 [ONESIGNAL] Notification ID: $notificationId');
+        _logger.i('🎉 [ONESIGNAL] Recipients: $recipients');
+        _logger.i('🎉 [ONESIGNAL] Errors (if any): $errors');
+        _logger.i('🎉 [ONESIGNAL] Timestamp: ${DateTime.now().toIso8601String()}');
         
         // Registrar no histórico com sucesso
+        _logger.i('📝 [ONESIGNAL] Registrando envio no histórico...');
         await _logNotificationSent({
           'player_id': playerId,
           'notification_id': notificationId,
@@ -610,13 +906,17 @@ class OneSignalService {
           'data': data ?? {},
           'image': imageUrl,
           'status': 'sent',
+          'recipients': recipients,
           'timestamp': DateTime.now().toIso8601String(),
         });
+        _logger.i('✅ [ONESIGNAL] Histórico registrado');
         
         return true;
       } else {
-        _logger.e('❌ OneSignal API Error: ${response.statusCode}');
-        _logger.e('   Response: ${response.body}');
+        _logger.e('❌ [ONESIGNAL] ERRO DA API OneSignal');
+        _logger.e('❌ [ONESIGNAL] Status Code: ${response.statusCode}');
+        _logger.e('❌ [ONESIGNAL] Response Body: ${response.body}');
+        _logger.e('❌ [ONESIGNAL] Request Payload: ${jsonEncode(payload)}');
         
         // Registrar falha no histórico
         await _logNotificationSent({
@@ -631,7 +931,10 @@ class OneSignalService {
         return false;
       }
     } catch (e, stackTrace) {
-      _logger.e('❌ Erro ao enviar notificação OneSignal', error: e, stackTrace: stackTrace);
+      _logger.e('💥 [ONESIGNAL] ERRO CRÍTICO ao enviar notificação', error: e, stackTrace: stackTrace);
+      _logger.e('💥 [ONESIGNAL] Player ID: ${playerId.substring(0, 12)}...');
+      _logger.e('💥 [ONESIGNAL] Título: $title');
+      _logger.e('💥 [ONESIGNAL] Error details: $e');
       
       // Registrar falha no histórico
       await _logNotificationSent({

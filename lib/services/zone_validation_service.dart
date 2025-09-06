@@ -1,6 +1,6 @@
 import 'dart:async';
-
 import '../exceptions/app_exceptions.dart';
+import 'logging/zone_exclusion_logger.dart';
 
 /// Service responsible for validating and normalizing excluded zone data
 /// Addresses critical security issues identified in the zones analysis
@@ -167,26 +167,94 @@ class ZoneValidationService {
   }
   
   /// Validates that the location combination is valid
-  /// This can be extended to integrate with external APIs for validation
+  /// If data comes from Google Places API, it's considered valid
   static Future<bool> validateLocationExists({
     required String neighborhood,
     required String city,
     required String state,
+    bool fromGooglePlaces = false,
   }) async {
     try {
-      // Normalize all inputs
-      final normalizedNeighborhood = validateAndNormalizeNeighborhood(neighborhood);
-      final normalizedCity = validateAndNormalizeCity(city);
-      final normalizedState = validateAndNormalizeState(state);
-      
-      // Basic validation - ensure they're not empty and state is valid
-      // TODO: Integrate with external geocoding API (Google Maps, ViaCEP, etc.)
-      // for now, we return true if basic validation passes
-      
-      return normalizedNeighborhood.isNotEmpty && 
-             normalizedCity.isNotEmpty && 
-             validBrazilianStates.contains(normalizedState);
+      ZoneExclusionLogger.logValidationStart(
+        driverId: 'unknown',
+        field: 'location_combination',
+        context: {
+          'validation_type': 'location_exists',
+          'location': '$neighborhood, $city - $state',
+          'from_google_places': fromGooglePlaces,
+        },
+      );
+
+      // If data comes from Google Places API, it's already validated
+      if (fromGooglePlaces) {
+        ZoneExclusionLogger.logValidationSuccess(
+          driverId: 'unknown',
+          field: 'location_combination',
+          context: {
+            'validation_type': 'location_exists',
+            'is_valid': true,
+            'source': 'google_places_api',
+            'location': '$neighborhood, $city - $state',
+          },
+        );
+        return true;
+      }
+
+      // Basic validation for manual input
+      try {
+        final normalizedNeighborhood = validateAndNormalizeNeighborhood(neighborhood);
+        final normalizedCity = validateAndNormalizeCity(city);
+        final normalizedState = validateAndNormalizeState(state);
+        
+        final isValid = normalizedNeighborhood.isNotEmpty && 
+                        normalizedCity.isNotEmpty && 
+                        validBrazilianStates.contains(normalizedState.toLowerCase());
+
+        ZoneExclusionLogger.logValidationSuccess(
+          driverId: 'unknown',
+          field: 'location_combination',
+          context: {
+            'validation_type': 'location_exists',
+            'is_valid': isValid,
+            'source': 'manual_validation',
+            'original': '$neighborhood, $city - $state',
+            'normalized': '$normalizedNeighborhood, $normalizedCity - $normalizedState',
+          },
+        );
+        
+        return isValid;
+      } catch (e) {
+        // If normalization fails, but we have basic data, accept it
+        if (neighborhood.trim().isNotEmpty && 
+            city.trim().isNotEmpty && 
+            state.trim().length >= 2) {
+          ZoneExclusionLogger.logValidationSuccess(
+            driverId: 'unknown',
+            field: 'location_combination',
+            context: {
+              'validation_type': 'location_exists',
+              'is_valid': true,
+              'source': 'fallback_validation',
+              'location': '$neighborhood, $city - $state',
+              'note': 'Accepted despite normalization error: ${e.toString()}',
+            },
+          );
+          return true;
+        }
+        throw e;
+      }
     } catch (e) {
+      ZoneExclusionLogger.logValidationError(
+        driverId: 'unknown',
+        field: 'location_combination',
+        error: 'Erro ao validar localização: ${e.toString()}',
+        context: {
+          'neighborhood': neighborhood,
+          'city': city,
+          'state': state,
+          'error_type': e.runtimeType.toString(),
+        },
+      );
       return false;
     }
   }
@@ -196,24 +264,62 @@ class ZoneValidationService {
     required String neighborhood,
     required String city,
     required String state,
-  }) => '${normalizeText(neighborhood)}|${normalizeText(city)}|${normalizeText(state)}';
+  }) {
+    final identifier = '${normalizeText(neighborhood)}|${normalizeText(city)}|${normalizeText(state)}';
+    
+    ZoneExclusionLogger.logValidationSuccess(
+      driverId: 'unknown',
+      field: 'zone_identifier',
+      context: {
+        'validation_type': 'zone_identifier_creation',
+        'original': '$neighborhood, $city - $state',
+        'identifier': identifier,
+      },
+    );
+    
+    return identifier;
+  }
   
   /// Validates complete zone data before database operations
   static Future<Map<String, String>> validateAndNormalizeZoneData({
     required String neighborhood,
     required String city,
     required String state,
+    bool fromGooglePlaces = false,
   }) async {
-    // Validate and normalize each field
+    // If from Google Places, use original data without strict normalization
+    if (fromGooglePlaces) {
+      final isValidLocation = await validateLocationExists(
+        neighborhood: neighborhood,
+        city: city,
+        state: state,
+        fromGooglePlaces: true,
+      );
+      
+      if (!isValidLocation) {
+        throw ValidationException(
+          'Erro inesperado: Dados do Google Places rejeitados',
+        );
+      }
+      
+      return {
+        'neighborhood_name': neighborhood,
+        'city': city,
+        'state': state,
+      };
+    }
+    
+    // For manual input, validate and normalize each field
     final normalizedNeighborhood = validateAndNormalizeNeighborhood(neighborhood);
     final normalizedCity = validateAndNormalizeCity(city);
     final normalizedState = validateAndNormalizeState(state);
     
-    // Check if location exists (basic validation for now)
+    // Check if location exists
     final isValidLocation = await validateLocationExists(
       neighborhood: normalizedNeighborhood,
       city: normalizedCity,
       state: normalizedState,
+      fromGooglePlaces: false,
     );
     
     if (!isValidLocation) {

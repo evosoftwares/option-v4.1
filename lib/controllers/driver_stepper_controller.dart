@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,11 +7,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user.dart' as app_models;
 import '../models/vehicle_brand.dart';
 import '../models/vehicle_model.dart';
+import '../models/supabase/platform_settings.dart';
+import '../services/app_logger.dart';
 import '../services/driver_service.dart';
-import '../services/driver_wallet_service.dart';
 import '../services/firebase_file_upload_service.dart';
 import '../services/user_service.dart';
 import '../services/vehicle_data_service.dart';
+import '../services/platform_settings_service.dart';
 import '../utils/supabase_helper.dart';
 
 class DriverStepperController extends ChangeNotifier {
@@ -20,11 +23,14 @@ class DriverStepperController extends ChangeNotifier {
   String? _errorMessage;
   bool _disposed = false;
   
-  // Documentos
+  // Constructor
+  DriverStepperController() {
+    loadAvailableCategories();
+  }
+  
+  // Estados de upload por documento (mantidos para compatibilidade)
   File? _cnhPhoto;
   File? _crlvPhoto;
-  
-  // Estados de upload por documento
   String? _cnhUrl;
   String? _crlvUrl;
   bool _isUploadingCnh = false;
@@ -32,7 +38,7 @@ class DriverStepperController extends ChangeNotifier {
   String? _cnhError;
   String? _crlvError;
   
-  // Estados de retry para feedback visual
+  // Estados de retry para feedback visual (mantidos para compatibilidade)
   int _cnhRetryAttempt = 0;
   int _crlvRetryAttempt = 0;
   bool _cnhIsRetrying = false;
@@ -44,6 +50,7 @@ class DriverStepperController extends ChangeNotifier {
   String _vehicleYear = '';
   String _vehiclePlate = '';
   String _vehicleColor = '';
+  String _vehicleCategory = '';
   
   // Text controllers for vehicle form
   final TextEditingController brandController = TextEditingController();
@@ -54,6 +61,7 @@ class DriverStepperController extends ChangeNotifier {
   
   final ImagePicker _picker = ImagePicker();
   final VehicleDataService _vehicleDataService = VehicleDataService();
+  final PlatformSettingsService _platformSettingsService = PlatformSettingsService(SupabaseHelper.client!);
   
   // Vehicle autocomplete data
   final List<VehicleBrand> _brands = [];
@@ -69,6 +77,12 @@ class DriverStepperController extends ChangeNotifier {
   bool _yearFieldTouched = false;
   bool _plateFieldTouched = false;
   bool _colorFieldTouched = false;
+  bool _categoryFieldTouched = false;
+  
+  // Platform settings data
+  List<PlatformSettings> _availableCategories = [];
+  PlatformSettings? _selectedCategory;
+  bool _isCategoriesLoading = false;
   
   // Getters
   int get currentStep => _currentStep;
@@ -77,7 +91,7 @@ class DriverStepperController extends ChangeNotifier {
   File? get cnhPhoto => _cnhPhoto;
   File? get crlvPhoto => _crlvPhoto;
   
-  // Getters de estado por documento
+  // Getters de estado por documento (mantidos para compatibilidade)
   String? get cnhUrl => _cnhUrl;
   String? get crlvUrl => _crlvUrl;
   bool get isUploadingCnh => _isUploadingCnh;
@@ -85,7 +99,7 @@ class DriverStepperController extends ChangeNotifier {
   String? get cnhError => _cnhError;
   String? get crlvError => _crlvError;
   
-  // Getters para estados de retry
+  // Getters para estados de retry (mantidos para compatibilidade)
   int get cnhRetryAttempt => _cnhRetryAttempt;
   int get crlvRetryAttempt => _crlvRetryAttempt;
   bool get cnhIsRetrying => _cnhIsRetrying;
@@ -96,6 +110,7 @@ class DriverStepperController extends ChangeNotifier {
   String get vehicleYear => _vehicleYear;
   String get vehiclePlate => _vehiclePlate;
   String get vehicleColor => _vehicleColor;
+  String get vehicleCategory => _vehicleCategory;
   
   // Vehicle autocomplete getters
   List<VehicleBrand> get brands => _brands;
@@ -105,12 +120,18 @@ class DriverStepperController extends ChangeNotifier {
   bool get isBrandLoading => _isBrandLoading;
   bool get isModelLoading => _isModelLoading;
   
+  // Platform settings getters
+  List<PlatformSettings> get availableCategories => _availableCategories;
+  PlatformSettings? get selectedCategory => _selectedCategory;
+  bool get isCategoriesLoading => _isCategoriesLoading;
+  
   // Field validation getters
   bool get brandFieldTouched => _brandFieldTouched;
   bool get modelFieldTouched => _modelFieldTouched;
   bool get yearFieldTouched => _yearFieldTouched;
   bool get plateFieldTouched => _plateFieldTouched;
   bool get colorFieldTouched => _colorFieldTouched;
+  bool get categoryFieldTouched => _categoryFieldTouched;
   
   // Field error getters
   bool get brandHasError => _brandFieldTouched && _vehicleBrand.isEmpty;
@@ -118,24 +139,28 @@ class DriverStepperController extends ChangeNotifier {
   bool get yearHasError => _yearFieldTouched && _vehicleYear.isEmpty;
   bool get plateHasError => _plateFieldTouched && _vehiclePlate.isEmpty;
   bool get colorHasError => _colorFieldTouched && _vehicleColor.isEmpty;
+  bool get categoryHasError => _categoryFieldTouched && _vehicleCategory.isEmpty;
   
   String? get brandErrorMessage => brandHasError ? 'Selecione uma marca' : null;
   String? get modelErrorMessage => modelHasError ? 'Selecione um modelo' : null;
   String? get yearErrorMessage => yearHasError ? 'Informe o ano' : null;
   String? get plateErrorMessage => plateHasError ? 'Informe a placa' : null;
   String? get colorErrorMessage => colorHasError ? 'Informe a cor' : null;
-// Validation getters
-  bool get canProceedFromDocuments => cnhPhoto != null && crlvPhoto != null;
+  String? get categoryErrorMessage => categoryHasError ? 'Selecione uma categoria' : null;
+  // Validation getters
+  // No validation needed for code of conduct step - it's informational only
+  bool get canProceedFromCodeOfConduct => true;
   
   bool get canProceedFromVehicle => 
       _vehicleBrand.isNotEmpty && 
       _vehicleModel.isNotEmpty && 
       _vehicleYear.isNotEmpty && 
       _vehiclePlate.isNotEmpty && 
-      _vehicleColor.isNotEmpty;
+      _vehicleColor.isNotEmpty &&
+      _vehicleCategory.isNotEmpty;
       
   bool get canCompleteRegistration => 
-      canProceedFromDocuments && canProceedFromVehicle;
+      canProceedFromCodeOfConduct && canProceedFromVehicle;
       
   // Setters para dados do veículo
   void setVehicleBrand(String brand) {
@@ -182,6 +207,49 @@ class DriverStepperController extends ChangeNotifier {
     notifyListeners();
   }
   
+  void setVehicleCategory(String category) {
+    if (_disposed) return;
+    _vehicleCategory = category;
+    notifyListeners();
+  }
+  
+  void selectCategory(String categoryName) {
+    if (_disposed) return;
+    final platformSettings = _availableCategories.firstWhere(
+      (settings) => settings.category == categoryName,
+      orElse: () => _availableCategories.first,
+    );
+    _selectedCategory = platformSettings;
+    _vehicleCategory = categoryName;
+    notifyListeners();
+  }
+  
+  // Carrega categorias disponíveis do platform_settings
+  Future<void> loadAvailableCategories() async {
+    if (_disposed) return;
+    
+    _isCategoriesLoading = true;
+    notifyListeners();
+    
+    try {
+      final allSettings = await _platformSettingsService.getAllSettings();
+      _availableCategories = allSettings;
+      
+      // Se não há categoria selecionada, seleciona a primeira (padrão)
+      if (_selectedCategory == null && _availableCategories.isNotEmpty) {
+        final defaultCategoryName = _availableCategories.any(
+          (category) => category.category == 'Comum'
+        ) ? 'Comum' : _availableCategories.first.category;
+        selectCategory(defaultCategoryName);
+      }
+    } catch (e) {
+      _errorMessage = 'Erro ao carregar categorias de veículo';
+    } finally {
+      _isCategoriesLoading = false;
+      notifyListeners();
+    }
+  }
+  
   // Navegação entre etapas
   void nextStep() {
     if (_disposed || _currentStep >= 2) return;
@@ -216,7 +284,7 @@ class DriverStepperController extends ChangeNotifier {
     notifyListeners();
   }
   
-  // Captura de fotos
+  // Captura de fotos (opcionais - para uploads voluntários de documentos)
   Future<void> takeCnhPhoto() async {
     try {
       final image = await _picker.pickImage(
@@ -259,7 +327,7 @@ class DriverStepperController extends ChangeNotifier {
     }
   }
   
-  // Seleção de fotos da galeria
+  // Seleção de fotos da galeria (opcionais - para uploads voluntários de documentos)
   Future<void> selectCnhFromGallery() async {
     try {
       final image = await _picker.pickImage(
@@ -300,47 +368,43 @@ class DriverStepperController extends ChangeNotifier {
     }
   }
   
-  // Upload de documentos usando FirebaseFileUploadService
-  Future<String?> _uploadDocument(File file, String fileName) async {
+  /// Upload de documento seguindo o mesmo padrão do upload de foto de perfil
+  Future<String?> _uploadDocument(File file, String fileName, String documentType) async {
     try {
-      // Garantir que a sessão está válida antes de fazer upload
-      await _ensureValidSession();
-      
-      final user = SupabaseHelper.client!.auth.currentUser!;
-      
-      // Buscar driver_id para usar o caminho correto
-      // Adicionar retry logic para aguardar criação do registro do motorista
-      String? driverId;
-      for (var attempt = 1; attempt <= 3; attempt++) {
-        driverId = await DriverWalletService.getDriverId(user.id);
-        if (driverId != null) break;
-        
-        print('⏳ Tentativa $attempt: Aguardando criação do registro do motorista...');
-        if (attempt < 3) {
-          await Future.delayed(Duration(seconds: attempt * 2)); // 2s, 4s
-        }
+      final authUser = SupabaseHelper.client?.auth.currentUser;
+      if (authUser == null) {
+        throw Exception('Usuário não autenticado');
       }
       
-      if (driverId == null) {
-        throw Exception('Registro de motorista não encontrado após múltiplas tentativas');
-      }
+      AppLogger.upload('Fazendo upload do documento $documentType');
       
-      // Usar caminho correto para Firebase Storage
-      final path = 'drivers/$driverId/documents/$fileName';
-      final extension = fileName.toLowerCase().split('.').last;
-      
-      final url = await FirebaseFileUploadService.uploadDriverDocument(
-        file: file,
-        folder: 'driver-documents',
-        path: path,
-        compress: extension != 'pdf', // Não comprimir PDFs
+      // Generate storage path seguindo o padrão das fotos de perfil
+      final storagePath = FirebaseFileUploadService.generateDriverDocumentPath(
+        userId: authUser.id,
+        fileName: fileName,
+        documentType: documentType,
       );
       
-      return url;
+      // Upload to driver-documents folder no Firebase Storage
+      final documentUrl = await FirebaseFileUploadService.uploadDriverDocument(
+        file: file,
+        folder: 'driver-documents',
+        path: storagePath,
+        compress: !fileName.toLowerCase().endsWith('.pdf'), // Não comprimir PDFs
+      );
+      
+      AppLogger.success('Documento $documentType enviado com sucesso');
+      
+      return documentUrl;
+    } on SocketException catch (e) {
+      AppLogger.error('Erro de conexão ao fazer upload do documento: ${e.message}', error: e);
+      throw Exception('Erro de conexão. Verifique sua internet e tente novamente.');
+    } on TimeoutException catch (e) {
+      AppLogger.error('Timeout ao fazer upload do documento: ${e.message}', error: e);
+      throw Exception('Upload demorou muito. Verifique sua conexão e tente novamente.');
     } catch (e) {
-      // Não transformar erro em mensagem global aqui; deixar quem chama decidir
-      print('Erro ao fazer upload do documento: $e');
-      rethrow;
+      AppLogger.error('Erro inesperado ao fazer upload do documento: $e', error: e);
+      throw Exception('Erro ao enviar documento. Tente novamente.');
     }
   }
   
@@ -386,75 +450,69 @@ class DriverStepperController extends ChangeNotifier {
       await _ensureValidSession();
       final user = SupabaseHelper.client!.auth.currentUser!;
       
-      // Validar se os documentos foram selecionados
-      if (_cnhPhoto == null) {
-        _setError('📷 Foto da CNH obrigatória\n\nPor favor, tire uma foto clara da sua Carteira Nacional de Habilitação para continuar.');
-        return false;
-      }
-      
-      if (_crlvPhoto == null) {
-        _setError('📷 Foto do CRLV obrigatória\n\nPor favor, tire uma foto clara do Certificado de Registro e Licenciamento do Veículo para continuar.');
-        return false;
-      }
-      
-      // Upload dos documentos
+      // Upload dos documentos (opcional - não exigir mais)
       String? cnhUrl;
       String? crlvUrl;
       
-      try {
-        _isUploadingCnh = true;
-        _cnhRetryAttempt = 0;
-        _cnhIsRetrying = false;
-        if (!_disposed) notifyListeners();
-        
-        cnhUrl = await _uploadDocumentWithRetryTracking(
-          file: _cnhPhoto!,
-          fileName: 'cnh_${DateTime.now().millisecondsSinceEpoch}.jpg',
-          documentType: 'CNH',
-          onRetry: (attempt) {
-            _cnhRetryAttempt = attempt;
-            _cnhIsRetrying = true;
-            if (!_disposed) notifyListeners();
-          },
-        );
-        
-        if (_disposed) return false;
-        _cnhUrl = cnhUrl;
-        _cnhError = null;
-        _cnhIsRetrying = false;
-      } catch (e) {
-        if (_disposed) return false;
-        _cnhError = _mapUploadError(e);
-        _setError('❌ Não foi possível enviar a foto da CNH.\n\n$_cnhError\n\nVerifique sua conexão e tente novamente.');
-        _isUploadingCnh = false;
-        _cnhIsRetrying = false;
-        _setLoading(false);
-        if (!_disposed) notifyListeners();
-        return false;
-      } finally {
-        _isUploadingCnh = false;
-        _cnhIsRetrying = false;
-        if (!_disposed) notifyListeners();
+      // Se documentos foram selecionados, fazer upload
+      if (_cnhPhoto != null) {
+        try {
+          _isUploadingCnh = true;
+          _cnhRetryAttempt = 0;
+          _cnhIsRetrying = false;
+          if (!_disposed) notifyListeners();
+          
+          cnhUrl = await _uploadDocumentWithRetryTracking(
+            file: _cnhPhoto!,
+            fileName: 'cnh_${DateTime.now().millisecondsSinceEpoch}.jpg',
+            documentType: 'CNH_FRONT',
+            onRetry: (attempt) {
+              _cnhRetryAttempt = attempt;
+              _cnhIsRetrying = true;
+              if (!_disposed) notifyListeners();
+            },
+          );
+          
+          if (_disposed) return false;
+          _cnhUrl = cnhUrl;
+          _cnhError = null;
+          _cnhIsRetrying = false;
+        } catch (e) {
+          if (_disposed) return false;
+          _cnhError = _mapUploadError(e);
+          _setError('❌ Não foi possível enviar a foto da CNH.\n\n$_cnhError\n\nVerifique sua conexão e tente novamente.');
+          _isUploadingCnh = false;
+          _cnhIsRetrying = false;
+          _setLoading(false);
+          if (!_disposed) notifyListeners();
+          return false;
+        } finally {
+          _isUploadingCnh = false;
+          _cnhIsRetrying = false;
+          if (!_disposed) notifyListeners();
+        }
       }
       
-      try {
-        _isUploadingCrlv = true;
-        if (!_disposed) notifyListeners();
-        crlvUrl = await _uploadDocument(_crlvPhoto!, 'crlv_${DateTime.now().millisecondsSinceEpoch}.jpg');
-        if (_disposed) return false;
-        _crlvUrl = crlvUrl;
-        _crlvError = null;
-      } catch (e) {
-        if (_disposed) return false;
-        _crlvError = _mapUploadError(e);
-        _setError('❌ Não foi possível enviar a foto do CRLV.\n\n$_crlvError\n\nVerifique sua conexão e tente novamente.');
-        _isUploadingCrlv = false;
-        _setLoading(false);
-        if (!_disposed) notifyListeners();
-        return false;
-      } finally {
-        _isUploadingCrlv = false;
-        if (!_disposed) notifyListeners();
+      if (_crlvPhoto != null) {
+        try {
+          _isUploadingCrlv = true;
+          if (!_disposed) notifyListeners();
+          crlvUrl = await _uploadDocument(_crlvPhoto!, 'crlv_${DateTime.now().millisecondsSinceEpoch}.jpg', 'CRLV');
+          if (_disposed) return false;
+          _crlvUrl = crlvUrl;
+          _crlvError = null;
+        } catch (e) {
+          if (_disposed) return false;
+          _crlvError = _mapUploadError(e);
+          _setError('❌ Não foi possível enviar a foto do CRLV.\n\n$_crlvError\n\nVerifique sua conexão e tente novamente.');
+          _isUploadingCrlv = false;
+          _setLoading(false);
+          if (!_disposed) notifyListeners();
+          return false;
+        } finally {
+          _isUploadingCrlv = false;
+          if (!_disposed) notifyListeners();
+        }
       }
       
       // Garantir que existe registro de driver e obter ID
@@ -467,19 +525,22 @@ class DriverStepperController extends ChangeNotifier {
         return false;
       }
       
-      // Atualizar dados do motorista
+      // Atualizar dados do motorista (sem CNH e CRLV que foram removidos do banco)
       try {
-        final driverService = DriverService(SupabaseHelper.client!);
-        await driverService.updateDriver(
+        await DriverService.updateDriver(
           driverId,
-          cnhPhotoUrl: cnhUrl,
-          crlvPhotoUrl: crlvUrl,
           brand: _vehicleBrand,
           model: _vehicleModel,
           year: int.tryParse(_vehicleYear) ?? 0,
           plate: _vehiclePlate,
           color: _vehicleColor,
+          category: _vehicleCategory,
         );
+        
+        // Mark profile as complete for driver
+        print('🔄 [DRIVER_STEPPER_CONTROLLER] Marcando perfil de motorista como completo...');
+        await UserService.markProfileComplete(user.id);
+        print('✅ [DRIVER_STEPPER_CONTROLLER] Perfil de motorista marcado como completo');
         
         _clearError();
         _setLoading(false);
@@ -792,26 +853,49 @@ class DriverStepperController extends ChangeNotifier {
   
   Future<void> _checkPlateUniqueness(String plate) async {
     try {
-      final supabase = Supabase.instance.client;
-      final currentUserId = supabase.auth.currentUser?.id;
+      print('🔍 [PLATE-CHECK] Iniciando verificação de unicidade da placa: $plate');
       
-      if (currentUserId == null) return;
+      // Verificar disponibilidade do cliente Supabase
+      final client = SupabaseHelper.client;
+      if (client == null) {
+        print('❌ [PLATE-CHECK] SupabaseHelper.client é nulo');
+        throw Exception('Cliente Supabase não disponível');
+      }
       
-      final response = await supabase
+      final currentUserId = client.auth.currentUser?.id;
+      print('🔍 [PLATE-CHECK] User ID atual: $currentUserId');
+      
+      if (currentUserId == null) {
+        print('⚠️ [PLATE-CHECK] Usuário não autenticado, ignorando verificação');
+        return;
+      }
+      
+      print('🔍 [PLATE-CHECK] Consultando banco para placa: ${plate.toUpperCase()}');
+      final response = await client
           .from('drivers')
           .select('user_id')
           .eq('vehicle_plate', plate.toUpperCase())
           .neq('user_id', currentUserId)
           .maybeSingle();
       
+      print('✅ [PLATE-CHECK] Resposta do banco: $response');
+      
       if (response != null) {
+        print('❌ [PLATE-CHECK] Placa já está em uso por outro motorista');
         throw Exception('Placa já está em uso por outro motorista');
       }
+      
+      print('✅ [PLATE-CHECK] Placa disponível para uso');
     } catch (e) {
+      print('❌ [PLATE-CHECK] Erro durante verificação: $e');
       if (e.toString().contains('já está em uso')) {
         rethrow;
       }
-      // Ignorar outros erros de rede/conexão
+      // PROBLEMA IDENTIFICADO: Erros de rede estão sendo ignorados, potencialmente permitindo placas duplicadas
+      print('⚠️ [PLATE-CHECK] CRÍTICO: Erro de rede/conexão sendo ignorado. Isso pode permitir cadastro de placas duplicadas!');
+      print('⚠️ [PLATE-CHECK] Erro ignorado (possível problema de rede): $e');
+      // Em vez de ignorar, devemos falhar gracefully ou tentar novamente
+      throw Exception('Não foi possível verificar a disponibilidade da placa. Verifique sua conexão e tente novamente.');
     }
   }
   
@@ -823,6 +907,12 @@ class DriverStepperController extends ChangeNotifier {
     notifyListeners();
   }
   
+  void setCategoryTouched() {
+    if (_disposed) return;
+    _categoryFieldTouched = true;
+    notifyListeners();
+  }
+  
   // Method to trigger validation check (when user tries to proceed)
   void validateVehicleFields() {
     if (_disposed) return;
@@ -831,6 +921,7 @@ class DriverStepperController extends ChangeNotifier {
     _yearFieldTouched = true;
     _plateFieldTouched = true;
     _colorFieldTouched = true;
+    _categoryFieldTouched = true;
     notifyListeners();
   }
   

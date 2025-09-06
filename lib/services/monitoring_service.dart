@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 // import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// Serviço de monitoramento para logs estruturados e métricas
@@ -15,11 +17,27 @@ class MonitoringService {
   static final Map<String, int> _operationCounts = {};
   static final Map<String, List<Duration>> _operationDurations = {};
 
+  static String? _appVersion;
+  static String? _clientIp;
+
   /// Inicializa o serviço de monitoramento
   static Future<void> initialize() async {
     if (kDebugMode) {
       _logger.i('Monitoring service initialized in debug mode');
     }
+    
+    // Obter versão do app
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+      _logger.i('App version: $_appVersion');
+    } catch (e) {
+      _logger.e('Failed to get app version', error: e);
+      _appVersion = '1.0.0+1'; // fallback
+    }
+
+    // Detectar IP do cliente
+    await _detectClientIp();
     
     // Configurar Sentry se não estiver em debug (desativado por enquanto)
     // if (!kDebugMode) {
@@ -57,7 +75,7 @@ class MonitoringService {
       'status': status,
       'metadata': metadata ?? {},
       'platform': Platform.operatingSystem,
-      'app_version': '1.0.0', // TODO: Get from package_info
+      'app_version': _appVersion ?? '1.0.0+1',
     };
 
     if (error != null) {
@@ -144,7 +162,7 @@ class MonitoringService {
       'user_id': userId,
       'details': details,
       'metadata': metadata ?? {},
-      'client_ip': 'unknown', // TODO: Get client IP if available
+      'client_ip': _clientIp ?? 'unknown',
       'user_agent': Platform.operatingSystem,
     };
 
@@ -251,23 +269,92 @@ class MonitoringService {
     _operationDurations.clear();
   }
 
-  /// Envia log para backend (implementação futura)
+  /// Detecta o IP do cliente
+  static Future<void> _detectClientIp() async {
+    try {
+      // Método 1: Usar um serviço de IP público
+      final response = await Supabase.instance.client
+          .rpc('get_client_ip')
+          .maybeSingle();
+      
+      if (response != null && response['ip'] != null) {
+        _clientIp = response['ip'];
+        _logger.i('Client IP detected: $_clientIp');
+        return;
+      }
+    } catch (e) {
+      _logger.w('Failed to get client IP from Supabase RPC', error: e);
+    }
+
+    try {
+      // Método 2: Fallback - usar um serviço externo
+      final httpClient = HttpClient();
+      final request = await httpClient.getUrl(Uri.parse('https://api.ipify.org?format=json'));
+      final response = await request.close();
+      
+      if (response.statusCode == 200) {
+        final body = await response.transform(utf8.decoder).join();
+        final data = jsonDecode(body);
+        _clientIp = data['ip'];
+        _logger.i('Client IP detected via external service: $_clientIp');
+      }
+      httpClient.close();
+    } catch (e) {
+      _logger.w('Failed to get client IP from external service', error: e);
+      _clientIp = 'unknown';
+    }
+  }
+
+  /// Envia log para backend
   static Future<void> _sendLogToBackend(Map<String, dynamic> logData) async {
     try {
-      // TODO: Implementar envio para backend de logs
-      // Pode ser via Supabase Edge Functions ou serviço de logs externo
-      
       if (kDebugMode) {
         print('LOG TO BACKEND: ${jsonEncode(logData)}');
+        return; // Não enviar logs em debug mode
       }
+
+      // Enviar para Supabase
+      final supabase = Supabase.instance.client;
       
-      // Exemplo de implementação com Supabase
-      // await Supabase.instance.client
-      //     .from('application_logs')
-      //     .insert(logData);
+      // Preparar dados para inserção
+      final logRecord = {
+        ...logData,
+        'created_at': DateTime.now().toIso8601String(),
+        'session_id': supabase.auth.currentSession?.user.id ?? 'anonymous',
+      };
+
+      // Inserir na tabela de logs
+      await supabase.from('application_logs').insert(logRecord);
+      
+      _logger.d('Log sent to backend successfully');
       
     } catch (e) {
       _logger.e('Falha ao enviar log para o backend', error: e);
+      
+      // Em caso de falha, tentar armazenar localmente para envio posterior
+      try {
+        await _storeLogLocally(logData);
+      } catch (localError) {
+        _logger.e('Failed to store log locally', error: localError);
+      }
+    }
+  }
+
+  /// Armazena log localmente para envio posterior
+  static Future<void> _storeLogLocally(Map<String, dynamic> logData) async {
+    try {
+      final supabase = Supabase.instance.client;
+      
+      // Tentar inserir em uma tabela de logs pendentes
+      await supabase.from('pending_logs').insert({
+        ...logData,
+        'created_at': DateTime.now().toIso8601String(),
+        'retry_count': 0,
+      });
+    } catch (e) {
+      _logger.e('Failed to store log in pending logs table', error: e);
+      // Último recurso: armazenar em SharedPreferences
+      // Isso pode ser implementado se necessário
     }
   }
 

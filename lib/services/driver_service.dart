@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../exceptions/app_exceptions.dart';
@@ -11,14 +10,14 @@ import '../core/error_handling/app_error.dart';
 import '../models/supabase/driver.dart';
 import '../models/supabase/driver_offer.dart';
 import '../models/supabase/driver_effective_status.dart';
-import '../models/supabase/working_hours.dart';
 import '../models/supabase/trip.dart';
 import '../models/vehicle_category.dart';
 import '../validators/database_constraints_validator.dart';
-import 'driver_document_service.dart';
 import 'driver_excluded_zones_service.dart';
 import 'driver_status_service.dart';
-import 'working_hours_service.dart';
+import 'platform_settings_service.dart';
+import 'vehicle_category_validator.dart';
+import '../utils/supabase_helper.dart';
 
 /// Classe auxiliar para armazenar motorista com sua distância calculada
 class DriverWithDistance {
@@ -35,21 +34,34 @@ class DriverService {
 
   DriverService(this._supabase) :
     _driverStatusService = DriverStatusService(_supabase),
-    _workingHoursService = WorkingHoursService(_supabase);
+    _platformSettingsService = PlatformSettingsService(_supabase),
+    _vehicleCategoryValidator = VehicleCategoryValidator(_supabase);
   
   final SupabaseClient _supabase;
   final DriverStatusService _driverStatusService;
-  final WorkingHoursService _workingHoursService;
+  final PlatformSettingsService _platformSettingsService;
+  final VehicleCategoryValidator _vehicleCategoryValidator;
 
   // Get driver profile
   Future<Driver?> getDriver(String driverId) async {
+    print('🔍 [DriverService.getDriver] Iniciando busca de motorista: $driverId');
+    print('🔍 [DriverService.getDriver] Cliente Supabase disponível: ${_supabase != null}');
+    
     try {
+      print('🔍 [DriverService.getDriver] Executando query no Supabase...');
       final response =
           await _supabase.from('drivers').select().eq('id', driverId).single();
 
+      print('✅ [DriverService.getDriver] Motorista encontrado: $driverId');
+      print('✅ [DriverService.getDriver] Dados recebidos: ${response.toString().substring(0, 100)}...');
       return Driver.fromJson(response);
     } on PostgrestException catch (e) {
+      print('❌ [DriverService.getDriver] PostgrestException: ${e.code} - ${e.message}');
+      print('❌ [DriverService.getDriver] Detalhes: ${e.details}');
+      print('❌ [DriverService.getDriver] Hint: ${e.hint}');
+      
       if (e.code == 'PGRST116') {
+        print('⚠️ [DriverService.getDriver] Motorista não encontrado: $driverId');
         return null;
       }
       final mappedError = PostgrestErrorMapper.mapError(e, context: {
@@ -70,9 +82,10 @@ class DriverService {
       );
       
       throw mappedError;
-    } catch (e) {
+    } on FormatException catch (e) {
+      print('❌ [DriverService.getDriver] FormatException ao processar dados: $e');
       final error = DatabaseException(
-          'Erro inesperado ao buscar motorista. Por favor, tente novamente mais tarde.',);
+          'Erro ao processar dados do motorista. Por favor, tente novamente mais tarde.',);
       
       // Log error for monitoring
       await ErrorLoggingService.instance.logException(
@@ -84,6 +97,26 @@ class DriverService {
           'originalError': e.toString(),
         },
         severity: ErrorSeverity.medium,
+      );
+      
+      throw error;
+    } on Exception catch (e) {
+      print('❌ [DriverService.getDriver] Exception não tratada: ${e.runtimeType} - $e');
+      print('❌ [DriverService.getDriver] StackTrace: ${StackTrace.current}');
+      final error = DatabaseException(
+          'Erro inesperado ao buscar motorista. Por favor, tente novamente mais tarde.',);
+      
+      // Log error for monitoring
+      await ErrorLoggingService.instance.logException(
+        error,
+        type: AppErrorType.databaseError,
+        context: {
+          'operation': 'getDriver',
+          'driverId': driverId,
+          'exceptionType': e.runtimeType.toString(),
+          'originalError': e.toString(),
+        },
+        severity: ErrorSeverity.high,
       );
       
       throw error;
@@ -193,12 +226,9 @@ class DriverService {
     }
   }
 
-  // Create driver profile aligned with drivers table schema
+  // Create driver profile aligned with drivers table schema (sem CNH e CRLV que foram removidos do banco)
   Future<Driver> createDriver({
     required String userId,
-    required String cnhNumber,
-    required DateTime cnhExpiryDate,
-    String? cnhPhotoUrl,
     // Vehicle details
     required String brand,
     required String model,
@@ -206,7 +236,6 @@ class DriverService {
     required String color,
     required String plate,
     required String category,
-    String? crlvPhotoUrl,
     // Preferences and settings
     bool acceptsPet = false,
     bool acceptsGrocery = false,
@@ -232,16 +261,12 @@ class DriverService {
     try {
       final insertData = {
         'user_id': userId,
-        'cnh_number': cnhNumber,
-        'cnh_expiry_date': cnhExpiryDate.toIso8601String(),
-        'cnh_photo_url': cnhPhotoUrl,
         'vehicle_brand': brand,
         'vehicle_model': model,
         'vehicle_year': year,
         'vehicle_color': color,
         'vehicle_plate': plate,
         'vehicle_category': category,
-        'crlv_photo_url': crlvPhotoUrl,
         'approval_status': 'pending',
         'is_online': false,
         'accepts_pet': acceptsPet,
@@ -269,9 +294,35 @@ class DriverService {
         'consecutive_cancellations': 0,
       };
 
+      // LOG DEBUG: Verificando comportamento atual da validação de placa
+      print('🔍 [DriverService.createDriver] Validando placa: "$plate"');
+      print('🔍 [DriverService.createDriver] Placa vazia: ${plate.trim().isEmpty}');
+      print('🔍 [DriverService.createDriver] Começa com PENDENTE: ${plate.trim().startsWith('PENDENTE')}');
+      
       // Verificar se a placa já existe antes da criação
       if (plate.trim().isNotEmpty && !plate.trim().startsWith('PENDENTE')) {
-        await _checkVehiclePlateUniquenessForCreation(plate.trim());
+        print('🔍 [DriverService.createDriver] Placa válida detectada, verificando unicidade...');
+        try {
+          await _checkVehiclePlateUniquenessForCreation(plate.trim());
+          print('✅ [DriverService.createDriver] Verificação de placa concluída com sucesso');
+        } catch (e) {
+          print('❌ [DriverService.createDriver] Erro durante verificação de placa: $e');
+          // Re-throw para manter o comportamento original
+          rethrow;
+        }
+      } else {
+        print('🔍 [DriverService.createDriver] Placa ignorada (vazia ou começa com PENDENTE)');
+      }
+
+      // Validar se a categoria existe na tabela platform_settings
+      final categoryStr = category.trim();
+      if (categoryStr.isNotEmpty) {
+        final isValidCategory = _vehicleCategoryValidator.isVehicleCategoryValid(categoryStr);
+        if (!isValidCategory) {
+          print('❌ [DriverService.createDriver] vehicle_category inválido: $categoryStr');
+          throw ValidationException('Categoria de veículo inválida: $categoryStr');
+        }
+        print('✅ [DriverService.createDriver] vehicle_category válido: $categoryStr');
       }
 
       // Validar dados antes da inserção
@@ -282,10 +333,11 @@ class DriverService {
 
       return Driver.fromJson(response);
     } on PostgrestException catch (e) {
+      print('❌ [DriverService.createDriver] PostgrestException: ${e.code} - ${e.message}');
+      print('❌ [DriverService.createDriver] Detalhes: ${e.details}');
       final mappedError = PostgrestErrorMapper.mapError(e, context: {
         'operation': 'createDriver',
         'userId': userId,
-        'cnhNumber': cnhNumber,
         'vehicleCategory': category,
       });
       
@@ -296,7 +348,6 @@ class DriverService {
         context: {
           'operation': 'createDriver',
           'userId': userId,
-          'cnhNumber': cnhNumber,
           'vehicleCategory': category,
           'postgrestCode': e.code,
         },
@@ -304,7 +355,16 @@ class DriverService {
       );
       
       throw mappedError;
-    } catch (e) {
+    } on ValidationException catch (e) {
+      print('❌ [DriverService.createDriver] ValidationException: ${e.message}');
+      // Re-throw validation exceptions without wrapping
+      throw e;
+    } on DatabaseException catch (e) {
+      print('❌ [DriverService.createDriver] DatabaseException: ${e.message}');
+      // Re-throw database exceptions without wrapping
+      throw e;
+    } on Exception catch (e) {
+      print('❌ [DriverService.createDriver] Exception não tratada: ${e.runtimeType} - $e');
       final error = DatabaseException(
           'Erro inesperado ao criar perfil de motorista. Por favor, tente novamente mais tarde.',);
       
@@ -315,6 +375,7 @@ class DriverService {
         context: {
           'operation': 'createDriver',
           'userId': userId,
+          'exceptionType': e.runtimeType.toString(),
           'originalError': e.toString(),
         },
         severity: ErrorSeverity.high,
@@ -324,167 +385,60 @@ class DriverService {
     }
   }
 
-  // Update driver profile aligned with drivers table schema
-  Future<Driver> updateDriver(
+  /// Atualiza os dados de um motorista (sem CNH e CRLV que foram removidos do banco)
+  static Future<void> updateDriver(
     String driverId, {
-    // CNH
-    String? cnhNumber,
-    DateTime? cnhExpiryDate,
-    String? cnhPhotoUrl,
-    // Vehicle details
-    String? brand,
-    String? model,
-    int? year,
-    String? color,
-    String? plate,
-    String? category,
-    String? crlvPhotoUrl,
-    // Status & availability
-    String? approvalStatus,
-    bool? isOnline,
-    // Preferences and settings
-    bool? acceptsPet,
-    bool? acceptsGrocery,
-    bool? acceptsCondo,
-    double? petFee,
-    double? groceryFee,
-    double? condoFee,
-    double? stopFee,
-    String? acPolicy,
-    double? customPricePerKm,
-    double? customPricePerMinute,
-    String? bankAccountType,
-    String? bankCode,
-    String? bankAgency,
-    String? bankAccount,
-    String? pixKey,
-    String? pixKeyType,
-    String? fcmToken,
-    String? devicePlatform,
-    double? currentLatitude,
-    double? currentLongitude,
+    required String brand,
+    required String model,
+    required int year,
+    required String plate,
+    required String color,
+    required String category,
   }) async {
-    final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
-    print('🔄 [UPDATE-DRIVER-$sessionId] Iniciando atualização do motorista: $driverId');
-    
+    print('🔄 DriverService.updateDriver iniciado');
+    print('  - driverId: $driverId');
+    print('  - brand: $brand');
+    print('  - model: $model');
+    print('  - year: $year');
+    print('  - plate: $plate');
+    print('  - color: $color');
+    print('  - category: $category');
+
+    // Validar se a categoria existe na tabela platform_settings
+    final categoryStr = category.trim();
+    if (categoryStr.isNotEmpty) {
+      final validator = VehicleCategoryValidator(SupabaseHelper.client!);
+      final isValidCategory = validator.isVehicleCategoryValid(categoryStr);
+      if (!isValidCategory) {
+        print('❌ [DriverService.updateDriver] vehicle_category inválido: $categoryStr');
+        throw ValidationException('Categoria de veículo inválida: $categoryStr');
+      }
+      print('✅ [DriverService.updateDriver] vehicle_category válido: $categoryStr');
+    }
+
     try {
-      final updates = <String, dynamic>{};
-      if (cnhNumber != null) updates['cnh_number'] = cnhNumber;
-      if (cnhExpiryDate != null) {
-        updates['cnh_expiry_date'] = cnhExpiryDate.toIso8601String();
-      }
-      if (cnhPhotoUrl != null) updates['cnh_photo_url'] = cnhPhotoUrl;
+      final updates = {
+        'vehicle_brand': brand,
+        'vehicle_model': model,
+        'vehicle_year': year,
+        'vehicle_plate': plate,
+        'vehicle_color': color,
+        'vehicle_category': category,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
 
-      if (brand != null) updates['vehicle_brand'] = brand;
-      if (model != null) updates['vehicle_model'] = model;
-      if (year != null) updates['vehicle_year'] = year;
-      if (color != null) updates['vehicle_color'] = color;
-      if (plate != null) updates['vehicle_plate'] = plate;
-      if (category != null) updates['vehicle_category'] = category;
-      
-      print('📝 [UPDATE-DRIVER-$sessionId] Dados a serem atualizados: ${updates.keys.join(", ")}');
-      if (crlvPhotoUrl != null) updates['crlv_photo_url'] = crlvPhotoUrl;
-
-      if (approvalStatus != null) updates['approval_status'] = approvalStatus;
-      
-      // Validação obrigatória: verificar documentos antes de ficar online
-      if (isOnline ?? false) {
-        final documentationStatus = await DriverDocumentService.getDocumentationStatus(driverId);
-        
-        if (!documentationStatus['isComplete']) {
-          final missingDocs = documentationStatus['missingDocuments'] as List;
-          final rejectedDocs = documentationStatus['rejectedDocuments'] as List;
-          final pendingDocs = documentationStatus['pendingDocuments'] as List;
-          final expiredDocs = documentationStatus['expiredDocuments'] as List;
-          
-          var errorMessage = 'Não é possível ficar online. ';
-          
-          if (missingDocs.isNotEmpty) {
-            errorMessage += 'Documentos não enviados: ${missingDocs.join(', ')}. ';
-          }
-          if (rejectedDocs.isNotEmpty) {
-            errorMessage += 'Documentos rejeitados: ${rejectedDocs.join(', ')}. ';
-          }
-          if (pendingDocs.isNotEmpty) {
-            errorMessage += 'Documentos aguardando aprovação: ${pendingDocs.join(', ')}. ';
-          }
-          if (expiredDocs.isNotEmpty) {
-            errorMessage += 'Documentos expirados: ${expiredDocs.join(', ')}. ';
-          }
-          
-          throw DocumentationRequiredException(errorMessage.trim());
-        }
-      }
-      
-      // Usar novo sistema de status ao invés de atualizar is_online diretamente
-      if (isOnline != null) {
-        await _driverStatusService.updateOnlineIntent(driverId, isOnline);
-        // Não atualizar is_online na tabela drivers - será calculado pela view
-      }
-
-      if (acceptsPet != null) updates['accepts_pet'] = acceptsPet;
-      if (acceptsGrocery != null) updates['accepts_grocery'] = acceptsGrocery;
-      if (acceptsCondo != null) updates['accepts_condo'] = acceptsCondo;
-
-      if (petFee != null) updates['pet_fee'] = petFee;
-      if (groceryFee != null) updates['grocery_fee'] = groceryFee;
-      if (condoFee != null) updates['condo_fee'] = condoFee;
-      if (stopFee != null) updates['stop_fee'] = stopFee;
-      if (acPolicy != null) updates['ac_policy'] = acPolicy;
-      if (customPricePerKm != null) {
-        updates['custom_price_per_km'] = customPricePerKm;
-      }
-      if (customPricePerMinute != null) {
-        updates['custom_price_per_minute'] = customPricePerMinute;
-      }
-      if (bankAccountType != null) updates['bank_account_type'] = bankAccountType;
-      if (bankCode != null) updates['bank_code'] = bankCode;
-      if (bankAgency != null) updates['bank_agency'] = bankAgency;
-      if (bankAccount != null) updates['bank_account'] = bankAccount;
-      if (pixKey != null) updates['pix_key'] = pixKey;
-      if (pixKeyType != null) updates['pix_key_type'] = pixKeyType;
-      if (fcmToken != null) updates['fcm_token'] = fcmToken;
-      if (devicePlatform != null) updates['device_platform'] = devicePlatform;
-
-      if (currentLatitude != null) {
-        updates['current_latitude'] = currentLatitude;
-      }
-      if (currentLongitude != null) {
-        updates['current_longitude'] = currentLongitude;
-      }
-
-      // Verificar se a placa já existe antes da atualização
-      if (plate != null && plate.trim().isNotEmpty && !plate.trim().startsWith('PENDENTE')) {
-        print('🔍 [UPDATE-DRIVER-$sessionId] Verificando unicidade da placa: ${plate.trim()}');
-        await _checkVehiclePlateUniqueness(plate.trim(), driverId);
-        print('✅ [UPDATE-DRIVER-$sessionId] Placa validada com sucesso');
-      }
-
-      // Validar dados antes da atualização
-      if (updates.isNotEmpty) {
-        print('🔍 [UPDATE-DRIVER-$sessionId] Validando constraints dos dados...');
-        _validateUpdateData(updates);
-        print('✅ [UPDATE-DRIVER-$sessionId] Dados validados com sucesso');
-      }
-
-      print('💾 [UPDATE-DRIVER-$sessionId] Executando query de atualização no Supabase...');
-      final response = await _supabase
+      await SupabaseHelper.client!
           .from('drivers')
           .update(updates)
-          .eq('id', driverId)
-          .select()
-          .single();
+          .eq('id', driverId);
 
-      print('✅ [UPDATE-DRIVER-$sessionId] Motorista atualizado com sucesso');
-      return Driver.fromJson(response);
+      print('✅ Driver atualizado com sucesso');
     } on PostgrestException catch (e) {
-      print('❌ [UPDATE-DRIVER-$sessionId] PostgrestException: ${e.code} - ${e.message}');
-      print('❌ [UPDATE-DRIVER-$sessionId] Details: ${e.details}');
-      throw PostgrestErrorMapper.mapError(e);
+      print('❌ Erro do banco de dados: ${e.message}');
+      throw DriverException('Erro ao atualizar motorista: ${e.message}');
     } catch (e) {
-      print('❌ [UPDATE-DRIVER-$sessionId] Erro inesperado: $e');
-      throw const DatabaseException(
-          'Erro inesperado ao atualizar motorista. Por favor, tente novamente mais tarde.',);
+      print('❌ Erro inesperado: $e');
+      throw DriverException('Erro inesperado ao atualizar motorista: $e');
     }
   }
 
@@ -676,15 +630,57 @@ class DriverService {
 
   // Update driver availability (online/offline)
   Future<void> updateAvailability(String driverId, bool isOnline) async {
+    print('🔵 [DRIVER_SERVICE] updateAvailability iniciado');
+    print('   🔹 Driver ID: $driverId');
+    print('   🔹 isOnline: $isOnline');
+    print('   🔹 Tamanho do driverId: ${driverId.length}');
+    print('   🔹 DriverId é vazio: ${driverId.isEmpty}');
+    
+    // Validação de driverId
+    if (driverId.isEmpty) {
+      print('❌ [DRIVER_SERVICE] Driver ID inválido (vazio)');
+      throw const ValidationException('Driver ID inválido (vazio)');
+    }
+    
     try {
-      await _supabase.from('drivers').update({
+      print('🔗 [DRIVER_SERVICE] Fazendo update no Supabase...');
+      print('   🔹 Tabela: drivers');
+      print('   🔹 Update data: {\'is_online\': $isOnline}');
+      print('   🔹 Condição: eq(\'id\', \'$driverId\')');
+      
+      final response = await _supabase.from('drivers').update({
         'is_online': isOnline,
+      }).eq('id', driverId);
+      
+      print('📊 [DRIVER_SERVICE] Update executado com sucesso');
+      print('   🔹 Response: $response');
+      print('   🔹 Tipo do response: ${response.runtimeType}');
+    } on PostgrestException catch (e) {
+      print('❌ [DRIVER_SERVICE] PostgrestException em updateAvailability: ${e.code} - ${e.message}');
+      print('❌ [DRIVER_SERVICE] Details: ${e.details}');
+      print('❌ [DRIVER_SERVICE] Hint: ${e.hint}');
+      throw PostgrestErrorMapper.mapError(e);
+    } catch (e, stackTrace) {
+      print('❌ [DRIVER_SERVICE] Erro inesperado em updateAvailability: ${e.toString()}');
+      print('❌ [DRIVER_SERVICE] Tipo do erro: ${e.runtimeType}');
+      print('❌ [DRIVER_SERVICE] Stack trace: $stackTrace');
+      throw const DatabaseException(
+          'Erro inesperado ao atualizar disponibilidade. Por favor, tente novamente mais tarde.');
+    }
+  }
+
+  // Update driver AC policy
+  static Future<void> updateAcPolicy(String driverId, String acPolicy) async {
+    try {
+      await SupabaseHelper.client!.from('drivers').update({
+        'ac_policy': acPolicy,
+        'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', driverId);
     } on PostgrestException catch (e) {
       throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
       throw const DatabaseException(
-          'Erro inesperado ao atualizar disponibilidade. Por favor, tente novamente mais tarde.',);
+          'Erro inesperado ao atualizar política de ar-condicionado. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -899,10 +895,8 @@ class DriverService {
             'vehicle_color': driverData['vehicle_color'],
             'vehicle_category': driverData['vehicle_category'],
             'vehicle_plate': driverData['vehicle_plate'] ?? '', // Assumindo que pode não existir na view
-            'cnh_number': '', // Dados não expostos na view por privacidade
-            'cnh_expiry_date': null,
-            'cnh_photo_url': null,
-            'crlv_photo_url': null,
+  
+            
             'approval_status': 'approved', // Só motoristas aprovados aparecem na view
             'is_online': driverData['is_online'],
             'accepts_pet': driverData['accepts_pet'],
@@ -1149,53 +1143,82 @@ class DriverService {
   }
 
   /// Busca categorias de veículos disponíveis em uma região
-  /// Retorna dados reais baseados nos motoristas ativos
+  /// Retorna dados baseados em platform_settings + contagem de motoristas ativos
   Future<List<VehicleCategoryData>> getAvailableCategoriesInRegion({
     required double latitude,
     required double longitude,
     double radiusKm = 10.0,
   }) async {
     try {
-      // Busca estatísticas por categoria dos motoristas online na região
+      // Busca contagem de motoristas por categoria na região
       final response = await _supabase.rpc('get_available_categories_stats', params: {
         'lat': latitude,
         'lng': longitude,
         'radius_km': radiusKm,
       },);
 
-      if (response == null || response.isEmpty) {
-        // Fallback: retorna categorias padrão se não houver dados reais
-        return VehicleCategory.popularCategories
-            .map(VehicleCategoryData.defaultForCategory)
-            .toList();
+      // Buscar preços base de cada categoria do platform_settings
+      final categoryDataList = <VehicleCategoryData>[];
+      
+      for (final category in VehicleCategory.popularCategories) {
+        // Buscar configurações da categoria específica ou usar padrão
+        final pricingConfig = await _platformSettingsService.getPricingConfig(category.id);
+        
+        // Encontrar contagem de motoristas para esta categoria
+        int driverCount = 0;
+        if (response != null && response is List) {
+          final categoryStats = (response)
+              .where((stat) => stat['vehicle_category'] == category.id)
+              .firstOrNull;
+          driverCount = categoryStats?['driver_count'] as int? ?? 0;
+        }
+
+        categoryDataList.add(VehicleCategoryData(
+          category: category,
+          basePricePerKm: pricingConfig['basePricePerKm'] as double,
+          basePricePerMinute: pricingConfig['basePricePerMinute'] as double,
+          availableDrivers: driverCount,
+          isAvailable: driverCount > 0,
+          minFare: pricingConfig['minFare'] as double,
+        ));
       }
 
-      return (response as List).map((stat) {
-        final categoryId = stat['vehicle_category'] as String;
-        final category = VehicleCategory.fromId(categoryId) ?? VehicleCategory.standard;
-        
-        return VehicleCategoryData(
-          category: category,
-          basePricePerKm: (stat['avg_price_per_km'] as num?)?.toDouble() ?? 1.5,
-          basePricePerMinute: (stat['avg_price_per_minute'] as num?)?.toDouble() ?? 0.20,
-          availableDrivers: stat['driver_count'] as int? ?? 0,
-          isAvailable: (stat['driver_count'] as int? ?? 0) > 0,
-        );
-      }).toList();
+      return categoryDataList;
     } on PostgrestException catch (e) {
-      // Se a função RPC não existir, retorna dados padrão
+      // Se a função RPC não existir, criar dados usando apenas platform_settings
       if (e.code == '42883') {
-        return VehicleCategory.popularCategories
-            .map(VehicleCategoryData.defaultForCategory)
-            .toList();
+        return _createCategoryDataWithoutDriverCount();
       }
       throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
-      // Fallback para dados padrão em caso de erro
-      return VehicleCategory.popularCategories
-          .map(VehicleCategoryData.defaultForCategory)
-          .toList();
+      // Fallback para dados com platform_settings
+      return _createCategoryDataWithoutDriverCount();
     }
+  }
+
+  /// Cria dados de categoria usando apenas platform_settings (sem contagem de motoristas)
+  Future<List<VehicleCategoryData>> _createCategoryDataWithoutDriverCount() async {
+    final categoryDataList = <VehicleCategoryData>[];
+    
+    for (final category in VehicleCategory.popularCategories) {
+      try {
+        final pricingConfig = await _platformSettingsService.getPricingConfig(category.id);
+        
+        categoryDataList.add(VehicleCategoryData(
+          category: category,
+          basePricePerKm: pricingConfig['basePricePerKm'] as double,
+          basePricePerMinute: pricingConfig['basePricePerMinute'] as double,
+          availableDrivers: 5, // Valor padrão assumindo disponibilidade
+          isAvailable: true,
+          minFare: pricingConfig['minFare'] as double,
+        ));
+      } catch (e) {
+        // Fallback para dados hardcoded se platform_settings falhar
+        categoryDataList.add(VehicleCategoryData.defaultForCategory(category));
+      }
+    }
+    
+    return categoryDataList;
   }
 
   /// Busca dados de uma categoria específica
@@ -1205,6 +1228,10 @@ class DriverService {
     double radiusKm = 10.0,
   }) async {
     try {
+      // Buscar preços da categoria no platform_settings
+      final pricingConfig = await _platformSettingsService.getPricingConfig(category.id);
+      
+      // Contar motoristas disponíveis na região para esta categoria
       final drivers = await getAvailableDriversNearby(
         latitude: latitude,
         longitude: longitude,
@@ -1212,42 +1239,16 @@ class DriverService {
         category: category.id,
       );
 
-      if (drivers.isEmpty) {
-        return VehicleCategoryData.defaultForCategory(category).copyWith(
-          availableDrivers: 0,
-          isAvailable: false,
-        );
-      }
-
-      // Calcula preços médios dos motoristas disponíveis
-      var avgPricePerKm = 1.5;
-      var avgPricePerMinute = 0.20;
-      
-      final pricesPerKm = drivers
-          .where((d) => d.customPricePerKm != null && d.customPricePerKm! > 0)
-          .map((d) => d.customPricePerKm!)
-          .toList();
-      
-      final pricesPerMinute = drivers
-          .where((d) => d.customPricePerMinute != null && d.customPricePerMinute! > 0)
-          .map((d) => d.customPricePerMinute!)
-          .toList();
-
-      if (pricesPerKm.isNotEmpty) {
-        avgPricePerKm = pricesPerKm.reduce((a, b) => a + b) / pricesPerKm.length;
-      }
-      
-      if (pricesPerMinute.isNotEmpty) {
-        avgPricePerMinute = pricesPerMinute.reduce((a, b) => a + b) / pricesPerMinute.length;
-      }
-
       return VehicleCategoryData(
         category: category,
-        basePricePerKm: avgPricePerKm,
-        basePricePerMinute: avgPricePerMinute,
+        basePricePerKm: pricingConfig['basePricePerKm'] as double,
+        basePricePerMinute: pricingConfig['basePricePerMinute'] as double,
         availableDrivers: drivers.length,
+        isAvailable: drivers.isNotEmpty,
+        minFare: pricingConfig['minFare'] as double,
       );
     } catch (e) {
+      // Fallback para dados padrão
       return VehicleCategoryData.defaultForCategory(category);
     }
   }
@@ -1293,8 +1294,139 @@ class DriverService {
   /// Obtém o status efetivo do motorista (calculado pela view)
   Future<DriverEffectiveStatus?> getDriverEffectiveStatus(String driverId) async => await _driverStatusService.getDriverEffectiveStatus(driverId);
   
-  /// Verifica se o motorista pode ficar online baseado nos horários de trabalho
-  Future<bool> canDriverGoOnline(String driverId) async => await _driverStatusService.canDriverGoOnlineNow(driverId);
+  /// Verifica detalhadamente por que o motorista não pode ficar online
+  Future<Map<String, dynamic>> getOnlineEligibilityStatus(String driverId) async {
+    print('🔍 [DRIVER_SERVICE] getOnlineEligibilityStatus iniciado para driver: $driverId');
+    
+    if (driverId.isEmpty) {
+      return {
+        'canGoOnline': false,
+        'reason': 'Driver ID inválido',
+        'message': 'ID do motorista não foi fornecido.',
+        'actionRequired': 'Faça login novamente.',
+      };
+    }
+    
+    try {
+      // 1. Verificar se o motorista está aprovado
+      final driverData = await _supabase
+          .from('drivers')
+          .select('approval_status')
+          .eq('id', driverId)
+          .single();
+      
+      final approvalStatus = driverData['approval_status'] as String?;
+      
+      if (approvalStatus != 'approved') {
+        String message;
+        String actionRequired;
+        
+        switch (approvalStatus) {
+          case 'pending':
+            message = 'Seu perfil ainda está em análise pela nossa equipe.';
+            actionRequired = 'Aguarde a aprovação do seu cadastro.';
+            break;
+          case 'rejected':
+            message = 'Seu perfil foi rejeitado. Entre em contato com o suporte.';
+            actionRequired = 'Contate o suporte para mais informações.';
+            break;
+          default:
+            message = 'Status de aprovação desconhecido.';
+            actionRequired = 'Entre em contato com o suporte.';
+        }
+        
+        return {
+          'canGoOnline': false,
+          'reason': 'Motorista não aprovado',
+          'message': message,
+          'actionRequired': actionRequired,
+          'approvalStatus': approvalStatus,
+        };
+      }
+      
+      // 2. Verificar documentos usando o status service
+      final documentsStatus = await _driverStatusService.checkRequiredDocumentsApproved(driverId);
+      
+      if (!documentsStatus['allApproved']) {
+        final pendingDocs = documentsStatus['pendingDocuments'] as List<String>;
+        final rejectedDocs = documentsStatus['rejectedDocuments'] as List<String>;
+        final missingDocs = documentsStatus['missingDocuments'] as List<String>;
+        
+        String message = 'Você precisa ter todos os documentos aprovados para ficar online.';
+        String actionRequired = 'Complete o envio e aprovação dos documentos obrigatórios.';
+        
+        if (missingDocs.isNotEmpty) {
+          message = 'Documentos obrigatórios não enviados: ${missingDocs.join(', ')}.';
+          actionRequired = 'Envie todos os documentos obrigatórios.';
+        } else if (rejectedDocs.isNotEmpty) {
+          message = 'Documentos rejeitados: ${rejectedDocs.join(', ')}.';
+          actionRequired = 'Reenvie os documentos rejeitados.';
+        } else if (pendingDocs.isNotEmpty) {
+          message = 'Documentos aguardando aprovação: ${pendingDocs.join(', ')}.';
+          actionRequired = 'Aguarde a análise dos documentos enviados.';
+        }
+        
+        return {
+          'canGoOnline': false,
+          'reason': 'Documentos não aprovados',
+          'message': message,
+          'actionRequired': actionRequired,
+          'documentsStatus': documentsStatus,
+        };
+      }
+      
+      // 3. Verificar horários de trabalho
+      final canGoOnlineNow = await _driverStatusService.canDriverGoOnlineNow(driverId);
+      
+      if (!canGoOnlineNow) {
+        return {
+          'canGoOnline': false,
+          'reason': 'Fora do horário de trabalho',
+          'message': 'Você só pode ficar online durante seus horários de trabalho configurados.',
+          'actionRequired': 'Configure seus horários ou aguarde o horário permitido.',
+        };
+      }
+      
+      // Tudo aprovado
+      return {
+        'canGoOnline': true,
+        'reason': 'Aprovado',
+        'message': 'Você está habilitado para ficar online!',
+        'actionRequired': null,
+      };
+      
+    } catch (e) {
+      print('❌ [DRIVER_SERVICE] Erro ao verificar elegibilidade: $e');
+      return {
+        'canGoOnline': false,
+        'reason': 'Erro do sistema',
+        'message': 'Ocorreu um erro ao verificar sua elegibilidade.',
+        'actionRequired': 'Tente novamente mais tarde.',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Verifica se o motorista pode ficar online (documentos aprovados)
+  Future<bool> canDriverGoOnline(String driverId) async {
+    print('🔵 [DRIVER_SERVICE] canDriverGoOnline iniciado para driver: $driverId');
+    
+    if (driverId.isEmpty) {
+      print('❌ [DRIVER_SERVICE] Driver ID inválido (vazio)');
+      return false;
+    }
+    
+    try {
+      print('🔗 [DRIVER_SERVICE] Chamando _driverStatusService.canDriverGoOnlineNow...');
+      final canGoOnline = await _driverStatusService.canDriverGoOnlineNow(driverId);
+      print('📊 [DRIVER_SERVICE] Resultado: $canGoOnline para driver: $driverId');
+      
+      return canGoOnline;
+    } catch (e) {
+      print('❌ [DRIVER_SERVICE] Erro ao verificar se pode ficar online: $e');
+      return false;
+    }
+  }
   
   /// Obtém a intenção de ficar online do motorista
   Future<bool> getDriverOnlineIntent(String driverId) async {
@@ -1302,30 +1434,6 @@ class DriverService {
     return status?.onlineIntent ?? false;
   }
   
-  /// Obtém os horários de trabalho do motorista
-  Future<List<WorkingHours>> getDriverWorkingHours(String driverId) async => await _workingHoursService.getWorkingHours(driverId);
-  
-  /// Atualiza os horários de trabalho do motorista
-  Future<void> updateDriverWorkingHours(String driverId, List<Map<String, dynamic>> workingHours) async {
-    // Remove horários existentes
-    await _workingHoursService.deleteAllWorkingHours(driverId);
-    
-    // Adiciona novos horários
-    for (final hours in workingHours) {
-      await _workingHoursService.createWorkingHours(
-        driverId: driverId,
-        dayOfWeek: hours['dayOfWeek'] as int,
-        startTime: TimeOfDay(
-          hour: int.parse(hours['startTime'].toString().split(':')[0]),
-          minute: int.parse(hours['startTime'].toString().split(':')[1]),
-        ),
-        endTime: TimeOfDay(
-          hour: int.parse(hours['endTime'].toString().split(':')[0]),
-          minute: int.parse(hours['endTime'].toString().split(':')[1]),
-        ),
-      );
-    }
-  }
   
   /// Obtém lista de motoristas efetivamente online
   Future<List<DriverEffectiveStatus>> getEffectivelyOnlineDrivers() async => await _driverStatusService.getOnlineDrivers();
@@ -1335,6 +1443,7 @@ class DriverService {
 
   /// Verifica se a placa do veículo já está sendo usada por outro motorista
   Future<void> _checkVehiclePlateUniqueness(String plate, String currentDriverId) async {
+    print('🔍 [DriverService._checkVehiclePlateUniqueness] Verificando unicidade da placa: "$plate" para motorista: $currentDriverId');
     try {
       final response = await _supabase
           .from('drivers')
@@ -1342,14 +1451,19 @@ class DriverService {
           .eq('vehicle_plate', plate)
           .neq('id', currentDriverId);
 
+      print('🔍 [DriverService._checkVehiclePlateUniqueness] Resultado da consulta: ${response.length} registros encontrados');
       if (response.isNotEmpty) {
+        print('❌ [DriverService._checkVehiclePlateUniqueness] Placa já existe: ${response.map((r) => r['id']).toList()}');
         throw const ValidationException(
           'Esta placa já está cadastrada por outro motorista. Por favor, verifique os dados e tente novamente.',
         );
       }
+      print('✅ [DriverService._checkVehiclePlateUniqueness] Placa disponível: "$plate"');
     } on PostgrestException catch (e) {
+      print('❌ [DriverService._checkVehiclePlateUniqueness] PostgrestException: ${e.code} - ${e.message}');
       throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
+      print('❌ [DriverService._checkVehiclePlateUniqueness] Erro inesperado: $e');
       if (e is ValidationException) rethrow;
       throw const DatabaseException(
         'Erro inesperado ao verificar placa do veículo.',
@@ -1360,19 +1474,28 @@ class DriverService {
   /// Verifica se a placa do veículo já existe na criação de um novo motorista
   Future<void> _checkVehiclePlateUniquenessForCreation(String plate) async {
     try {
+      print('🔍 [_checkVehiclePlateUniquenessForCreation] Verificando unicidade da placa: "$plate"');
+      
       final response = await _supabase
           .from('drivers')
           .select('id, vehicle_plate')
           .eq('vehicle_plate', plate);
 
+      print('🔍 [_checkVehiclePlateUniquenessForCreation] Resposta do Supabase: $response');
+      
       if (response.isNotEmpty) {
+        print('❌ [_checkVehiclePlateUniquenessForCreation] Placa já existe no banco!');
         throw const ValidationException(
           'Esta placa já está cadastrada por outro motorista. Por favor, verifique os dados e tente novamente.',
         );
       }
+      
+      print('✅ [_checkVehiclePlateUniquenessForCreation] Placa disponível!');
     } on PostgrestException catch (e) {
+      print('❌ [_checkVehiclePlateUniquenessForCreation] PostgrestException: ${e.code} - ${e.message}');
       throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
+      print('❌ [_checkVehiclePlateUniquenessForCreation] Erro inesperado: $e');
       if (e is ValidationException) rethrow;
       throw const DatabaseException(
         'Erro inesperado ao verificar placa do veículo.',
@@ -1382,38 +1505,67 @@ class DriverService {
 
   /// Valida apenas os campos que estão sendo atualizados
   void _validateUpdateData(Map<String, dynamic> updates) {
-    // Validar vehicle_category se presente (campo crítico)
+    // DEBUG: Log de entrada para validação
+    print('🔍 [DriverService._validateUpdateData] Iniciando validação. Campos: ${updates.keys.toList()}');
+    
+    // Validação de vehicle_category usando VehicleCategoryValidator
     if (updates.containsKey('vehicle_category')) {
       final category = updates['vehicle_category'];
-      if (category != null) {
-        final categoryStr = category.toString().toLowerCase().trim();
-        const validCategories = ['economico', 'standard', 'premium', 'suv', 'executivo', 'van'];
-        if (!validCategories.contains(categoryStr)) {
-          throw ValidationException(
-            'vehicle_category inválido: $categoryStr. Valores permitidos: ${validCategories.join(", ")}'
-          );
+      print('🔍 [DriverService._validateUpdateData] Validando vehicle_category: $category');
+      if (category == null) {
+        print('❌ [DriverService._validateUpdateData] vehicle_category é nulo');
+        throw const ValidationException('vehicle_category não pode ser nulo');
+      }
+      
+      // Validar se a categoria existe na tabela platform_settings
+      final categoryStr = category.toString().trim();
+      if (categoryStr.isNotEmpty) {
+        final isValidCategory = _vehicleCategoryValidator.isVehicleCategoryValid(categoryStr);
+        if (!isValidCategory) {
+          print('❌ [DriverService._validateUpdateData] vehicle_category inválido: $categoryStr');
+          throw ValidationException('Categoria de veículo inválida: $categoryStr');
         }
+        print('✅ [DriverService._validateUpdateData] vehicle_category válido: $categoryStr');
       }
     }
     
     // Validar vehicle_plate se presente (campo crítico)
     if (updates.containsKey('vehicle_plate')) {
       final plate = updates['vehicle_plate'];
+      print('🔍 [DriverService._validateUpdateData] Validando vehicle_plate: $plate');
       if (plate != null) {
         final plateStr = plate.toString().trim();
+        print('🔍 [DriverService._validateUpdateData] Placa após trim: "$plateStr"');
+        
         if (plateStr.isNotEmpty && !plateStr.startsWith('PENDENTE')) {
           final cleanPlate = plateStr.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+          print('🔍 [DriverService._validateUpdateData] Placa limpa: "$cleanPlate"');
           
           if (cleanPlate.length != 7) {
-            throw ValidationException('Placa deve ter exatamente 7 caracteres (ex: ABC1234)');
+            print('❌ [DriverService._validateUpdateData] Placa com tamanho inválido: ${cleanPlate.length} caracteres');
+            throw ValidationException('Placa deve ter exatamente 7 caracteres (ex: ABC1234). Tamanho atual: ${cleanPlate.length}');
           }
           
           // Formato brasileiro: ABC1234 ou ABC1D23 (Mercosul)
-          final plateRegex = RegExp(r'^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$');
-          if (!plateRegex.hasMatch(cleanPlate)) {
-            throw ValidationException('Formato de placa inválido. Use ABC1234 ou ABC1D23');
+          // LOG DEBUG: Testando regex antigo vs novo
+          final oldPlateRegex = RegExp(r'^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$');
+          final newPlateRegex = RegExp(r'^[A-Z]{3}[0-9]{4}$|^[A-Z]{3}[0-9][A-Z][0-9]{2}$');
+          
+          print('🔍 [DriverService._validateUpdateData] Testando placa: "$cleanPlate"');
+          print('🔍 [DriverService._validateUpdateData] Regex antigo: ${oldPlateRegex.pattern} - Match: ${oldPlateRegex.hasMatch(cleanPlate)}');
+          print('🔍 [DriverService._validateUpdateData] Regex novo: ${newPlateRegex.pattern} - Match: ${newPlateRegex.hasMatch(cleanPlate)}');
+          
+          if (!newPlateRegex.hasMatch(cleanPlate)) {
+            print('❌ [DriverService._validateUpdateData] Placa não corresponde ao novo regex');
+            print('❌ [DriverService._validateUpdateData] Formatos válidos: ABC1234 (antigo) ou ABC1D23 (Mercosul)');
+            throw ValidationException('Formato de placa inválido. Use ABC1234 (antigo) ou ABC1D23 (Mercosul). Placa recebida: $plateStr');
           }
+          print('✅ [DriverService._validateUpdateData] Placa válida: "$cleanPlate"');
+        } else {
+          print('⚠️ [DriverService._validateUpdateData] Placa vazia ou começa com PENDENTE: "$plateStr"');
         }
+      } else {
+        print('⚠️ [DriverService._validateUpdateData] Placa é nula, pulando validação');
       }
     }
     

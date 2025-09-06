@@ -1,0 +1,3019 @@
+{
+  "backup_app_users_migration": {
+    "properties": {
+      "id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "email": {
+        "format": "text",
+        "type": "string"
+      },
+      "full_name": {
+        "format": "text",
+        "type": "string"
+      },
+      "phone": {
+        "format": "text",
+        "type": "string"
+      },
+      "photo_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "user_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "status": {
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "user_id": {
+        "format": "uuid",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "working_hours": {
+    "required": [
+      "id",
+      "driver_id",
+      "day_of_week",
+      "start_time",
+      "end_time",
+      "is_active",
+      "created_at",
+      "updated_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "driver_id": {
+        "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "day_of_week": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "start_time": {
+        "format": "time without time zone",
+        "type": "string"
+      },
+      "end_time": {
+        "format": "time without time zone",
+        "type": "string"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "corrupted_users_backup": {
+    "required": [
+      "id",
+      "original_user_id"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "original_user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "original_full_name": {
+        "format": "text",
+        "type": "string"
+      },
+      "original_phone": {
+        "format": "text",
+        "type": "string"
+      },
+      "original_email": {
+        "format": "text",
+        "type": "string"
+      },
+      "correction_timestamp": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "correction_reason": {
+        "format": "text",
+        "type": "string"
+      },
+      "restored": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "restored_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "trips": {
+    "required": [
+      "id",
+      "trip_code",
+      "passenger_id",
+      "driver_id",
+      "status",
+      "origin_address",
+      "origin_latitude",
+      "origin_longitude",
+      "destination_address",
+      "destination_latitude",
+      "destination_longitude",
+      "vehicle_category",
+      "base_fare",
+      "total_fare"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "trip_code": {
+        "format": "text",
+        "type": "string"
+      },
+      "request_id": {
+        "description": "Note:\nThis is a Foreign Key to `trip_requests.id`.<fk table='trip_requests' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "passenger_id": {
+        "description": "Note:\nThis is a Foreign Key to `passengers.id`.<fk table='passengers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "driver_id": {
+        "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "status": {
+        "format": "text",
+        "type": "string"
+      },
+      "origin_address": {
+        "format": "text",
+        "type": "string"
+      },
+      "origin_latitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "origin_longitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "origin_neighborhood": {
+        "format": "text",
+        "type": "string"
+      },
+      "destination_address": {
+        "format": "text",
+        "type": "string"
+      },
+      "destination_latitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "destination_longitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "destination_neighborhood": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_category": {
+        "format": "text",
+        "type": "string"
+      },
+      "needs_pet": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "needs_grocery_space": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "is_condo_destination": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "is_condo_origin": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "needs_ac": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "number_of_stops": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "route_polyline": {
+        "format": "text",
+        "type": "string"
+      },
+      "estimated_distance_km": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "estimated_duration_minutes": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "driver_to_pickup_distance_km": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "driver_to_pickup_duration_minutes": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "actual_distance_km": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "actual_duration_minutes": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "waiting_time_minutes": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "driver_distance_traveled_km": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "base_fare": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "additional_fees": {
+        "default": 0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "surge_multiplier": {
+        "default": 1.0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "total_fare": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "platform_commission": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "driver_earnings": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "cancellation_reason": {
+        "format": "text",
+        "type": "string"
+      },
+      "cancellation_fee": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "cancelled_by": {
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "driver_assigned_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "driver_arrived_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "trip_started_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "trip_completed_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "cancelled_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "payment_status": {
+        "default": "pending",
+        "format": "text",
+        "type": "string"
+      },
+      "payment_id": {
+        "format": "text",
+        "type": "string"
+      },
+      "payment_completed_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "promo_code_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "discount_applied": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "backup_conflict_409_removal": {
+    "properties": {
+      "source_table": {
+        "format": "text",
+        "type": "string"
+      },
+      "backup_timestamp": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "email": {
+        "format": "text",
+        "type": "string"
+      },
+      "full_name": {
+        "format": "text",
+        "type": "string"
+      },
+      "phone": {
+        "format": "text",
+        "type": "string"
+      },
+      "photo_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "user_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "status": {
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "driver_operational_cities": {
+    "required": [
+      "id",
+      "driver_id",
+      "city_id"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "driver_id": {
+        "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "city_id": {
+        "description": "Note:\nThis is a Foreign Key to `operational_cities.id`.<fk table='operational_cities' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "is_primary": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "payment_methods": {
+    "description": "M\u00e9todos de pagamento dos usu\u00e1rios (PIX, Carteira Digital)",
+    "required": [
+      "id",
+      "user_id",
+      "type",
+      "is_default",
+      "is_active",
+      "created_at",
+      "updated_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "type": {
+        "format": "character varying",
+        "maxLength": 50,
+        "type": "string"
+      },
+      "is_default": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "card_data": {
+        "format": "jsonb"
+      },
+      "pix_data": {
+        "description": "JSON com dados do PIX: {\"key_type\": \"cpf|email|phone|random_key\", \"key_value\": \"valor_da_chave\", \"qr_code_data\": \"dados_qr\"}",
+        "format": "jsonb"
+      },
+      "asaas_customer_id": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "driver_documents": {
+    "required": [
+      "id",
+      "driver_id",
+      "document_type",
+      "file_url"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "driver_id": {
+        "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "document_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "file_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "file_size": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "mime_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "expiry_date": {
+        "format": "date",
+        "type": "string"
+      },
+      "status": {
+        "default": "pending",
+        "format": "text",
+        "type": "string"
+      },
+      "rejection_reason": {
+        "format": "text",
+        "type": "string"
+      },
+      "reviewed_by": {
+        "description": "Note:\nThis is a Foreign Key to `app_users.id`.<fk table='app_users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "reviewed_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "is_current": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "profiles": {
+    "description": "View de compatibilidade que mapeia app_users para o formato esperado pelo c\u00f3digo legacy",
+    "properties": {
+      "id": {
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "nome": {
+        "format": "text",
+        "type": "string"
+      },
+      "telefone": {
+        "format": "text",
+        "type": "string"
+      },
+      "avatar_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "tipo_usuario": {
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "backup_drivers_migration": {
+    "properties": {
+      "id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "cnh_number": {
+        "format": "text",
+        "type": "string"
+      },
+      "cnh_expiry_date": {
+        "format": "date",
+        "type": "string"
+      },
+      "cnh_photo_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_brand": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_model": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_year": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "vehicle_color": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_plate": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_category": {
+        "format": "text",
+        "type": "string"
+      },
+      "crlv_photo_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "approval_status": {
+        "format": "text",
+        "type": "string"
+      },
+      "approved_by": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "approved_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "is_online": {
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "accepts_pet": {
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "pet_fee": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "accepts_grocery": {
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "grocery_fee": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "accepts_condo": {
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "condo_fee": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "stop_fee": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "ac_policy": {
+        "format": "text",
+        "type": "string"
+      },
+      "custom_price_per_km": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "custom_price_per_minute": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "bank_account_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "bank_code": {
+        "format": "text",
+        "type": "string"
+      },
+      "bank_agency": {
+        "format": "text",
+        "type": "string"
+      },
+      "bank_account": {
+        "format": "text",
+        "type": "string"
+      },
+      "pix_key": {
+        "format": "text",
+        "type": "string"
+      },
+      "pix_key_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "consecutive_cancellations": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "total_trips": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "average_rating": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "current_latitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "current_longitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "last_location_update": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "created_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "daily_statistics": {
+    "properties": {
+      "date": {
+        "format": "date",
+        "type": "string"
+      },
+      "total_trips": {
+        "format": "bigint",
+        "type": "integer"
+      },
+      "completed_trips": {
+        "format": "bigint",
+        "type": "integer"
+      },
+      "cancelled_trips": {
+        "format": "bigint",
+        "type": "integer"
+      },
+      "no_show_trips": {
+        "format": "bigint",
+        "type": "integer"
+      },
+      "avg_fare": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "total_revenue": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "total_commission": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "unique_passengers": {
+        "format": "bigint",
+        "type": "integer"
+      },
+      "unique_drivers": {
+        "format": "bigint",
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  },
+  "driver_status": {
+    "required": [
+      "driver_id",
+      "online_intent",
+      "updated_at"
+    ],
+    "properties": {
+      "driver_id": {
+        "description": "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "online_intent": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "passenger_promo_codes": {
+    "required": [
+      "id",
+      "code",
+      "type",
+      "value",
+      "min_amount",
+      "is_active",
+      "is_first_ride_only",
+      "usage_count",
+      "valid_from",
+      "valid_until",
+      "created_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "code": {
+        "format": "character varying",
+        "maxLength": 50,
+        "type": "string"
+      },
+      "type": {
+        "format": "character varying",
+        "maxLength": 50,
+        "type": "string"
+      },
+      "value": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "min_amount": {
+        "default": 0.0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "max_discount": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "is_first_ride_only": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "usage_limit": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "usage_count": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "valid_from": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "valid_until": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "activity_logs": {
+    "required": [
+      "id",
+      "action"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "description": "Note:\nThis is a Foreign Key to `app_users.id`.<fk table='app_users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "action": {
+        "format": "text",
+        "type": "string"
+      },
+      "entity_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "entity_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "old_values": {
+        "format": "jsonb"
+      },
+      "new_values": {
+        "format": "jsonb"
+      },
+      "metadata": {
+        "format": "jsonb"
+      },
+      "ip_address": {
+        "format": "inet",
+        "type": "string"
+      },
+      "user_agent": {
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "user_devices": {
+    "required": [
+      "id",
+      "user_id",
+      "device_token",
+      "platform"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "description": "Note:\nThis is a Foreign Key to `app_users.id`.<fk table='app_users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "device_token": {
+        "format": "text",
+        "type": "string"
+      },
+      "platform": {
+        "format": "text",
+        "type": "string"
+      },
+      "device_model": {
+        "format": "text",
+        "type": "string"
+      },
+      "app_version": {
+        "format": "text",
+        "type": "string"
+      },
+      "os_version": {
+        "format": "text",
+        "type": "string"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "last_used_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "passenger_promo_code_usage": {
+    "required": [
+      "id",
+      "user_id",
+      "promo_code_id",
+      "original_amount",
+      "discount_amount",
+      "final_amount",
+      "used_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "promo_code_id": {
+        "description": "Note:\nThis is a Foreign Key to `passenger_promo_codes.id`.<fk table='passenger_promo_codes' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "trip_id": {
+        "description": "Note:\nThis is a Foreign Key to `trips.id`.<fk table='trips' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "original_amount": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "discount_amount": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "final_amount": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "used_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "app_users": {
+    "required": [
+      "id",
+      "email",
+      "full_name",
+      "phone",
+      "user_type",
+      "status"
+    ],
+    "properties": {
+      "id": {
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "email": {
+        "format": "text",
+        "type": "string"
+      },
+      "full_name": {
+        "format": "text",
+        "type": "string"
+      },
+      "phone": {
+        "default": "pending",
+        "format": "text",
+        "type": "string"
+      },
+      "photo_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "user_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "status": {
+        "default": "active",
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "fcm_token": {
+        "format": "text",
+        "type": "string"
+      },
+      "device_id": {
+        "format": "text",
+        "type": "string"
+      },
+      "device_platform": {
+        "format": "text",
+        "type": "string"
+      },
+      "last_active_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "drivers": {
+    "required": [
+      "id",
+      "user_id",
+      "cnh_number",
+      "cnh_expiry_date",
+      "cnh_photo_url",
+      "vehicle_brand",
+      "vehicle_model",
+      "vehicle_year",
+      "vehicle_color",
+      "vehicle_plate",
+      "vehicle_category",
+      "crlv_photo_url"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "description": "Note:\nThis is a Foreign Key to `app_users.id`.<fk table='app_users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "cnh_number": {
+        "format": "text",
+        "type": "string"
+      },
+      "cnh_expiry_date": {
+        "format": "date",
+        "type": "string"
+      },
+      "cnh_photo_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_brand": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_model": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_year": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "vehicle_color": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_plate": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_category": {
+        "format": "text",
+        "type": "string"
+      },
+      "crlv_photo_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "approval_status": {
+        "default": "pending",
+        "format": "text",
+        "type": "string"
+      },
+      "approved_by": {
+        "description": "Note:\nThis is a Foreign Key to `app_users.id`.<fk table='app_users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "approved_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "is_online": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "accepts_pet": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "pet_fee": {
+        "default": 0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "accepts_grocery": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "grocery_fee": {
+        "default": 0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "accepts_condo": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "condo_fee": {
+        "default": 0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "stop_fee": {
+        "default": 0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "ac_policy": {
+        "default": "on_request",
+        "format": "text",
+        "type": "string"
+      },
+      "custom_price_per_km": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "custom_price_per_minute": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "bank_account_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "bank_code": {
+        "format": "text",
+        "type": "string"
+      },
+      "bank_agency": {
+        "format": "text",
+        "type": "string"
+      },
+      "bank_account": {
+        "format": "text",
+        "type": "string"
+      },
+      "pix_key": {
+        "format": "text",
+        "type": "string"
+      },
+      "pix_key_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "consecutive_cancellations": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "total_trips": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "average_rating": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "current_latitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "current_longitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "last_location_update": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "fcm_token": {
+        "format": "text",
+        "type": "string"
+      },
+      "device_platform": {
+        "format": "text",
+        "type": "string"
+      },
+      "last_notification_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "passengers": {
+    "required": [
+      "id",
+      "user_id"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "description": "Note:\nThis is a Foreign Key to `app_users.id`.<fk table='app_users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "consecutive_cancellations": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "total_trips": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "average_rating": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "payment_method_id": {
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "trip_stops": {
+    "required": [
+      "id",
+      "trip_id",
+      "stop_order",
+      "address",
+      "latitude",
+      "longitude"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "trip_id": {
+        "description": "Note:\nThis is a Foreign Key to `trips.id`.<fk table='trips' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "stop_order": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "address": {
+        "format": "text",
+        "type": "string"
+      },
+      "latitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "longitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "arrived_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "departed_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "driver_performance": {
+    "properties": {
+      "driver_id": {
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "driver_name": {
+        "format": "text",
+        "type": "string"
+      },
+      "average_rating": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "total_trips": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "consecutive_cancellations": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "completed_trips_30d": {
+        "format": "bigint",
+        "type": "integer"
+      },
+      "cancelled_trips_30d": {
+        "format": "bigint",
+        "type": "integer"
+      },
+      "rating_30d": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "earnings_30d": {
+        "format": "numeric",
+        "type": "number"
+      }
+    },
+    "type": "object"
+  },
+  "passenger_wallets": {
+    "required": [
+      "id",
+      "passenger_id",
+      "user_id",
+      "available_balance",
+      "pending_balance",
+      "total_spent",
+      "total_cashback",
+      "created_at",
+      "updated_at"
+    ],
+    "properties": {
+      "id": {
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "passenger_id": {
+        "description": "Note:\nThis is a Foreign Key to `passengers.id`.<fk table='passengers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "available_balance": {
+        "default": 0.0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "pending_balance": {
+        "default": 0.0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "total_spent": {
+        "default": 0.0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "total_cashback": {
+        "default": 0.0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "saved_places": {
+    "required": [
+      "id",
+      "user_id",
+      "label",
+      "address",
+      "latitude",
+      "longitude",
+      "category"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "label": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "address": {
+        "format": "text",
+        "type": "string"
+      },
+      "latitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "longitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "category": {
+        "default": "other",
+        "format": "character varying",
+        "maxLength": 50,
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "operational_cities": {
+    "required": [
+      "id",
+      "name",
+      "state"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "name": {
+        "format": "text",
+        "type": "string"
+      },
+      "state": {
+        "format": "text",
+        "type": "string"
+      },
+      "country": {
+        "default": "Brasil",
+        "format": "text",
+        "type": "string"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "min_fare": {
+        "default": 8.0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "launch_date": {
+        "format": "date",
+        "type": "string"
+      },
+      "polygon_coordinates": {
+        "format": "jsonb"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "driver_excluded_zones": {
+    "required": [
+      "id",
+      "driver_id",
+      "neighborhood_name",
+      "city",
+      "state"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "driver_id": {
+        "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "neighborhood_name": {
+        "format": "text",
+        "type": "string"
+      },
+      "city": {
+        "format": "text",
+        "type": "string"
+      },
+      "state": {
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "data_correction_monitoring": {
+    "properties": {
+      "correction_date": {
+        "format": "date",
+        "type": "string"
+      },
+      "corrections_made": {
+        "format": "bigint",
+        "type": "integer"
+      },
+      "corrections_restored": {
+        "format": "bigint",
+        "type": "integer"
+      },
+      "corrections_active": {
+        "format": "bigint",
+        "type": "integer"
+      },
+      "correction_reason": {
+        "format": "text",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "trip_chats": {
+    "required": [
+      "id",
+      "trip_id",
+      "sender_id",
+      "message"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "trip_id": {
+        "description": "Note:\nThis is a Foreign Key to `trips.id`.<fk table='trips' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "sender_id": {
+        "description": "Note:\nThis is a Foreign Key to `app_users.id`.<fk table='app_users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "message": {
+        "format": "text",
+        "type": "string"
+      },
+      "is_read": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "read_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "ratings": {
+    "required": [
+      "id",
+      "trip_id"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "trip_id": {
+        "description": "Note:\nThis is a Foreign Key to `trips.id`.<fk table='trips' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "passenger_rating": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "passenger_rating_tags": {
+        "format": "text[]",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "passenger_rating_comment": {
+        "format": "text",
+        "type": "string"
+      },
+      "passenger_rated_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "driver_rating": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "driver_rating_tags": {
+        "format": "text[]",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "driver_rating_comment": {
+        "format": "text",
+        "type": "string"
+      },
+      "driver_rated_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "platform_settings": {
+    "required": [
+      "id",
+      "category",
+      "base_price_per_km",
+      "base_price_per_minute",
+      "platform_commission_percent"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "category": {
+        "format": "text",
+        "type": "string"
+      },
+      "base_price_per_km": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "base_price_per_minute": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "platform_commission_percent": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "min_fare": {
+        "default": 8.0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "min_cancellation_fee": {
+        "default": 10.0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "cancellation_fee_percent": {
+        "default": 20.0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "no_show_wait_minutes": {
+        "default": 3,
+        "format": "integer",
+        "type": "integer"
+      },
+      "driver_acceptance_timeout_seconds": {
+        "default": 10,
+        "format": "integer",
+        "type": "integer"
+      },
+      "search_radius_km": {
+        "default": 10,
+        "format": "integer",
+        "type": "integer"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "withdrawals": {
+    "required": [
+      "id",
+      "driver_id",
+      "wallet_id",
+      "amount"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "driver_id": {
+        "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "wallet_id": {
+        "description": "Note:\nThis is a Foreign Key to `driver_wallets.id`.<fk table='driver_wallets' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "amount": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "withdrawal_method": {
+        "format": "text",
+        "type": "string"
+      },
+      "bank_account_info": {
+        "format": "jsonb"
+      },
+      "asaas_transfer_id": {
+        "format": "text",
+        "type": "string"
+      },
+      "status": {
+        "default": "pending",
+        "format": "text",
+        "type": "string"
+      },
+      "failure_reason": {
+        "format": "text",
+        "type": "string"
+      },
+      "requested_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "processed_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "completed_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "available_drivers_view": {
+    "description": "View que lista motoristas dispon\u00edveis para passageiros. Filtra apenas motoristas aprovados, online, ativos e com localiza\u00e7\u00e3o recente.",
+    "properties": {
+      "driver_id": {
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "description": "Note:\nThis is a Foreign Key to `app_users.id`.<fk table='app_users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "full_name": {
+        "format": "text",
+        "type": "string"
+      },
+      "photo_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "phone": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_brand": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_model": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_year": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "vehicle_color": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_category": {
+        "format": "text",
+        "type": "string"
+      },
+      "average_rating": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "total_trips": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "is_online": {
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "current_latitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "current_longitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "last_location_update": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "accepts_pet": {
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "accepts_grocery": {
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "accepts_condo": {
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "ac_policy": {
+        "format": "text",
+        "type": "string"
+      },
+      "custom_price_per_km": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "custom_price_per_minute": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "pet_fee": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "grocery_fee": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "condo_fee": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "stop_fee": {
+        "format": "numeric",
+        "type": "number"
+      }
+    },
+    "type": "object"
+  },
+  "driver_operation_zones": {
+    "description": "\u00c1reas de atua\u00e7\u00e3o do motorista com fatores de multiplica\u00e7\u00e3o de pre\u00e7o",
+    "required": [
+      "id",
+      "driver_id",
+      "zone_name",
+      "polygon_coordinates",
+      "price_multiplier",
+      "is_active"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "driver_id": {
+        "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "zone_name": {
+        "description": "Nome da \u00e1rea definido pelo motorista",
+        "format": "text",
+        "type": "string"
+      },
+      "polygon_coordinates": {
+        "description": "Coordenadas do pol\u00edgono em formato JSON: [{\"lat\": -23.5505, \"lng\": -46.6333}, ...]",
+        "format": "jsonb"
+      },
+      "price_multiplier": {
+        "default": 1.0,
+        "description": "Fator de multiplica\u00e7\u00e3o do pre\u00e7o (1.0 = normal, 1.5 = 50% a mais, etc.)",
+        "format": "numeric",
+        "type": "number"
+      },
+      "is_active": {
+        "default": true,
+        "description": "Se a \u00e1rea est\u00e1 ativa para aplica\u00e7\u00e3o do multiplicador",
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "trip_location_history": {
+    "required": [
+      "id",
+      "trip_id",
+      "latitude",
+      "longitude"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "trip_id": {
+        "description": "Note:\nThis is a Foreign Key to `trips.id`.<fk table='trips' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "latitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "longitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "speed_kmh": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "heading": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "accuracy_meters": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "recorded_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "driver_effective_status": {
+    "properties": {
+      "driver_id": {
+        "description": "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "online_intent": {
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "is_within_working_hours": {
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "effective_online": {
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "updated_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "wallet_transactions": {
+    "required": [
+      "id",
+      "wallet_id",
+      "type",
+      "amount"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "wallet_id": {
+        "description": "Note:\nThis is a Foreign Key to `driver_wallets.id`.<fk table='driver_wallets' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "type": {
+        "format": "text",
+        "type": "string"
+      },
+      "amount": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "description": {
+        "format": "text",
+        "type": "string"
+      },
+      "reference_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "reference_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "balance_after": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "status": {
+        "default": "completed",
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "driver_schedules": {
+    "required": [
+      "id",
+      "driver_id",
+      "day_of_week",
+      "start_time",
+      "end_time"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "driver_id": {
+        "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "day_of_week": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "start_time": {
+        "format": "time without time zone",
+        "type": "string"
+      },
+      "end_time": {
+        "format": "time without time zone",
+        "type": "string"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "trip_requests": {
+    "required": [
+      "id",
+      "passenger_id",
+      "origin_address",
+      "origin_latitude",
+      "origin_longitude",
+      "destination_address",
+      "destination_latitude",
+      "destination_longitude",
+      "vehicle_category"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "passenger_id": {
+        "description": "Note:\nThis is a Foreign Key to `passengers.id`.<fk table='passengers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "origin_address": {
+        "format": "text",
+        "type": "string"
+      },
+      "origin_latitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "origin_longitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "origin_neighborhood": {
+        "format": "text",
+        "type": "string"
+      },
+      "destination_address": {
+        "format": "text",
+        "type": "string"
+      },
+      "destination_latitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "destination_longitude": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "destination_neighborhood": {
+        "format": "text",
+        "type": "string"
+      },
+      "vehicle_category": {
+        "format": "text",
+        "type": "string"
+      },
+      "needs_pet": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "needs_grocery_space": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "needs_ac": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "is_condo_origin": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "is_condo_destination": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "number_of_stops": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "status": {
+        "default": "searching",
+        "format": "text",
+        "type": "string"
+      },
+      "selected_offer_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "expires_at": {
+        "default": "(now() + '00:00:10'::interval)",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "target_driver_id": {
+        "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "fallback_drivers": {
+        "format": "uuid[]",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "accepted_by_driver_id": {
+        "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "accepted_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "current_fallback_index": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "timeout_count": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "estimated_distance_km": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "estimated_duration_minutes": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "estimated_fare": {
+        "format": "numeric",
+        "type": "number"
+      }
+    },
+    "type": "object"
+  },
+  "trip_status_history": {
+    "required": [
+      "id",
+      "trip_id",
+      "new_status"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "trip_id": {
+        "description": "Note:\nThis is a Foreign Key to `trips.id`.<fk table='trips' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "old_status": {
+        "format": "text",
+        "type": "string"
+      },
+      "new_status": {
+        "format": "text",
+        "type": "string"
+      },
+      "changed_by": {
+        "description": "Note:\nThis is a Foreign Key to `app_users.id`.<fk table='app_users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "reason": {
+        "format": "text",
+        "type": "string"
+      },
+      "metadata": {
+        "format": "jsonb"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "backup_passengers_migration": {
+    "properties": {
+      "id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "consecutive_cancellations": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "total_trips": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "average_rating": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "payment_method_id": {
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "passenger_wallet_transactions": {
+    "required": [
+      "id",
+      "wallet_id",
+      "passenger_id",
+      "type",
+      "amount",
+      "description",
+      "status",
+      "created_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "wallet_id": {
+        "description": "Note:\nThis is a Foreign Key to `passenger_wallets.id`.<fk table='passenger_wallets' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "passenger_id": {
+        "description": "Note:\nThis is a Foreign Key to `passengers.id`.<fk table='passengers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "type": {
+        "format": "character varying",
+        "maxLength": 50,
+        "type": "string"
+      },
+      "amount": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "description": {
+        "format": "text",
+        "type": "string"
+      },
+      "trip_id": {
+        "description": "Note:\nThis is a Foreign Key to `trips.id`.<fk table='trips' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "payment_method_id": {
+        "description": "Note:\nThis is a Foreign Key to `payment_methods.id`.<fk table='payment_methods' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "asaas_payment_id": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "status": {
+        "default": "pending",
+        "format": "character varying",
+        "maxLength": 50,
+        "type": "string"
+      },
+      "metadata": {
+        "format": "jsonb"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "processed_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "notifications": {
+    "required": [
+      "id",
+      "title",
+      "body",
+      "type"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "description": "Note:\nThis is a Foreign Key to `app_users.id`.<fk table='app_users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": {
+        "format": "text",
+        "type": "string"
+      },
+      "body": {
+        "format": "text",
+        "type": "string"
+      },
+      "type": {
+        "format": "text",
+        "type": "string"
+      },
+      "data": {
+        "format": "jsonb"
+      },
+      "priority": {
+        "default": "normal",
+        "format": "text",
+        "type": "string"
+      },
+      "is_read": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "sent_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "read_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "promo_code_usage": {
+    "required": [
+      "id",
+      "promo_code_id",
+      "passenger_id"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "promo_code_id": {
+        "description": "Note:\nThis is a Foreign Key to `promo_codes.id`.<fk table='promo_codes' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "passenger_id": {
+        "description": "Note:\nThis is a Foreign Key to `passengers.id`.<fk table='passengers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "trip_id": {
+        "description": "Note:\nThis is a Foreign Key to `trips.id`.<fk table='trips' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "discount_applied": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "used_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "driver_wallets": {
+    "required": [
+      "id",
+      "driver_id"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "driver_id": {
+        "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "available_balance": {
+        "default": 0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "pending_balance": {
+        "default": 0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "total_earned": {
+        "default": 0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "total_withdrawn": {
+        "default": 0,
+        "format": "numeric",
+        "type": "number"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "driver_offers": {
+    "required": [
+      "id",
+      "request_id",
+      "driver_id",
+      "driver_distance_km",
+      "driver_eta_minutes",
+      "base_fare",
+      "additional_fees",
+      "total_fare"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "request_id": {
+        "description": "Note:\nThis is a Foreign Key to `trip_requests.id`.<fk table='trip_requests' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "driver_id": {
+        "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "driver_distance_km": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "driver_eta_minutes": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "base_fare": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "additional_fees": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "total_fare": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "distance_component": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "time_component": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "is_available": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "was_selected": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "promo_codes": {
+    "required": [
+      "id",
+      "code",
+      "discount_type",
+      "discount_value",
+      "valid_from",
+      "valid_until"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "code": {
+        "format": "text",
+        "type": "string"
+      },
+      "description": {
+        "format": "text",
+        "type": "string"
+      },
+      "discount_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "discount_value": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "max_discount": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "min_trip_value": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "max_uses_per_user": {
+        "default": 1,
+        "format": "integer",
+        "type": "integer"
+      },
+      "valid_from": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "valid_until": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "usage_limit": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "used_count": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "target_cities": {
+        "format": "uuid[]",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "target_categories": {
+        "format": "text[]",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "is_first_trip_only": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_by": {
+        "description": "Note:\nThis is a Foreign Key to `app_users.id`.<fk table='app_users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+}

@@ -24,6 +24,7 @@ class DocumentCaptureScreen extends StatefulWidget {
 
 class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
   File? _selectedImage;
+  String? _existingImageUrl;
   bool _isUploading = false;
   String? _error;
   DateTime? _expiryDate;
@@ -34,6 +35,10 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
     super.initState();
     if (widget.existingDocument?.expiryDate != null) {
       _expiryDate = widget.existingDocument!.expiryDate;
+    }
+    // Carregar URL da imagem existente se disponível
+    if (widget.existingDocument?.fileUrl.isNotEmpty == true) {
+      _existingImageUrl = widget.existingDocument!.fileUrl;
     }
   }
 
@@ -430,14 +435,23 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        if (_selectedImage != null)
-          _buildImagePreview()
-        else
-          _buildImagePlaceholder(),
+        _buildImageDisplay(),
       ],
     );
 
-  Widget _buildImagePreview() => Container(
+  /// Método principal para decidir qual imagem exibir
+  Widget _buildImageDisplay() {
+    if (_selectedImage != null) {
+      return _buildLocalImagePreview();
+    } else if (_existingImageUrl != null) {
+      return _buildNetworkImagePreview();
+    } else {
+      return _buildImagePlaceholder();
+    }
+  }
+
+  /// Preview de imagem local (recém selecionada)
+  Widget _buildLocalImagePreview() => Container(
       width: double.infinity,
       height: 200,
       decoration: BoxDecoration(
@@ -478,17 +492,78 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+
+  /// Preview de imagem da rede (documento existente)
+  Widget _buildNetworkImagePreview() => Container(
+      width: double.infinity,
+      height: 200,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _getStatusBorderColor(),
+          width: 2,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            Image.network(
+              _existingImageUrl!,
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  color: AppColors.gray100,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.lightPrimary,
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) => Container(
+                color: AppColors.gray100,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: AppColors.error,
+                      size: 32,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Erro ao carregar imagem',
+                      style: TextStyle(
+                        color: AppColors.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Indicador de status
+            _buildStatusIndicator(),
+            // Botão para substituir imagem
             Positioned(
               bottom: 8,
               right: 8,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppColors.black.withOpacity(0.7),
+                  color: AppColors.lightPrimary,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: IconButton(
                   icon: const Icon(
-                    Icons.edit,
+                    Icons.camera_alt,
                     color: AppColors.white,
                     size: 20,
                   ),
@@ -500,6 +575,96 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
         ),
       ),
     );
+
+  /// Retorna a cor da borda baseada no status do documento
+  Color _getStatusBorderColor() {
+    if (widget.existingDocument == null) return AppColors.gray200;
+    
+    switch (widget.existingDocument!.status) {
+      case 'approved':
+        return AppColors.success;
+      case 'pending':
+        return AppColors.warning;
+      case 'rejected':
+        return AppColors.error;
+      default:
+        return AppColors.gray200;
+    }
+  }
+
+  /// Constrói o indicador visual de status do documento
+  Widget _buildStatusIndicator() {
+    if (widget.existingDocument == null) return const SizedBox.shrink();
+    
+    final document = widget.existingDocument!;
+    IconData icon;
+    Color color;
+    String label;
+    
+    switch (document.status) {
+      case 'approved':
+        icon = Icons.check_circle;
+        color = AppColors.success;
+        label = 'Aprovado';
+        break;
+      case 'pending':
+        icon = Icons.schedule;
+        color = AppColors.warning;
+        label = 'Em análise';
+        break;
+      case 'rejected':
+        icon = Icons.cancel;
+        color = AppColors.error;
+        label = 'Rejeitado';
+        break;
+      default:
+        icon = Icons.help_outline;
+        color = AppColors.gray400;
+        label = 'Desconhecido';
+    }
+    
+    return Positioned(
+      top: 8,
+      left: 8,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: AppColors.white,
+              size: 16,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Retorna o texto apropriado para o botão de upload
+  String _getUploadButtonText() {
+    if (_selectedImage != null) {
+      return widget.existingDocument != null ? 'Substituir Documento' : 'Enviar Documento';
+    } else if (widget.existingDocument != null) {
+      return 'Reenviar Documento';
+    } else {
+      return 'Enviar Documento';
+    }
+  }
 
   Widget _buildImagePlaceholder() => Container(
       width: double.infinity,
@@ -688,9 +853,7 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
                 ],
               )
             : Text(
-                widget.existingDocument != null
-                    ? 'Atualizar Documento'
-                    : 'Enviar Documento',
+                _getUploadButtonText(),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,

@@ -8,6 +8,7 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../utils/user_utils.dart';
 import '../../widgets/feedback/index.dart';
+import '../../utils/menu_logger.dart';
 
 class UserMenuScreen extends StatefulWidget {
   const UserMenuScreen({super.key});
@@ -22,10 +23,13 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
   @override
   void initState() {
     super.initState();
+    MenuLogger.logMenuLoad('USER');
     _userFuture = UserService.getCurrentUser();
   }
 
   void _showComingSoon(String label) {
+    MenuLogger.logComingSoonTap('USER', label);
+    
     final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -35,6 +39,8 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
   }
 
   Future<void> _logout() async {
+    MenuLogger.logLogoutAttempt('USER');
+    
     final confirm = await AppDialogUtils.showConfirmation(
       context,
       title: 'Sair',
@@ -44,10 +50,12 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
 
     if (confirm ?? false) {
       try {
+        MenuLogger.logLogoutSuccess('USER');
         await Supabase.instance.client.auth.signOut();
         if (!mounted) return;
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
       } catch (e) {
+        MenuLogger.logLogoutError('USER', e);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -55,10 +63,14 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
           ),
         );
       }
+    } else {
+      MenuLogger.logLogoutConfirmation('USER', false);
     }
   }
 
   Future<void> _openWhatsAppSupport() async {
+    MenuLogger.logHelpAccess('USER', 'WhatsApp Support');
+    
     const phoneNumber = '556592577217';
     const message = 'Olá! Preciso de ajuda com o app Option.';
     final encodedMessage = Uri.encodeComponent(message);
@@ -67,8 +79,10 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
     final uri = Uri.parse(whatsappUrl);
     
     if (await canLaunchUrl(uri)) {
+      MenuLogger.logExternalAppLaunch('USER', 'WhatsApp', 'Open support chat');
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
+      MenuLogger.logNavigationError('USER', 'WhatsApp Support', 'Cannot launch URL');
       if (!mounted) {
         return;
       }
@@ -110,29 +124,42 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
               _MenuTile(
                 icon: Icons.account_balance_wallet_outlined,
                 label: 'Carteira',
-                onTap: () => Navigator.pushNamed(context, '/wallet'),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('USER', 'Carteira');
+                  Navigator.pushNamed(context, '/wallet');
+                },
               ),
               _MenuTile(
                 icon: Icons.person_outline,
                 label: 'Perfil',
-                onTap: () => Navigator.pushNamed(context, '/profile_edit').then((result) {
-                  if (result == true) {
-                    setState(() {
-                      _userFuture = UserService.getCurrentUser();
-                    });
-                  }
-                }),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('USER', 'Perfil');
+                  Navigator.pushNamed(context, '/profile_edit').then((result) {
+                    if (result == true) {
+                      MenuLogger.logProfileUpdateSuccess('USER');
+                      setState(() {
+                        _userFuture = UserService.getCurrentUser();
+                      });
+                    }
+                  });
+                },
               ),
               // Opção Pagamentos removida temporariamente
               // _MenuTile(
               //   icon: Icons.payment_outlined,
               //   label: 'Pagamentos',
-              //   onTap: () => Navigator.pushNamed(context, '/payments'),
+              //   onTap: () {
+              //     MenuLogger.logScreenNavigation('USER', 'Pagamentos');
+              //     Navigator.pushNamed(context, '/payments');
+              //   },
               // ),
               _MenuTile(
                 icon: Icons.place_outlined,
                 label: 'Locais salvos',
-                onTap: () => Navigator.pushNamed(context, '/saved_places'),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('USER', 'Locais salvos');
+                  Navigator.pushNamed(context, '/saved_places');
+                },
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
@@ -140,7 +167,10 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
               _MenuTile(
                 icon: Icons.history,
                 label: 'Histórico de viagens',
-                onTap: () => Navigator.pushNamed(context, '/trip_history'),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('USER', 'Histórico de viagens');
+                  Navigator.pushNamed(context, '/trip_history');
+                },
               ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
@@ -149,12 +179,18 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
               // _MenuTile(
               //   icon: Icons.emergency,
               //   label: 'Emergência',
-              //   onTap: () => Navigator.pushNamed(context, '/emergency'),
+              //   onTap: () {
+              //     MenuLogger.logScreenNavigation('USER', 'Emergência');
+              //     Navigator.pushNamed(context, '/emergency');
+              //   },
               // ),
               _MenuTile(
                 icon: Icons.notifications_none,
                 label: 'Notificações',
-                onTap: () => Navigator.pushNamed(context, '/notifications'),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('USER', 'Notificações');
+                  Navigator.pushNamed(context, '/notifications');
+                },
               ),
               _MenuTile(
                 icon: Icons.help_outline,
@@ -164,7 +200,10 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
               _MenuTile(
                 icon: Icons.info_outline,
                 label: 'Sobre o app',
-                onTap: () => Navigator.pushNamed(context, '/about'),
+                onTap: () {
+                  MenuLogger.logScreenNavigation('USER', 'Sobre o app');
+                  Navigator.pushNamed(context, '/about');
+                },
               ),
               _MenuTile(
                 icon: Icons.logout,
@@ -231,9 +270,25 @@ class _HeaderCard extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
+class _SectionTitle extends StatefulWidget {
   const _SectionTitle({required this.title});
   final String title;
+
+  @override
+  State<_SectionTitle> createState() => _SectionTitleState();
+}
+
+class _SectionTitleState extends State<_SectionTitle> {
+  @override
+  void initState() {
+    super.initState();
+    // Log section view when the section title is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        MenuLogger.logMenuSectionView('USER', widget.title);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -241,7 +296,7 @@ class _SectionTitle extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Text(
-        title,
+        widget.title,
         style: AppTypography.titleMedium.copyWith(color: cs.onSurfaceVariant),
       ),
     );

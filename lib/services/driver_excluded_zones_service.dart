@@ -78,6 +78,20 @@ class DriverExcludedZonesService {
           );
         }
         
+        // Verifica se o motorista existe
+        final driverExists = await _supabase
+            .from('drivers')
+            .select('id')
+            .eq('id', driverId)
+            .maybeSingle();
+        
+        if (driverExists == null) {
+          throw const ValidationException(
+            'Não foi possível adicionar zona excluída: motorista não encontrado. '
+            'Por favor, verifique se você está logado como motorista.',
+          );
+        }
+        
         // Verifica limite de zonas
         await _zoneLimitService.validateAndEnforceLimit(driverId, 1);
         
@@ -122,6 +136,20 @@ class DriverExcludedZonesService {
     required List<Map<String, String>> zones,
   }) async => TransactionService.executeWithRetry(
       () async {
+        // Verifica se o motorista existe
+        final driverExists = await _supabase
+            .from('drivers')
+            .select('id')
+            .eq('id', driverId)
+            .maybeSingle();
+        
+        if (driverExists == null) {
+          throw const ValidationException(
+            'Não foi possível adicionar zonas excluídas: motorista não encontrado. '
+            'Por favor, verifique se você está logado como motorista.',
+          );
+        }
+        
         // Verifica limite antes de processar
         await _zoneLimitService.validateAndEnforceLimit(driverId, zones.length);
         

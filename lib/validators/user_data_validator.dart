@@ -79,23 +79,32 @@ class UserDataValidator {
 
   /// Valida telefone (opcional)
   static String? validatePhone(String? phone) {
+    print('📞 [USER_DATA_VALIDATOR] validatePhone iniciado');
+    print('📞 [USER_DATA_VALIDATOR] Telefone recebido: ${phone ?? 'null'}');
+    
     if (phone == null || phone.trim().isEmpty) {
+      print('📞 [USER_DATA_VALIDATOR] Telefone é nulo ou vazio, retornando null');
       return null; // Telefone é opcional
     }
 
     final sanitized = phone.trim();
+    print('📞 [USER_DATA_VALIDATOR] Telefone sanitizado: $sanitized');
     
     if (_isCorruptedData(sanitized)) {
+      print('📞 [USER_DATA_VALIDATOR] Telefone corrompido detectado: $sanitized');
       throw ValidationException('Telefone contém dados corrompidos: $sanitized');
     }
 
     // Remove formatação e valida apenas números
     final digitsOnly = sanitized.replaceAll(RegExp(r'[^\d]'), '');
+    print('📞 [USER_DATA_VALIDATOR] Apenas dígitos: $digitsOnly');
     
     if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+      print('📞 [USER_DATA_VALIDATOR] Comprimento inválido: ${digitsOnly.length} dígitos');
       throw ValidationException('Telefone deve ter entre 10 e 15 dígitos: $sanitized');
     }
 
+    print('📞 [USER_DATA_VALIDATOR] Telefone válido, retornando: $sanitized');
     return sanitized;
   }
 
@@ -164,14 +173,32 @@ class UserDataValidator {
     String? phone,
     String? photoUrl,
   }) {
+    print('🔍 [USER_DATA_VALIDATOR] validateUserData iniciado');
+    print('🔍 [USER_DATA_VALIDATOR] Dados recebidos:');
+    print('  - fullName: $fullName');
+    print('  - email: $email');
+    print('  - userType: $userType');
+    print('  - phone: ${phone ?? 'null'}');
+    print('  - photoUrl: ${photoUrl ?? 'null'}');
+    
     try {
-      return {
+      final result = {
         'full_name': validateAndSanitizeFullName(fullName),
         'email': validateEmail(email),
         'user_type': validateUserType(userType),
         'phone': validatePhone(phone),
         'photo_url': photoUrl?.trim(),
       };
+      
+      print('✅ [USER_DATA_VALIDATOR] validateUserData concluído com sucesso');
+      print('✅ [USER_DATA_VALIDATOR] Resultado:');
+      print('  - full_name: ${result['full_name']}');
+      print('  - email: ${result['email']}');
+      print('  - user_type: ${result['user_type']}');
+      print('  - phone: ${result['phone'] ?? 'null'}');
+      print('  - photo_url: ${result['photo_url'] ?? 'null'}');
+      
+      return result;
     } catch (e) {
       // Log crítico para investigação
       print('🚨 DADOS CORROMPIDOS DETECTADOS E BLOQUEADOS:');

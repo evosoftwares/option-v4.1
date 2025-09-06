@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/location_service.dart';
 import '../../widgets/logo_branding.dart';
@@ -18,6 +19,8 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _searchResults = [];
   bool _isLoading = false;
+  Timer? _debounceTimer;
+  Completer<void>? _searchCompleter;
 
   @override
   void initState() {
@@ -27,34 +30,74 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
 
   @override
   void dispose() {
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
+    _debounceTimer?.cancel();
+    if (_searchCompleter != null && !_searchCompleter!.isCompleted) {
+      _searchCompleter!.complete();
+    }
     super.dispose();
   }
 
-  Future<void> _onSearchChanged() async {
+  void _onSearchChanged() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _performSearch();
+    });
+  }
+
+  Future<void> _performSearch() async {
+    if (!mounted) return;
+    
     final query = _searchController.text;
     if (query.length < 3) {
-      setState(() {
-        _searchResults = [];
-      });
+      if (mounted) {
+        setState(() {
+          _searchResults = [];
+          _isLoading = false;
+        });
+      }
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    // Cancel previous search if still running
+    if (_searchCompleter != null && !_searchCompleter!.isCompleted) {
+      _searchCompleter!.complete();
+    }
+    _searchCompleter = Completer<void>();
+
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       final results = await widget.locationService.searchPlaces(query);
-      setState(() {
-        _searchResults = results;
-      });
+      
+      // Check if this search was cancelled or widget was disposed
+      if (_searchCompleter?.isCompleted == true || !mounted) {
+        return;
+      }
+      
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+        });
+      }
     } catch (e) {
-      print('Erro na busca: $e');
+      if (mounted) {
+        print('Erro na busca: $e');
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      if (_searchCompleter != null && !_searchCompleter!.isCompleted) {
+        _searchCompleter!.complete();
+      }
     }
   }
 

@@ -587,8 +587,8 @@ class TripService {
       
       const selectQuery = '''
         id, trip_code, status, origin_address, destination_address,
-        actual_distance_km, base_fare, additional_fees, requested_at, completed_at,
-        cancelled_at, cancellation_reason, payment_status, created_at
+        actual_distance_km, base_fare, additional_fees, created_at, trip_completed_at,
+        cancelled_at, cancellation_reason, payment_status
       ''';
 
       dynamic query = _supabase.from('trips').select(selectQuery);
@@ -664,8 +664,8 @@ class TripService {
           actualDistanceKm: json['actual_distance_km']?.toDouble(),
           baseFare: (json['base_fare'] ?? 0).toDouble(),
           additionalFees: (json['additional_fees'] ?? 0).toDouble(),
-          requestedAt: DateTime.parse(json['requested_at'] ?? json['created_at']),
-          completedAt: json['completed_at'] != null ? DateTime.parse(json['completed_at']) : null,
+          requestedAt: DateTime.parse(json['created_at']),
+          completedAt: json['trip_completed_at'] != null ? DateTime.parse(json['trip_completed_at']) : null,
           cancelledAt: json['cancelled_at'] != null ? DateTime.parse(json['cancelled_at']) : null,
           cancellationReason: json['cancellation_reason'],
           paymentStatus: json['payment_status'] ?? 'pending',

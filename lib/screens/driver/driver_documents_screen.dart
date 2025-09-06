@@ -14,7 +14,7 @@ class DriverDocumentsScreen extends StatefulWidget {
 }
 
 class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
-  final String _driverId = Supabase.instance.client.auth.currentUser?.id ?? '';
+  String _driverId = '';
   
   List<DriverDocument> _documents = [];
   Map<String, dynamic>? _documentationStatus;
@@ -24,11 +24,12 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadDocuments();
+    _initializeDriver();
   }
 
-  Future<void> _loadDocuments() async {
-    if (_driverId.isEmpty) {
+  Future<void> _initializeDriver() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
       setState(() {
         _error = 'Usuário não autenticado';
         _isLoading = false;
@@ -42,6 +43,98 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         _error = null;
       });
 
+      // Garantir que existe um registro de driver
+      _driverId = await _ensureDriverExists(user.id);
+      
+      // Carregar documentos
+      await _loadDocuments();
+    } catch (e) {
+      setState(() {
+        _error = 'Erro ao inicializar: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  /// Garante que existe um registro de driver para o usuário e retorna o ID
+  Future<String> _ensureDriverExists(String userId) async {
+    try {
+      // Primeiro, tentar buscar driver existente
+      final existingDriverResponse = await Supabase.instance.client
+          .from('drivers')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+      
+      if (existingDriverResponse != null) {
+        return existingDriverResponse['id'] as String;
+      }
+      
+      // Se não existe, criar usando dados básicos
+      print('⚠️ Registro de driver não encontrado, criando automaticamente...');
+      
+      // Criar registro de driver básico
+      final driverData = {
+        'user_id': userId,
+        'vehicle_brand': 'PENDENTE',
+        'vehicle_model': 'PENDENTE',
+        'vehicle_year': 2020,
+        'vehicle_color': 'PENDENTE',
+        'vehicle_plate': 'PENDENTE_${userId.substring(0, 8)}',
+        'vehicle_category': 'Comum',
+        'approval_status': 'pending',
+        'approved_by': null,
+        'approved_at': null,
+        'is_online': false,
+        'accepts_pet': false,
+        'pet_fee': 0.0,
+        'accepts_grocery': false,
+        'grocery_fee': 0.0,
+        'accepts_condo': false,
+        'condo_fee': 0.0,
+        'stop_fee': 0.0,
+        'ac_policy': 'on_request',
+        'custom_price_per_km': 0.0,
+        'custom_price_per_minute': 0.0,
+        'bank_account_type': null,
+        'bank_code': null,
+        'bank_agency': null,
+        'bank_account': null,
+        'pix_key': '',
+        'pix_key_type': 'email',
+        'consecutive_cancellations': 0,
+        'total_trips': 0,
+        'average_rating': null,
+        'current_latitude': null,
+        'current_longitude': null,
+        'last_location_update': null,
+      };
+      
+      final newDriverResponse = await Supabase.instance.client
+          .from('drivers')
+          .insert(driverData)
+          .select('id')
+          .single();
+      
+      final driverId = newDriverResponse['id'] as String;
+      print('✅ Registro de driver criado com sucesso: $driverId');
+      return driverId;
+      
+    } catch (e) {
+      throw Exception('Erro ao garantir registro de driver: $e');
+    }
+  }
+
+  Future<void> _loadDocuments() async {
+    if (_driverId.isEmpty) {
+      setState(() {
+        _error = 'Driver ID não disponível';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
       final documents = await DriverDocumentService.getCurrentDriverDocuments(_driverId);
       final status = await DriverDocumentService.getDocumentationStatus(_driverId);
 
@@ -370,11 +463,11 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
 
     for (final docType in requiredDocs) {
       final document = _documents.firstWhere(
-        (doc) => doc.documentType == (docType['type']! as DocumentType).name,
+        (doc) => doc.documentType == (docType['type']! as DocumentType).value,
         orElse: () => DriverDocument(
           id: '',
           driverId: _driverId,
-          documentType: (docType['type']! as DocumentType).name,
+          documentType: (docType['type']! as DocumentType).value,
           fileUrl: '',
           status: 'missing',
           isCurrent: false,
@@ -691,11 +784,11 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         const SizedBox(height: 16),
         ...missingDocs.map((docType) {
           final document = _documents.firstWhere(
-            (doc) => doc.documentType == (docType['type']! as DocumentType).name,
+            (doc) => doc.documentType == (docType['type']! as DocumentType).value,
             orElse: () => DriverDocument(
               id: '',
               driverId: _driverId,
-              documentType: (docType['type']! as DocumentType).name,
+              documentType: (docType['type']! as DocumentType).value,
               fileUrl: '',
               status: 'missing',
               isCurrent: false,
@@ -728,11 +821,11 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         const SizedBox(height: 16),
         ...completedDocs.map((docType) {
           final document = _documents.firstWhere(
-            (doc) => doc.documentType == (docType['type']! as DocumentType).name,
+            (doc) => doc.documentType == (docType['type']! as DocumentType).value,
             orElse: () => DriverDocument(
               id: '',
               driverId: _driverId,
-              documentType: (docType['type']! as DocumentType).name,
+              documentType: (docType['type']! as DocumentType).value,
               fileUrl: '',
               status: 'missing',
               isCurrent: false,
@@ -771,11 +864,11 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         const SizedBox(height: 16),
         ...optionalDocs.map((docType) {
           final document = _documents.firstWhere(
-            (doc) => doc.documentType == (docType['type']! as DocumentType).name,
+            (doc) => doc.documentType == (docType['type']! as DocumentType).value,
             orElse: () => DriverDocument(
               id: '',
               driverId: _driverId,
-              documentType: (docType['type']! as DocumentType).name,
+              documentType: (docType['type']! as DocumentType).value,
               fileUrl: '',
               status: 'missing',
               isCurrent: false,

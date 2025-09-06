@@ -177,8 +177,6 @@ class DatabaseConstraintsValidator {
   /// Valida constraints da tabela drivers
   static void validateDriver(Map<String, dynamic> data) {
     _validateUserId(data['user_id']); // FK para app_users
-    _validateCnhNumber(data['cnh_number']);
-    _validateCnhExpiryDate(data['cnh_expiry_date']);
     _validateVehicleData(data);
     _validateApprovalStatus(data['approval_status']);
     _validateDriverBooleans(data);
@@ -189,54 +187,7 @@ class DatabaseConstraintsValidator {
     _validateRatingsAndTrips(data);
   }
   
-  /// Valida cnh_number (VARCHAR(20), NOT NULL, UNIQUE)
-  static void _validateCnhNumber(dynamic cnhNumber) {
-    if (cnhNumber == null) {
-      throw const ValidationException('cnh_number é obrigatório');
-    }
-    
-    final cnhStr = cnhNumber.toString().trim();
-    
-    if (cnhStr.isEmpty) {
-      throw const ValidationException('cnh_number não pode estar vazio');
-    }
-    
-    if (cnhStr.length > 20) {
-      throw ValidationException('cnh_number não pode ter mais de 20 caracteres: ${cnhStr.length}');
-    }
-    
-    // CNH brasileira tem 11 dígitos
-    final digitsOnly = cnhStr.replaceAll(RegExp(r'[^\d]'), '');
-    if (digitsOnly.length != 11) {
-      throw ValidationException('cnh_number deve ter 11 dígitos: $cnhStr');
-    }
-  }
-  
-  /// Valida cnh_expiry_date (DATE, NOT NULL)
-  static void _validateCnhExpiryDate(dynamic expiryDate) {
-    if (expiryDate == null) {
-      throw const ValidationException('cnh_expiry_date é obrigatório');
-    }
-    
-    DateTime? date;
-    
-    if (expiryDate is String) {
-      try {
-        date = DateTime.parse(expiryDate);
-      } catch (e) {
-        throw ValidationException('cnh_expiry_date deve ser uma data válida: $expiryDate');
-      }
-    } else if (expiryDate is DateTime) {
-      date = expiryDate;
-    } else {
-      throw ValidationException('cnh_expiry_date deve ser uma data: $expiryDate');
-    }
-    
-    // CNH não pode estar vencida
-    if (date.isBefore(DateTime.now())) {
-      throw ValidationException('cnh_expiry_date não pode estar vencida: ${date.toIso8601String()}');
-    }
-  }
+
   
   /// Valida dados do veículo
   static void _validateVehicleData(Map<String, dynamic> data) {
@@ -322,14 +273,15 @@ class DatabaseConstraintsValidator {
       throw const ValidationException('vehicle_category é obrigatório');
     }
     
-    final categoryStr = category.toString().toLowerCase().trim();
+    final categoryStr = category.toString().trim();
     
-    const validCategories = ['economico', 'standard', 'premium', 'suv', 'executivo', 'van'];
-    if (!validCategories.contains(categoryStr)) {
-      throw ValidationException(
-        'vehicle_category inválido: $categoryStr. Valores permitidos: ${validCategories.join(", ")}'
-      );
+    if (categoryStr.isEmpty) {
+      throw const ValidationException('vehicle_category não pode estar vazio');
     }
+    
+    // Nota: A validação de existência da categoria na tabela platform_settings
+    // deve ser feita no nível da aplicação usando PlatformSettingsService
+    // Esta validação é apenas para constraints básicas do banco
   }
   
   /// Valida approval_status

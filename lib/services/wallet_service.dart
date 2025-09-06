@@ -160,19 +160,15 @@ class WalletService {
       
       print('🔧 Criando registro de motorista automaticamente para usuário: $userId');
       
-      // Create basic driver record with placeholder values
+      // Criar registro de driver básico
       final driverData = {
         'user_id': userId,
-        'cnh_number': 'PENDENTE_CADASTRO',
-        'cnh_expiry_date': DateTime.now().add(const Duration(days: 365)).toIso8601String().split('T')[0],
-        'cnh_photo_url': '',
         'vehicle_brand': 'PENDENTE',
-        'vehicle_model': 'PENDENTE', 
+        'vehicle_model': 'PENDENTE',
         'vehicle_year': 2020,
         'vehicle_color': 'PENDENTE',
         'vehicle_plate': 'PENDENTE_${userId.substring(0, 8)}',
-        'vehicle_category': 'standard',
-        'crlv_photo_url': '',
+        'vehicle_category': 'Comum',
         'approval_status': 'pending',
         'approved_by': null,
         'approved_at': null,

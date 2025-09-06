@@ -10,6 +10,7 @@ class User {
     required this.status,
     required this.createdAt,
     required this.updatedAt,
+    this.profileComplete = false,
   });
 
   /// Cria um User a partir de um Map (dados do Supabase)
@@ -23,6 +24,7 @@ class User {
       status: map['status'] as String,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
+      profileComplete: map['profile_complete'] as bool? ?? false,
     );
 
   /// Cria um User a partir de JSON (deserialização)
@@ -36,6 +38,7 @@ class User {
   final String status; // 'active', 'inactive', 'suspended'
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool profileComplete; // Whether user has completed registration stepper
 
   /// Converte o User para um Map (para enviar ao Supabase)
   Map<String, dynamic> toMap() => {
@@ -48,6 +51,7 @@ class User {
       'status': status,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'profile_complete': profileComplete,
     };
 
   /// Converte para Map apenas com campos necessários para inserção
@@ -59,6 +63,7 @@ class User {
       'photo_url': photoUrl,
       'user_type': userType,
       'status': status,
+      'profile_complete': profileComplete,
     };
 
   /// Cria uma cópia do User com campos atualizados
@@ -72,6 +77,7 @@ class User {
     String? status,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? profileComplete,
   }) => User(
       id: id ?? this.id,
       email: email ?? this.email,
@@ -82,10 +88,11 @@ class User {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      profileComplete: profileComplete ?? this.profileComplete,
     );
 
   @override
-  String toString() => 'User(id: $id, email: $email, fullName: $fullName, userType: $userType, status: $status)';
+  String toString() => 'User(id: $id, email: $email, fullName: $fullName, userType: $userType, status: $status, profileComplete: $profileComplete)';
 
   @override
   bool operator ==(Object other) {
@@ -101,4 +108,10 @@ class User {
 
   /// Verifica se o usuário está ativo
   bool get isActive => status == 'active';
+
+  /// Verifica se o usuário completou o processo de registro
+  bool get hasCompletedRegistration => profileComplete;
+
+  /// Verifica se o usuário precisa completar o stepper de registro
+  bool get needsToCompleteRegistration => !profileComplete;
 }

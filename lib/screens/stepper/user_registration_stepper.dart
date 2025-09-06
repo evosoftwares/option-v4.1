@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/stepper_controller.dart';
 import '../../exceptions/user_registration_exception.dart';
+import '../../services/user_service.dart';
+import '../../utils/supabase_helper.dart';
 import 'phone_step.dart';
 import 'photo_step.dart';
 
@@ -135,7 +137,17 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
           print('🚗 [$timestamp] [REGISTRATION] Navegando para stepper de motorista');
           Navigator.of(context).pushReplacementNamed('/driver_stepper');
         } else {
-          print('🚶 [$timestamp] [REGISTRATION] Navegando para /home (passageiro)');
+          print('🚶 [$timestamp] [REGISTRATION] Marcando perfil de passageiro como completo...');
+          // Para passageiros, marcar o perfil como completo aqui
+          final authUser = SupabaseHelper.client?.auth.currentUser;
+          if (authUser != null) {
+            try {
+              await UserService.markProfileComplete(authUser.id);
+              print('✅ [$timestamp] [REGISTRATION] Perfil de passageiro marcado como completo');
+            } catch (e) {
+              print('❌ [$timestamp] [REGISTRATION] Erro ao marcar perfil como completo: $e');
+            }
+          }
           Navigator.of(context).pushReplacementNamed('/home');
         }
       } else {
@@ -172,43 +184,56 @@ class _UserRegistrationStepperState extends State<UserRegistrationStepper> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (_currentStep == 0) {
-              Navigator.of(context).pop();
-            } else {
-              _previousStep();
-            }
-          },
-        ),
-        title: const Text('Complete seu cadastro'),
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildProgressIndicator(),
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  PhoneStep(
-                    onNext: _nextStep,
-                  ),
-                  PhotoStep(
-                    onNext: _nextStep,
-                  ),
-                ],
+    return PopScope(
+      canPop: false, // Prevent back navigation
+      onPopInvokedWithResult: (didPop, result) {
+        // This prevents the user from going back
+        if (didPop) return;
+        
+        // Show a dialog explaining they can't skip registration
+        showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Cadastro Obrigatório'),
+            content: const Text('Você precisa completar seu cadastro para usar o aplicativo.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
               ),
-            ),
-          ],
+            ],
+          ),
+        );
+      },
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          elevation: 0,
+          automaticallyImplyLeading: false, // Remove the back button completely
+          title: const Text('Complete seu cadastro'),
+          centerTitle: true,
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildProgressIndicator(),
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    PhoneStep(
+                      onNext: _nextStep,
+                    ),
+                    PhotoStep(
+                      onNext: _nextStep,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
