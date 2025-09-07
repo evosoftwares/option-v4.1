@@ -31,7 +31,6 @@ class _DriverDocumentsStepperState extends State<DriverDocumentsStepper> {
     'Foto do Veículo - Trás',
     'Foto do Veículo - Esquerda',
     'Foto do Veículo - Direita',
-    'Interior do Veículo',
   ];
 
   // Tipos de documentos do veículo correspondentes
@@ -40,7 +39,6 @@ class _DriverDocumentsStepperState extends State<DriverDocumentsStepper> {
     DocumentType.vehicleBack,
     DocumentType.vehicleLeft,
     DocumentType.vehicleRight,
-    DocumentType.vehicleInterior,
   ];
 
   @override
@@ -216,12 +214,6 @@ class _DriverDocumentsStepperState extends State<DriverDocumentsStepper> {
                   DriverVehiclePhotoStep(
                     driverId: widget.driverId,
                     documentType: _documentTypes[3],
-                    onNext: _nextStep,
-                    isLoading: _isLoading,
-                  ),
-                  DriverVehiclePhotoStep(
-                    driverId: widget.driverId,
-                    documentType: _documentTypes[4],
                     onNext: _completeDocumentation,
                     isLoading: _isLoading,
                   ),

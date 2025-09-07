@@ -16,6 +16,7 @@ import '../../models/driver_status.dart';
 import '../../models/supabase/trip.dart';
 import '../../services/driver_service.dart';
 // import '../../services/fcm_service.dart'; // Removido - usando OneSignal
+import '../../services/driver_document_service.dart';
 import '../../services/location_service.dart';
 import '../../services/map_style_service.dart';
 import '../../services/user_service.dart';
@@ -49,10 +50,15 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   late final AnimationController _buttonController;
   late final Animation<double> _buttonScaleAnimation;
 
+  // Estado para documentos pendentes
+  bool _hasDocumentsPending = false;
+  int _pendingDocsCount = 0;
+  String? _driverId;
+
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<List<Trip>>? _tripSub;
   String? _currentTripId;
-  String? _driverId;
+
   bool _revertingOnlineDueToPermission = false;
   bool _isProcessingStatusChange = false;
 
@@ -72,14 +78,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     _initControllers();
     _initServices();
     _loadCarIcon();
+    _checkDocumentsStatus();
     _initLocation();
     _initActiveTrips();
   }
 
   Future<void> _loadCarIcon() async {
     // Inicializar ícone preto de fallback
-    _blackCarIcon = BitmapDescriptor.defaultMarkerWithHue(0); // 0 = vermelho, mais escuro disponível
-    
+    _blackCarIcon = BitmapDescriptor.defaultMarkerWithHue(
+        0); // 0 = vermelho, mais escuro disponível
+
     try {
       _carIcon = await BitmapDescriptor.asset(
         const ImageConfiguration(size: Size(50, 50)),
@@ -94,6 +102,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   void _initControllers() {
     _statusController = DriverStatusManager().controller;
     _statusController.addListener(_onStatusChanged);
+
+    // Configurar callback para erros de elegibilidade
+    _statusController.onEligibilityError = _handleEligibilityError;
 
     _buttonController = AnimationController(
       duration: const Duration(milliseconds: 200),
@@ -325,7 +336,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
             return;
           }
 
-          // Pulse animation removed
+          // Mostrar notificação de sucesso apenas quando realmente online
+          if (mounted) {
+            _showSuccessOnlineNotification();
+          }
         } else {
           // Pulse animation removed
         }
@@ -499,7 +513,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     }
   }
 
-    Future<void> _onGoButtonPressed() async {
+  Future<void> _onGoButtonPressed() async {
     print('🔵 [DRIVER_HOME] _onGoButtonPressed iniciado');
     HapticFeedback.mediumImpact();
 
@@ -508,11 +522,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     });
 
     final status = _statusController.status;
-    print('🔵 [DRIVER_HOME] Status atual: ${status.status}, isOnline: ${status.isOnline}, isTransitioning: ${status.isTransitioning}');
-    
+    print(
+        '🔵 [DRIVER_HOME] Status atual: ${status.status}, isOnline: ${status.isOnline}, isTransitioning: ${status.isTransitioning}');
+
     // Se está online, vai offline diretamente
     if (status.isOnline) {
-      print('🔵 [DRIVER_HOME] Motorista está online, chamando toggleOnlineStatus para ficar offline');
+      print(
+          '🔵 [DRIVER_HOME] Motorista está online, chamando toggleOnlineStatus para ficar offline');
       await _statusController.toggleOnlineStatus();
       if (mounted) {
         print('🔵 [DRIVER_HOME] Exibindo notificação de offline');
@@ -521,20 +537,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       print('🔵 [DRIVER_HOME] _onGoButtonPressed concluído (ficou offline)');
       return;
     }
-    
+
     // Se está offline, tenta ficar online diretamente
     print('🔵 [DRIVER_HOME] Motorista está offline, tentando ficar online');
     try {
       print('🔵 [DRIVER_HOME] Chamando toggleOnlineStatus...');
       await _statusController.toggleOnlineStatus();
       print('🔵 [DRIVER_HOME] toggleOnlineStatus concluído com sucesso');
-      
-      if (mounted) {
-        print('🔵 [DRIVER_HOME] Ficou online, exibindo notificação de sucesso');
-        // Sucesso ao ficar online - mostrar notificação visual
-        _showSuccessOnlineNotification();
-      }
-      print('🔵 [DRIVER_HOME] _onGoButtonPressed concluído (processo de ficar online)');
+
+      // REMOVIDO: Não mostrar sucesso aqui - o callback onEligibilityError pode ainda ser chamado
+      // A mensagem de sucesso deve ser mostrada apenas quando realmente aprovado
+      print(
+          '🔵 [DRIVER_HOME] _onGoButtonPressed concluído (aguardando validação)');
     } on DocumentationRequiredException catch (e) {
       print('🔵 [DRIVER_HOME] Erro de documentação necessária: ${e.message}');
       // Mostrar dialog visual para documentos
@@ -552,8 +566,44 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       print('🔵 [DRIVER_HOME] Stack trace: $stackTrace');
       // Mostrar dialog visual para erro genérico
       if (mounted) {
-        await _showGenericErrorDialog('Erro ao tentar ficar online. Verifique sua conexão e tente novamente.');
+        await _showGenericErrorDialog(
+            'Erro ao tentar ficar online. Verifique sua conexão e tente novamente.');
       }
+    }
+  }
+
+  /// Verifica status dos documentos do motorista
+  Future<void> _checkDocumentsStatus() async {
+    try {
+      // Obter driver ID
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+
+      final driverId = await WalletService().getDriverIdForUser(user.id);
+      if (driverId == null) return;
+
+      _driverId = driverId;
+
+      // Verificar status dos documentos
+      final documentsStatus =
+          await DriverDocumentService.getDocumentationStatus(driverId);
+
+      final isComplete = documentsStatus['isComplete'] as bool;
+      final missingDocs = documentsStatus['missingDocuments'] as List;
+      final pendingDocs = documentsStatus['pendingDocuments'] as List;
+      final rejectedDocs = documentsStatus['rejectedDocuments'] as List;
+
+      final totalPending =
+          missingDocs.length + pendingDocs.length + rejectedDocs.length;
+
+      if (mounted) {
+        setState(() {
+          _hasDocumentsPending = !isComplete;
+          _pendingDocsCount = totalPending;
+        });
+      }
+    } catch (e) {
+      print('⚠️ [DRIVER_HOME] Erro ao verificar documentos: $e');
     }
   }
 
@@ -707,99 +757,118 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        ),
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.orange.shade50, Colors.white],
-            ),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            color: AppColors.lightSurface,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
-                  color: Colors.orange,
+                  color: AppColors.warning.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.orange.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  border: Border.all(
+                    color: AppColors.warning.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.upload_file_rounded,
-                  size: 32,
-                  color: Colors.white,
+                  size: AppSpacing.iconLg,
+                  color: AppColors.warning,
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text(
+              
+              SizedBox(height: AppSpacing.lg),
+              
+              Text(
                 'Documentos Pendentes',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.lightOnSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 12),
+              
+              SizedBox(height: AppSpacing.md),
+              
               Container(
-                padding: const EdgeInsets.all(16),
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  color: AppColors.warning.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  border: Border.all(
+                    color: AppColors.warning.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
                 ),
-                child: Column(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.info_outline, color: Colors.orange),
-                    const SizedBox(height: 8),
-                    Text(
-                      message,
-                      style: const TextStyle(fontSize: 15, height: 1.4),
-                      textAlign: TextAlign.center,
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: AppColors.warning,
+                      size: 18,
+                    ),
+                    SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        message,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.lightOnSurface,
+                          height: 1.4,
+                        ),
+                        textAlign: TextAlign.left,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              
+              SizedBox(height: AppSpacing.lg),
+              
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                         ),
+                        side: BorderSide(color: AppColors.gray300),
                       ),
                       child: const Text('Entendi'),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  
+                  SizedBox(width: AppSpacing.md),
+                  
                   Expanded(
                     flex: 2,
-                    child: ElevatedButton.icon(
+                    child: FilledButton.icon(
                       onPressed: () {
                         Navigator.of(context).pop();
-                        Navigator.pushNamed(context, '/driver-documents');
+                        Navigator.pushNamed(context, '/driver_documents');
                       },
                       icon: const Icon(Icons.upload_rounded, size: 18),
                       label: const Text('Enviar Documentos'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.warning,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                         ),
                       ),
                     ),
@@ -813,89 +882,109 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     );
   }
 
-  /// Mostra dialog visual para erros de validação
-  Future<void> _showValidationErrorDialog(String message) async {
+  /// Mostra dialog unificado para erros (substitui os métodos duplicados)
+  Future<void> _showErrorDialog({
+    required String message,
+    String? title,
+    IconData? icon,
+    bool dismissible = true,
+  }) async {
     return showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: dismissible,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        ),
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.red.shade50, Colors.white],
-            ),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            color: AppColors.lightSurface,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
-                  color: Colors.red,
+                  color: AppColors.error.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.red.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  border: Border.all(
+                    color: AppColors.error.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.warning_rounded,
-                  size: 32,
-                  color: Colors.white,
+                child: Icon(
+                  icon ?? Icons.warning_rounded,
+                  size: AppSpacing.iconLg,
+                  color: AppColors.error,
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'Não é Possível Ficar Online',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+              
+              SizedBox(height: AppSpacing.lg),
+              
+              Text(
+                title ?? 'Não é Possível Ficar Online',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.lightOnSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 12),
+              
+              SizedBox(height: AppSpacing.md),
+              
               Container(
-                padding: const EdgeInsets.all(16),
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                  color: AppColors.error.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  border: Border.all(
+                    color: AppColors.error.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
                 ),
-                child: Column(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.red),
-                    const SizedBox(height: 8),
-                    Text(
-                      message,
-                      style: const TextStyle(fontSize: 15, height: 1.4),
-                      textAlign: TextAlign.center,
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: AppColors.error,
+                      size: 18,
+                    ),
+                    SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        message,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.lightOnSurface,
+                          height: 1.4,
+                        ),
+                        textAlign: TextAlign.left,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              
+              SizedBox(height: AppSpacing.lg),
+              
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton.icon(
+                child: FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.check_rounded, size: 18),
-                  label: const Text('Entendi'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.error,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     ),
                   ),
+                  child: const Text('Entendi'),
                 ),
               ),
             ],
@@ -905,96 +994,58 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     );
   }
 
-  /// Mostra dialog visual para erros genéricos
-  Future<void> _showGenericErrorDialog(String message) async {
-    return showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.blue.shade50, Colors.white],
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blue.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.refresh_rounded,
-                  size: 32,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Ops! Algo deu errado',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                ),
-                child: Column(
-                  children: [
-                    const Icon(Icons.info_outline, color: Colors.blue),
-                    const SizedBox(height: 8),
-                    Text(
-                      message,
-                      style: const TextStyle(fontSize: 15, height: 1.4),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Tentar Novamente'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+  /// Mostra dialog para erros de validação
+  Future<void> _showValidationErrorDialog(String message) async {
+    await _showErrorDialog(
+      message: message,
+      title: 'Erro de Validação',
+      icon: Icons.error_outline,
     );
+  }
+
+  /// Mostra dialog para erros genéricos
+  Future<void> _showGenericErrorDialog(String message) async {
+    await _showErrorDialog(
+      message: message,
+      title: 'Erro',
+      icon: Icons.error_outline_rounded,
+    );
+  }
+
+  /// Handler para erros de elegibilidade reportados pelo DriverStatusController
+  void _handleEligibilityError(Map<String, dynamic> eligibilityStatus) {
+    print(
+        '🚨 [DRIVER_HOME] Erro de elegibilidade recebido: $eligibilityStatus');
+
+    if (!mounted) return;
+
+    final reason =
+        eligibilityStatus['reason'] as String? ?? 'Erro desconhecido';
+    final message = eligibilityStatus['message'] as String? ??
+        'Não foi possível ficar online';
+    final actionRequired = eligibilityStatus['actionRequired'] as String?;
+
+    switch (reason) {
+      case 'Documentos não aprovados':
+        _showDocumentationRequiredDialog(message);
+        break;
+      case 'Motorista não aprovado':
+        _showErrorDialog(
+          message: '$message\n\n${actionRequired ?? ''}',
+          dismissible: false,
+        );
+        break;
+      case 'Fora do horário de trabalho':
+        _showErrorDialog(message: message);
+        break;
+      default:
+        _showErrorDialog(
+          message: message,
+          title: 'Erro',
+          icon: Icons.error_outline_rounded,
+        );
+        break;
+    }
   }
 
   Widget _buildGoButton(DriverStatus status) {
@@ -1025,57 +1076,57 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     final Widget button = AnimatedBuilder(
       animation: _buttonScaleAnimation,
       builder: (context, child) => Transform.scale(
-          scale: _buttonScaleAnimation.value,
-          child: Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: buttonColor,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: buttonColor.withValues(alpha: 0.4),
-                  blurRadius: 16,
-                  spreadRadius: 4,
-                  offset: const Offset(0, 4),
-                ),
-                BoxShadow(
-                  color: AppColors.black.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: status.isTransitioning
-                ? Center(
-                    child: AppLoading(
-                      type: AppLoadingType.circular,
-                      size: AppLoadingSize.medium,
-                      color: textColor,
-                    ),
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (icon != null) ...[
-                        Icon(
-                          icon,
-                          color: textColor,
-                          size: AppSpacing.lg,
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                      ],
-                      Text(
-                        buttonText,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: textColor,
-                          fontWeight: AppTypography.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+        scale: _buttonScaleAnimation.value,
+        child: Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            color: buttonColor,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: buttonColor.withValues(alpha: 0.4),
+                blurRadius: 16,
+                spreadRadius: 4,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
+          child: status.isTransitioning
+              ? Center(
+                  child: AppLoading(
+                    type: AppLoadingType.circular,
+                    size: AppLoadingSize.medium,
+                    color: textColor,
+                  ),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(
+                        icon,
+                        color: textColor,
+                        size: AppSpacing.lg,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                    ],
+                    Text(
+                      buttonText,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: textColor,
+                            fontWeight: AppTypography.bold,
+                          ),
+                    ),
+                  ],
+                ),
         ),
+      ),
     );
 
     // Pulse animation removed as requested
@@ -1179,6 +1230,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
             ),
           ),
 
+          // Banner de documentos pendentes
+          if (_hasDocumentsPending)
+            Positioned(
+              bottom:
+                  MediaQuery.of(context).padding.bottom + AppSpacing.xl + 140,
+              left: AppSpacing.md,
+              right: AppSpacing.md,
+              child: GestureDetector(
+                onTap: () => Navigator.pushNamed(context, '/driver_documents'),
+                child: _buildDocumentsPendingBanner(),
+              ),
+            ),
+
           // Bottom "IR" button
           Positioned(
             bottom: MediaQuery.of(context).padding.bottom + AppSpacing.xl,
@@ -1190,6 +1254,126 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                 builder: (context, _) =>
                     _buildGoButton(_statusController.status),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Widget do banner de documentos pendentes
+  Widget _buildDocumentsPendingBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.orange.shade50,
+            Colors.orange.shade100,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.orange.shade300,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.warning_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ação Necessária',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.orange.shade800,
+                          ),
+                    ),
+                    Text(
+                      'Você não pode ficar online ainda',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.orange.shade700,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () =>
+                    Navigator.pushNamed(context, '/driver_documents'),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(8),
+                ),
+                icon: const Icon(Icons.arrow_forward, size: 20),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.orange.shade200,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.upload_file,
+                  color: Colors.orange.shade700,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '$_pendingDocsCount documento(s) precisam ser enviados ou aprovados',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.orange.shade800,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                ),
+                Text(
+                  'Enviar →',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.orange.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
             ),
           ),
         ],

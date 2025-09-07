@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../exceptions/app_exceptions.dart';
 import '../models/driver_wallet.dart';
 import '../models/wallet_transaction.dart';
+import 'wallet_logger.dart';
 
 class DriverWalletService {
   static final SupabaseClient _supabase = Supabase.instance.client;
@@ -156,6 +157,16 @@ class DriverWalletService {
         'p_reference_type': referenceType,
         'p_reference_id': referenceId,
       });
+      
+      // Log específico da carteira
+      await WalletLogger().logDriverEarningsAdded(
+        driverId: driverId,
+        userId: '', // We don't have userId here, would need to fetch it
+        amount: amount,
+        description: description,
+        referenceType: referenceType ?? '',
+        referenceId: referenceId ?? '',
+      );
     } catch (e) {
       throw DatabaseException('Erro ao adicionar ganhos do motorista: $e');
     }
@@ -187,6 +198,16 @@ class DriverWalletService {
         tripId: tripId,
         amount: platformCommission,
         percentage: platformCommissionPercent,
+      );
+      
+      // Log específico da carteira para pagamento de viagem
+      await WalletLogger().logDriverEarningsAdded(
+        driverId: driverId,
+        userId: '', // We don't have userId here, would need to fetch it
+        amount: driverEarnings,
+        description: 'Ganho de viagem #$tripId',
+        referenceType: 'trip',
+        referenceId: tripId,
       );
     } catch (e) {
       if (e is DatabaseException) rethrow;

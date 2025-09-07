@@ -13,6 +13,8 @@ import '../models/user.dart' as app_user;
 import 'asaas_service.dart';
 import 'security_service.dart';
 import 'auth_service.dart';
+import 'wallet_logger.dart';
+import 'app_logger.dart';
 
 class WalletService {
 
@@ -24,9 +26,15 @@ class WalletService {
 
   /// Busca o ID do motorista para um usuário com validações de segurança
   Future<String?> getDriverIdForUser(String userId) async {
+    final startTime = DateTime.now();
+    
     try {
+      AppLogger.process('Buscando ID do motorista para usuário', tag: 'WALLET_SERVICE');
+      AppLogger.query('drivers', 1, tag: 'WALLET_SERVICE', filters: {'user_id': userId});
+      
       // Validações de segurança
       if (!AuthService.isAuthenticated()) {
+        AppLogger.security('wallet_access_unauthorized', details: 'User not authenticated');
         throw const UnauthorizedException('Usuário não autenticado');
       }
       
@@ -37,6 +45,9 @@ class WalletService {
         resourceUserId: userId,
         operation: 'read_driver_info',
       );
+      
+      AppLogger.security('wallet_driver_access_validated', userId: currentUserId);
+      
       // Add timeout to prevent hanging
       final data = await _supabase
           .from('drivers')
@@ -46,7 +57,14 @@ class WalletService {
           .timeout(const Duration(seconds: 10));
       
       if (data != null) {
-        return data['id'] as String;
+        final driverId = data['id'] as String;
+        final duration = DateTime.now().difference(startTime);
+        
+        AppLogger.performance('get_driver_id', duration, tag: 'WALLET_SERVICE');
+        AppLogger.success('ID do motorista encontrado', tag: 'WALLET_SERVICE');
+        AppLogger.read('Driver', driverId, tag: 'WALLET_SERVICE');
+        
+        return driverId;
       }
       
       // If no driver record found, try to create one automatically with timeout
@@ -345,6 +363,18 @@ class WalletService {
         },
       );
       
+      // Log específico da carteira
+      await WalletLogger().logWithdrawalRequested(
+        walletId: driverId,
+        userId: driverData['user_id'],
+        amount: amount,
+        method: method,
+        withdrawalId: data['id'],
+        additionalContext: {
+          'bank_account_info_provided': bankAccountInfo != null,
+        },
+      );
+      
       return data;
     } on PostgrestException catch (e) {
       throw PostgrestErrorMapper.mapError(e, context: {'operation': 'requestWithdrawal', 'driverId': driverId, 'amount': amount});
@@ -597,6 +627,19 @@ class WalletService {
         },
       );
       
+      // Log específico da carteira
+      await WalletLogger().logPassengerCreditAdded(
+        passengerId: passengerId,
+        userId: passengerData['user_id'],
+        amount: amount,
+        description: description,
+        transactionId: transactionData['id'],
+        additionalContext: {
+          'payment_method_id': paymentMethodId,
+          'asaas_payment_id': asaasPaymentId,
+        },
+      );
+      
       return PassengerWalletTransaction.fromMap(transactionData);
     } on PostgrestException catch (e) {
       throw PostgrestErrorMapper.mapError(e, context: {'operation': 'addCredit', 'passengerId': passengerId, 'amount': amount});
@@ -673,6 +716,16 @@ class WalletService {
           'description': description,
           'transaction_id': transactionData['id'],
         },
+      );
+      
+      // Log específico da carteira
+      await WalletLogger().logPassengerDebit(
+        passengerId: passengerId,
+        userId: passengerData['user_id'],
+        tripId: tripId,
+        amount: amount,
+        description: description,
+        transactionId: transactionData['id'],
       );
       
       return PassengerWalletTransaction.fromMap(transactionData);
@@ -959,6 +1012,15 @@ class WalletService {
           },
         );
         
+        // Log específico da carteira para saque bloqueado
+        await WalletLogger().logWithdrawalBlocked(
+          userId: passengerId,
+          reason: securityCheck.reason,
+          blockType: securityCheck.type.name,
+          amount: amount,
+          pixKey: pixKey,
+        );
+        
         throw WithdrawalException(
           type: WalletErrorType.rateLimitExceeded,
           details: securityCheck.reason,
@@ -970,6 +1032,16 @@ class WalletService {
       // Detectar atividade suspeita
       final isSuspicious = await securityService.detectSuspiciousActivity(passengerId);
       if (isSuspicious) {
+        // Log específico da carteira para atividade suspeita
+        await WalletLogger().logSuspiciousActivity(
+          userId: passengerId,
+          activityType: 'withdrawal_attempt',
+          additionalContext: {
+            'amount': amount,
+            'pix_key': pixKey,
+          },
+        );
+        
         throw const WithdrawalException(
           type: WalletErrorType.suspiciousActivity,
           details: 'Atividade suspeita detectada. Tente novamente mais tarde.',
@@ -1045,6 +1117,18 @@ class WalletService {
           'pix_key': pixKey,
           'transaction_id': response['id'],
           'wallet_id': wallet.id,
+        },
+      );
+      
+      // Log específico da carteira para saque solicitado
+      await WalletLogger().logWithdrawalRequested(
+        walletId: wallet.id,
+        userId: passengerId,
+        amount: amount,
+        method: 'pix',
+        withdrawalId: response['id'],
+        additionalContext: {
+          'pix_key': pixKey,
         },
       );
       

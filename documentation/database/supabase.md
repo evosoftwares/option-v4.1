@@ -118,15 +118,12 @@ Based on direct API connection testing:
 - updated_at (timestamp with time zone)
 - user_id (uuid)
 
-### working_hours
-- id (uuid) **PRIMARY KEY**
-- driver_id (uuid) **FOREIGN KEY** -> table='drivers' column='id'
-- day_of_week (integer)
-- start_time (time without time zone)
-- end_time (time without time zone)
-- is_active (boolean) **DEFAULT** true
-- created_at (timestamp with time zone) **DEFAULT** now()
-- updated_at (timestamp with time zone) **DEFAULT** now()
+### ~~working_hours~~ (REMOVIDA)
+**TABELA REMOVIDA NA MIGRAÇÃO PARA LÓGICA BASEADA EM DOCUMENTOS**
+- Esta tabela foi completamente removida
+- A lógica de horários de trabalho foi substituída por validação de documentos
+- Motoristas agora controlam quando querem trabalhar sem restrições de horário
+- Status online depende apenas de: `online_intent` + `documentos aprovados`
 
 ### corrupted_users_backup
 - id (uuid) **PRIMARY KEY**
@@ -759,12 +756,21 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 - corrections_active (bigint)
 - correction_reason (text)
 
-### driver_effective_status
+### driver_effective_status (VIEW ATUALIZADA)
+**NOVA LÓGICA: Baseada apenas em aprovação de documentos**
 - driver_id (uuid) **PRIMARY KEY** **FOREIGN KEY** -> table='drivers' column='id'
-- online_intent (boolean)
-- is_within_working_hours (boolean)
-- effective_online (boolean)
-- updated_at (timestamp with time zone)
+- online_intent (boolean) - Intenção do motorista de ficar online
+- intent_updated_at (timestamp with time zone) - Quando a intenção foi atualizada
+- documents_validated (boolean) - Se TODOS os documentos obrigatórios estão aprovados
+- effective_online (boolean) - Status final: `online_intent AND documents_validated`
+
+**Documentos obrigatórios para `documents_validated = true`:**
+- CNH_FRONT com `status = 'approved'` e `is_current = true`
+- CNH_BACK com `status = 'approved'` e `is_current = true` 
+- CRLV com `status = 'approved'` e `is_current = true`
+- VEHICLE_FRONT com `status = 'approved'` e `is_current = true`
+
+**REMOVIDO:** ~~is_within_working_hours~~ (não existe mais)
 
 ### driver_performance
 - driver_id (uuid) **PRIMARY KEY**

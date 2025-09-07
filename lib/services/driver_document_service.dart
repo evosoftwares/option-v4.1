@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/supabase/driver_document.dart';
 import '../utils/supabase_helper.dart';
 import 'firebase_file_upload_service.dart';
+import 'app_logger.dart';
 
 class DriverDocumentService {
   static SupabaseClient get _supabase {
@@ -24,23 +25,35 @@ class DriverDocumentService {
     required File imageFile,
     DateTime? expiryDate,
   }) async {
-    print('🔄 DriverDocumentService.createDocument iniciado');
-    print('  - driverId: $driverId');
-    print('  - documentType: $documentType');
-    print('  - expiryDate: $expiryDate');
+    final startTime = DateTime.now();
+    
+    AppLogger.process('Iniciando criação de documento do motorista', tag: 'DRIVER_DOCUMENT');
+    AppLogger.create('DriverDocument', driverId, tag: 'DRIVER_DOCUMENT', data: {
+      'driver_id': driverId,
+      'document_type': documentType.name,
+      'has_expiry_date': expiryDate != null
+    });
 
     try {
+      AppLogger.upload('Validando arquivo de imagem', filename: imageFile.path.split('/').last);
+      
       // Validar se a imagem é válida
       final isValid = await FirebaseFileUploadService.isValidImage(imageFile);
       if (!isValid) {
+        AppLogger.validation('image_file', false, entity: 'DriverDocument', error: 'Invalid image file');
         throw DocumentException('Arquivo de imagem inválido');
       }
+
+      AppLogger.validation('image_file', true, entity: 'DriverDocument');
 
       // Obter informações da imagem
       final imageInfo = await FirebaseFileUploadService.getImageInfo(imageFile);
       if (imageInfo == null) {
+        AppLogger.error('Não foi possível obter informações da imagem', tag: 'DRIVER_DOCUMENT');
         throw DocumentException('Não foi possível obter informações da imagem');
       }
+
+      AppLogger.debug('Informações da imagem obtidas', tag: 'DRIVER_DOCUMENT', data: imageInfo);
 
       // Gerar caminho único para o arquivo
       final fileName = imageFile.path.split('/').last;
@@ -314,13 +327,12 @@ class DriverDocumentService {
       
       final driverCreatedAt = DateTime.parse(driverResponse['created_at'] as String);
       
-      // Documentos obrigatórios (remover CNH e CRLV da lista de documentos a serem enviados)
+      // Documentos obrigatórios - incluir todos os documentos obrigatórios
       final requiredTypes = [
+        DocumentType.cnhFront,
+        DocumentType.cnhBack,
+        DocumentType.crlv,
         DocumentType.vehicleFront,
-        DocumentType.vehicleBack,
-        DocumentType.vehicleLeft,
-        DocumentType.vehicleRight,
-        DocumentType.vehicleInterior,
       ];
 
       final documentsByType = <String, DriverDocument>{};
@@ -360,19 +372,7 @@ class DriverDocumentService {
         }
       }
 
-      // Verificar CNH e CRLV na tabela driver_documents
-      final cnhFrontDoc = documentsByType[DocumentType.cnhFront.value];
-      final cnhBackDoc = documentsByType[DocumentType.cnhBack.value];
-      final crlvDoc = documentsByType[DocumentType.crlv.value];
-      
-      if (cnhFrontDoc != null && cnhFrontDoc.status == 'approved' &&
-          cnhBackDoc != null && cnhBackDoc.status == 'approved') {
-        approvedDocuments.addAll([DocumentType.cnhFront.value, DocumentType.cnhBack.value]);
-      }
-      
-      if (crlvDoc != null && crlvDoc.status == 'approved') {
-        approvedDocuments.add(DocumentType.crlv.value);
-      }
+      // Os documentos CNH e CRLV já foram processados no loop principal
 
       final isComplete = missingDocuments.isEmpty && 
                         pendingDocuments.isEmpty && 
@@ -381,7 +381,7 @@ class DriverDocumentService {
 
       final result = {
         'isComplete': isComplete,
-        'totalRequired': requiredTypes.length + 3, // Adicionar CNH (frente e verso) e CRLV
+        'totalRequired': requiredTypes.length, // Total de documentos obrigatórios
         'totalApproved': approvedDocuments.length,
         'missingDocuments': missingDocuments,
         'pendingDocuments': pendingDocuments,
@@ -392,7 +392,7 @@ class DriverDocumentService {
 
       print('✅ Status da documentação calculado:');
       print('  - isComplete: $isComplete');
-      print('  - totalRequired: ${requiredTypes.length + 3}');
+      print('  - totalRequired: ${requiredTypes.length}');
       print('  - totalApproved: ${approvedDocuments.length}');
       print('  - approvedDocuments: $approvedDocuments');
       print('  - pendingDocuments: $pendingDocuments'); 

@@ -3,6 +3,7 @@ import '../utils/supabase_helper.dart';
 import '../exceptions/app_exceptions.dart';
 import '../models/user.dart';
 import 'user_service.dart';
+import 'app_logger.dart';
 
 /// Serviço de autenticação com validação de segurança sem RLS
 /// Implementa todas as verificações de ownership e autorização no lado da aplicação
@@ -17,7 +18,11 @@ class AuthService {
 
   /// Obtém o ID do usuário atual autenticado
   static String? getCurrentUserId() {
-    return _supabase.auth.currentUser?.id;
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId != null) {
+      AppLogger.read('AuthUser', userId, tag: 'AUTH');
+    }
+    return userId;
   }
 
   /// Obtém o usuário atual autenticado
@@ -40,26 +45,45 @@ class AuthService {
 
   /// Verifica se o usuário está autenticado
   static bool isAuthenticated() {
-    return _supabase.auth.currentUser != null;
+    final isAuth = _supabase.auth.currentUser != null;
+    AppLogger.validation('authentication_status', isAuth, entity: 'AuthService');
+    return isAuth;
   }
 
   /// Verifica se o usuário atual é o proprietário do recurso
   static Future<bool> isUserAuthorized(String resourceUserId) async {
+    final startTime = DateTime.now();
     final currentUserId = getCurrentUserId();
     if (currentUserId == null) {
+      AppLogger.security('unauthorized_access_attempt', details: 'User not authenticated for resource: $resourceUserId');
       throw const AuthException('Usuário não autenticado');
     }
-    return currentUserId == resourceUserId;
+    
+    final isAuthorized = currentUserId == resourceUserId;
+    final duration = DateTime.now().difference(startTime);
+    
+    AppLogger.performance('user_authorization_check', duration, tag: 'AUTH');
+    AppLogger.security('authorization_check', 
+      userId: currentUserId, 
+      details: 'Resource: $resourceUserId, Authorized: $isAuthorized'
+    );
+    
+    return isAuthorized;
   }
 
   /// Verifica se o usuário tem uma role específica
   static Future<bool> hasRole(String requiredRole) async {
+    final startTime = DateTime.now();
     final currentUserId = getCurrentUserId();
+    
     if (currentUserId == null) {
+      AppLogger.security('role_check_unauthorized', details: 'Required role: $requiredRole');
       throw const AuthException('Usuário não autenticado');
     }
 
     try {
+      AppLogger.query('app_users', 1, tag: 'AUTH', filters: {'role_check': requiredRole, 'user_id': currentUserId});
+      
       final response = await _supabase
           .from('app_users')
           .select('user_type')
@@ -67,11 +91,22 @@ class AuthService {
           .maybeSingle();
 
       if (response == null) {
+        AppLogger.security('user_not_found_in_role_check', userId: currentUserId, details: 'Required role: $requiredRole');
         throw const AuthException('Usuário não encontrado');
       }
 
-      return response['user_type'] == requiredRole;
+      final hasRequiredRole = response['user_type'] == requiredRole;
+      final duration = DateTime.now().difference(startTime);
+      
+      AppLogger.performance('role_verification', duration, tag: 'AUTH');
+      AppLogger.security('role_check_completed', 
+        userId: currentUserId, 
+        details: 'Required: $requiredRole, Has role: $hasRequiredRole'
+      );
+      
+      return hasRequiredRole;
     } catch (e) {
+      AppLogger.error('Erro ao verificar role do usuário', tag: 'AUTH', error: e);
       throw DatabaseException('Erro ao verificar role do usuário: $e');
     }
   }
@@ -145,11 +180,16 @@ class AuthService {
     String? phone,
     String userType = 'passenger',
   }) async {
+    final startTime = DateTime.now();
+    
     try {
-      print('🚀 [AUTH] Iniciando registro de usuário...');
-      print('  - Email: $email');
-      print('  - Nome: $fullName');
-      print('  - Tipo: $userType');
+      AppLogger.process('Iniciando registro de usuário', tag: 'AUTH');
+      AppLogger.create('User Registration Attempt', email, tag: 'AUTH', data: {
+        'email': email,
+        'full_name': fullName,
+        'user_type': userType,
+        'has_phone': phone != null
+      });
 
       // Criar usuário no auth
       final response = await _supabase.auth.signUp(
@@ -162,11 +202,13 @@ class AuthService {
       );
 
       if (response.user == null) {
+        AppLogger.error('Falha ao criar usuário no auth', tag: 'AUTH');
         throw const AuthException('Falha ao criar usuário');
       }
 
       final authUser = response.user!;
-      print('✅ [AUTH] Usuário criado no auth: ${authUser.id}');
+      AppLogger.success('Usuário criado no auth', tag: 'AUTH');
+      AppLogger.create('AuthUser', authUser.id, tag: 'AUTH');
 
       // Criar usuário na tabela app_users
       try {
@@ -178,7 +220,16 @@ class AuthService {
           userType: userType,
         );
 
-        print('✅ [AUTH] Usuário criado na aplicação: ${appUser.id}');
+        AppLogger.success('Usuário criado na aplicação', tag: 'AUTH');
+        AppLogger.create('AppUser', appUser.id, tag: 'AUTH');
+        
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.performance('user_registration', duration, tag: 'AUTH');
+        
+        AppLogger.security('user_registration_success', 
+          userId: authUser.id, 
+          details: 'Type: $userType, Needs confirmation: ${response.session == null}'
+        );
 
         return {
           'success': true,
@@ -191,19 +242,24 @@ class AuthService {
         };
       } catch (e) {
         // Se falhar ao criar app_user, remover do auth
-        print('❌ [AUTH] Erro ao criar app_user, removendo do auth...');
+        AppLogger.warning('Erro ao criar app_user, iniciando rollback', tag: 'AUTH');
+        AppLogger.delete('AuthUser', authUser.id, tag: 'AUTH', reason: 'Rollback due to app_user creation failure');
+        
         try {
           await _supabase.auth.admin.deleteUser(authUser.id);
+          AppLogger.success('Rollback concluído - usuário removido do auth', tag: 'AUTH');
         } catch (deleteError) {
-          print('❌ [AUTH] Erro ao remover usuário do auth: $deleteError');
+          AppLogger.error('Erro ao remover usuário do auth durante rollback', tag: 'AUTH', error: deleteError);
         }
         rethrow;
       }
     } on AuthException catch (e) {
-      print('❌ [AUTH] AuthException: ${e.message}');
+      AppLogger.error('AuthException durante registro', tag: 'AUTH', error: e);
+      AppLogger.security('user_registration_failed', details: 'AuthException: ${e.message}');
       throw AuthException('Erro de autenticação: ${e.message}');
     } catch (e) {
-      print('❌ [AUTH] Erro geral: $e');
+      AppLogger.error('Erro geral durante registro', tag: 'AUTH', error: e);
+      AppLogger.security('user_registration_failed', details: 'General error: $e');
       throw Exception('Erro ao criar conta: $e');
     }
   }
@@ -213,9 +269,11 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    final startTime = DateTime.now();
+    
     try {
-      print('🔑 [AUTH] Tentando login...');
-      print('  - Email: $email');
+      AppLogger.process('Tentando login', tag: 'AUTH');
+      AppLogger.security('login_attempt', details: 'Email: $email');
 
       final response = await _supabase.auth.signInWithPassword(
         email: email,
@@ -223,67 +281,97 @@ class AuthService {
       );
 
       if (response.user == null || response.session == null) {
+        AppLogger.security('login_failed', details: 'Invalid credentials for: $email');
         throw const AuthException('Falha no login');
       }
 
-      print('✅ [AUTH] Login realizado com sucesso: ${response.user!.id}');
+      final userId = response.user!.id;
+      AppLogger.success('Login realizado com sucesso', tag: 'AUTH');
+      AppLogger.security('login_success', userId: userId);
 
       // Verificar se o usuário existe na tabela app_users
-      final appUser = await UserService.getUserById(response.user!.id);
+      final appUser = await UserService.getUserById(userId);
       if (appUser == null) {
-        print('⚠️ [AUTH] Usuário não encontrado em app_users, criando...');
+        AppLogger.warning('Usuário não encontrado em app_users, criando registro', tag: 'AUTH');
         
         // Criar registro em app_users se não existir
         await UserService.createUser(
-          authUserId: response.user!.id,
+          authUserId: userId,
           email: response.user!.email!,
           fullName: response.user!.userMetadata?['full_name'] ?? 'Usuário',
           phone: response.user!.phone ?? '',
           userType: response.user!.userMetadata?['user_type'] ?? 'passenger',
         );
+        
+        AppLogger.create('AppUser', userId, tag: 'AUTH', data: {'reason': 'Missing app_users record'});
+      } else {
+        AppLogger.read('AppUser', userId, tag: 'AUTH');
       }
+
+      final duration = DateTime.now().difference(startTime);
+      AppLogger.performance('user_login', duration, tag: 'AUTH');
 
       return {
         'success': true,
-        'user_id': response.user!.id,
+        'user_id': userId,
         'email': response.user!.email,
         'session': response.session,
         'message': 'Login realizado com sucesso!',
       };
     } on AuthException catch (e) {
-      print('❌ [AUTH] AuthException: ${e.message}');
+      AppLogger.error('AuthException durante login', tag: 'AUTH', error: e);
+      AppLogger.security('login_failed', details: 'AuthException: ${e.message}');
       throw AuthException('Erro de login: ${e.message}');
     } catch (e) {
-      print('❌ [AUTH] Erro geral: $e');
+      AppLogger.error('Erro geral durante login', tag: 'AUTH', error: e);
+      AppLogger.security('login_failed', details: 'General error: $e');
       throw Exception('Erro ao fazer login: $e');
     }
   }
 
   /// Faz logout do usuário
   static Future<void> signOut() async {
+    final startTime = DateTime.now();
+    final userId = getCurrentUserId();
+    
     try {
-      print('👋 [AUTH] Fazendo logout...');
+      AppLogger.process('Fazendo logout', tag: 'AUTH');
+      AppLogger.security('logout_attempt', userId: userId);
+      
       await _supabase.auth.signOut();
-      print('✅ [AUTH] Logout realizado com sucesso');
+      
+      final duration = DateTime.now().difference(startTime);
+      AppLogger.performance('user_logout', duration, tag: 'AUTH');
+      AppLogger.success('Logout realizado com sucesso', tag: 'AUTH');
+      AppLogger.security('logout_success', userId: userId);
     } catch (e) {
-      print('❌ [AUTH] Erro ao fazer logout: $e');
+      AppLogger.error('Erro ao fazer logout', tag: 'AUTH', error: e);
+      AppLogger.security('logout_failed', userId: userId, details: 'Error: $e');
       throw Exception('Erro ao fazer logout: $e');
     }
   }
 
   /// Redefine a senha do usuário
   static Future<void> resetPassword(String email) async {
+    final startTime = DateTime.now();
+    
     try {
-      print('🔄 [AUTH] Enviando email de redefinição de senha...');
-      print('  - Email: $email');
+      AppLogger.process('Enviando email de redefinição de senha', tag: 'AUTH');
+      AppLogger.security('password_reset_attempt', details: 'Email: $email');
 
       await _supabase.auth.resetPasswordForEmail(email);
-      print('✅ [AUTH] Email de redefinição enviado com sucesso');
+      
+      final duration = DateTime.now().difference(startTime);
+      AppLogger.performance('password_reset_email', duration, tag: 'AUTH');
+      AppLogger.success('Email de redefinição enviado com sucesso', tag: 'AUTH');
+      AppLogger.security('password_reset_email_sent', details: 'Email: $email');
     } on AuthException catch (e) {
-      print('❌ [AUTH] AuthException: ${e.message}');
+      AppLogger.error('AuthException durante reset de senha', tag: 'AUTH', error: e);
+      AppLogger.security('password_reset_failed', details: 'AuthException: ${e.message}');
       throw AuthException('Erro ao enviar email: ${e.message}');
     } catch (e) {
-      print('❌ [AUTH] Erro geral: $e');
+      AppLogger.error('Erro geral durante reset de senha', tag: 'AUTH', error: e);
+      AppLogger.security('password_reset_failed', details: 'General error: $e');
       throw Exception('Erro ao enviar email de redefinição: $e');
     }
   }
@@ -294,13 +382,21 @@ class AuthService {
     String? phone,
     String? photoUrl,
   }) async {
+    final startTime = DateTime.now();
     final currentUserId = getCurrentUserId();
+    
     if (currentUserId == null) {
+      AppLogger.security('profile_update_unauthorized', details: 'User not authenticated');
       throw const AuthException('Usuário não autenticado');
     }
 
     try {
-      print('🔄 [AUTH] Atualizando perfil do usuário: $currentUserId');
+      AppLogger.process('Atualizando perfil do usuário', tag: 'AUTH');
+      AppLogger.update('UserProfile', currentUserId, tag: 'AUTH', changes: {
+        'full_name': fullName != null,
+        'phone': phone != null,
+        'photo_url': photoUrl != null
+      });
 
       // Atualizar metadados no auth se necessário
       if (fullName != null) {
@@ -309,6 +405,7 @@ class AuthService {
             data: {'full_name': fullName},
           ),
         );
+        AppLogger.update('AuthUserMetadata', currentUserId, tag: 'AUTH', changes: {'full_name': fullName});
       }
 
       // Atualizar dados em app_users
@@ -323,11 +420,17 @@ class AuthService {
             .from('app_users')
             .update(updateData)
             .eq('id', currentUserId);
+        
+        AppLogger.update('AppUser', currentUserId, tag: 'AUTH', changes: updateData);
       }
 
-      print('✅ [AUTH] Perfil atualizado com sucesso');
+      final duration = DateTime.now().difference(startTime);
+      AppLogger.performance('profile_update', duration, tag: 'AUTH');
+      AppLogger.success('Perfil atualizado com sucesso', tag: 'AUTH');
+      AppLogger.security('profile_updated', userId: currentUserId, details: 'Fields updated: ${updateData.keys.join(', ')}');
     } catch (e) {
-      print('❌ [AUTH] Erro ao atualizar perfil: $e');
+      AppLogger.error('Erro ao atualizar perfil', tag: 'AUTH', error: e);
+      AppLogger.security('profile_update_failed', userId: currentUserId, details: 'Error: $e');
       throw Exception('Erro ao atualizar perfil: $e');
     }
   }

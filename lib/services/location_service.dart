@@ -6,13 +6,23 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart' as ph;
 
+import 'app_logger.dart';
+
 class LocationService {
 
   LocationService({required this.apiKey});
   final String apiKey;
 
   Future<List<Map<String, dynamic>>> searchPlaces(String query) async {
-    if (query.isEmpty) return [];
+    final startTime = DateTime.now();
+    
+    if (query.isEmpty) {
+      AppLogger.validation('search_query', false, entity: 'LocationService', error: 'Empty query');
+      return [];
+    }
+    
+    AppLogger.process('Iniciando busca de lugares', tag: 'LOCATION');
+    AppLogger.query('google_places_api', 1, tag: 'LOCATION', filters: {'query': query, 'country': 'br'});
     
     final url = Uri.parse(
       'https://maps.googleapis.com/maps/api/place/autocomplete/json'
@@ -23,24 +33,43 @@ class LocationService {
     );
 
     try {
-      print('Fazendo requisição para: $url');
+      AppLogger.network('Google Places API Request', url.toString(), method: 'GET', tag: 'LOCATION');
       final response = await http.get(url);
       
-      print('Status da resposta: ${response.statusCode}');
-      print('Corpo da resposta: ${response.body}');
+      final duration = DateTime.now().difference(startTime);
+      AppLogger.network('Google Places API Response', url.toString(), 
+        method: 'GET', 
+        statusCode: response.statusCode, 
+        duration: duration, 
+        tag: 'LOCATION'
+      );
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
         // Verificar se há erro na resposta da API
         if (data['status'] != 'OK') {
-          print('Erro da API Google Places: ${data['status']} - ${data['error_message'] ?? 'Sem mensagem de erro'}');
+          AppLogger.warning('Erro da API Google Places', tag: 'LOCATION');
+          AppLogger.debug('API Error Details', tag: 'LOCATION', data: {
+            'status': data['status'],
+            'error_message': data['error_message'] ?? 'Sem mensagem de erro',
+            'query': query
+          });
+          
+          AppLogger.rateLimit('google_places_api', 'quota_exceeded', tag: 'LOCATION');
           
           // Se a API falhar, retornar resultado básico para entrada manual
           return _createManualSearchResult(query);
         }
         
         final predictions = data['predictions'] as List? ?? [];
+        
+        AppLogger.success('Busca de lugares concluída', tag: 'LOCATION');
+        AppLogger.performance('search_places', duration, tag: 'LOCATION', metrics: {
+          'results_count': predictions.length,
+          'query_length': query.length,
+          'api_status': data['status']
+        });
         
         return predictions.map((prediction) => {
             'placeId': prediction['place_id'],
@@ -49,12 +78,26 @@ class LocationService {
             'secondaryText': prediction['structured_formatting']?['secondary_text'] ?? '',
           },).toList();
       } else {
-        print('Erro HTTP: ${response.statusCode} - ${response.body}');
+        AppLogger.network('HTTP Error', url.toString(), 
+          method: 'GET', 
+          statusCode: response.statusCode, 
+          duration: duration, 
+          tag: 'LOCATION'
+        );
+        AppLogger.error('Erro HTTP na busca de lugares', tag: 'LOCATION', error: 'Status: ${response.statusCode}');
+        
         // Se houve erro HTTP, retornar resultado básico para entrada manual
         return _createManualSearchResult(query);
       }
     } catch (e) {
-      print('Erro ao buscar lugares: $e');
+      final duration = DateTime.now().difference(startTime);
+      AppLogger.error('Erro ao buscar lugares', tag: 'LOCATION', error: e);
+      AppLogger.connectivity('API_ERROR', type: 'Google Places', tag: 'LOCATION', details: {
+        'error': e.toString(),
+        'query': query,
+        'duration_ms': duration.inMilliseconds
+      });
+      
       // Se houve erro de conexão, retornar resultado básico para entrada manual
       return _createManualSearchResult(query);
     }

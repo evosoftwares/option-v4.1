@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../theme/app_spacing.dart';
 import '../../utils/supabase_helper.dart';
+import '../../services/emulator_optimized_auth_service.dart';
+import '../../utils/emulator_auth_helper.dart';
 import '../../validators/database_constraints_validator.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_text_field.dart';
@@ -60,36 +62,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return;
       }
 
-      // USAR APENAS AUTH NATIVO DO SUPABASE
-      print('🚀 [REGISTER] Usando auth nativo do Supabase');
-      final res = await supabase.auth.signUp(
+      // USAR EMULATOR OPTIMIZED AUTH SERVICE
+      print('🚀 [REGISTER] Usando EmulatorOptimizedAuthService...');
+      final response = await EmulatorOptimizedAuthService.signUp(
         email: email,
         password: password,
+        data: {
+          'full_name': fullName,
+          'phone': '', // Adicione se necessário
+        },
       );
 
-      if (!mounted) return;
+      if (response.user != null) {
+        // Sucesso - usuário criado com token JWT válido
+        print('🚀 [REGISTER] Registro bem-sucedido!');
+        print('🚀 [REGISTER] User ID: ${response.user!.id}');
 
-      if (res.session != null) {
+        if (!mounted) return;
+
         // Registro bem-sucedido - navegar para seleção de tipo
         Navigator.of(context).pushReplacementNamed(
           '/select_user_type',
           arguments: {
             'fullName': fullName,
             'email': email,
+            'userId': response.user!.id,
           },
         );
       } else {
-        // Confirmação por email necessária
+        // Falha no registro
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Verifique seu e-mail para confirmar a conta.')),
+          const SnackBar(content: Text('Erro no registro. Tente novamente.')),
         );
-        Navigator.of(context).pushReplacementNamed('/login');
       }
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro de autenticação: ${e.message}')),
-      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -109,7 +115,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480),
               child: Column(
@@ -147,26 +154,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             validator: (value) {
                               final v = value?.trim() ?? '';
                               if (v.isEmpty) return 'Informe seu nome';
-                              if (v.length < 3) return 'O nome deve ter ao menos 3 caracteres';
-                              
+                              if (v.length < 3)
+                                return 'O nome deve ter ao menos 3 caracteres';
+
                               // Verificar se o usuário digitou um email no campo de nome
-                              final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+                              final emailRegex =
+                                  RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
                               if (emailRegex.hasMatch(v)) {
                                 return 'Você digitou um e-mail no campo de nome. Por favor, digite apenas seu nome completo.';
                               }
-                              
+
                               // Verificar se contém caracteres típicos de email
-                              if (v.contains('@') || v.contains('.com') || v.contains('.br')) {
+                              if (v.contains('@') ||
+                                  v.contains('.com') ||
+                                  v.contains('.br')) {
                                 return 'O nome não deve conter @ ou domínios de email. Digite apenas seu nome completo.';
                               }
-                              
+
                               // Usar DatabaseConstraintsValidator para validação adicional
                               try {
-                                DatabaseConstraintsValidator.validateFullNameField(v);
+                                DatabaseConstraintsValidator
+                                    .validateFullNameField(v);
                               } catch (e) {
-                                return e.toString().replaceAll('ValidationException: ', '');
+                                return e
+                                    .toString()
+                                    .replaceAll('ValidationException: ', '');
                               }
-                              
+
                               return null;
                             },
                           ),
@@ -177,8 +191,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             validator: (value) {
                               final v = value?.trim() ?? '';
                               if (v.isEmpty) return 'Informe seu e-mail';
-                              
-                              final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+
+                              final emailRegex =
+                                  RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
                               if (!emailRegex.hasMatch(v)) {
                                 // Verificar se o usuário digitou um nome no campo de email
                                 if (!v.contains('@') && !v.contains('.')) {
@@ -186,14 +201,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 }
                                 return 'E-mail inválido. Use o formato: exemplo@email.com';
                               }
-                              
+
                               // Usar DatabaseConstraintsValidator para validação adicional
                               try {
-                                DatabaseConstraintsValidator.validateEmailField(v);
+                                DatabaseConstraintsValidator.validateEmailField(
+                                    v);
                               } catch (e) {
-                                return e.toString().replaceAll('ValidationException: ', '');
+                                return e
+                                    .toString()
+                                    .replaceAll('ValidationException: ', '');
                               }
-                              
+
                               return null;
                             },
                           ),
@@ -203,7 +221,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             validator: (value) {
                               final v = value ?? '';
                               if (v.isEmpty) return 'Informe sua senha';
-                              if (v.length < 6) return 'A senha deve ter ao menos 6 caracteres';
+                              if (v.length < 6)
+                                return 'A senha deve ter ao menos 6 caracteres';
                               return null;
                             },
                           ),
@@ -215,7 +234,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             validator: (value) {
                               final v = value ?? '';
                               if (v.isEmpty) return 'Confirme sua senha';
-                              if (v != _passwordController.text) return 'As senhas não coincidem';
+                              if (v != _passwordController.text)
+                                return 'As senhas não coincidem';
                               return null;
                             },
                           ),
@@ -252,10 +272,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             child: TextButton(
                               onPressed: _isSubmitting
                                   ? null
-                                  : () => Navigator.of(context).pushReplacementNamed('/login'),
+                                  : () => Navigator.of(context)
+                                      .pushReplacementNamed('/login'),
                               child: Text(
                                 'Já tem uma conta? Entrar',
-                                style: textTheme.labelLarge?.copyWith(color: colorScheme.primary),
+                                style: textTheme.labelLarge
+                                    ?.copyWith(color: colorScheme.primary),
                               ),
                             ),
                           ),

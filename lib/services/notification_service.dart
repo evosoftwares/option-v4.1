@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../exceptions/app_exceptions.dart';
 import 'local_notification_service.dart';
 import 'onesignal_service.dart';
+import 'app_logger.dart';
 
 class NotificationService {
 
@@ -21,7 +22,17 @@ class NotificationService {
     String? relatedId,
     String? priority,
   }) async {
+    final startTime = DateTime.now();
+    
     try {
+      AppLogger.process('Criando notificação', tag: 'NOTIFICATION');
+      AppLogger.create('Notification', userId, tag: 'NOTIFICATION', data: {
+        'title': title,
+        'type': type ?? 'general',
+        'priority': priority ?? 'normal',
+        'has_related_id': relatedId != null
+      });
+      
       await _supabase.from('notifications').insert({
         'user_id': userId,
         'title': title,
@@ -31,9 +42,19 @@ class NotificationService {
         'priority': priority ?? 'normal',
         'is_read': false,
       });
-    } on PostgrestException {
+      
+      final duration = DateTime.now().difference(startTime);
+      AppLogger.performance('create_notification', duration, tag: 'NOTIFICATION');
+      AppLogger.notification(type ?? 'general', userId, title: title, success: true);
+      AppLogger.success('Notificação criada com sucesso', tag: 'NOTIFICATION');
+      
+    } on PostgrestException catch (e) {
+      AppLogger.error('PostgrestException ao criar notificação', tag: 'NOTIFICATION', error: e);
+      AppLogger.notification(type ?? 'general', userId, title: title, success: false);
       throw const DatabaseException('Erro ao criar notificação. Por favor, tente novamente mais tarde.');
     } catch (e) {
+      AppLogger.error('Erro inesperado ao criar notificação', tag: 'NOTIFICATION', error: e);
+      AppLogger.notification(type ?? 'general', userId, title: title, success: false);
       throw const DatabaseException('Erro inesperado ao criar notificação. Por favor, tente novamente mais tarde.');
     }
   }

@@ -4,6 +4,7 @@ import '../exceptions/app_exceptions.dart';
 import '../models/payment_method.dart';
 import '../utils/supabase_helper.dart';
 import 'auth_service.dart';
+import 'app_logger.dart';
 
 class PaymentService {
   static SupabaseClient get _supabase {
@@ -16,16 +17,24 @@ class PaymentService {
 
   /// Get all payment methods for the current user with security validations
   static Future<List<PaymentMethod>> getPaymentMethods() async {
+    final startTime = DateTime.now();
+    
     try {
+      AppLogger.process('Iniciando busca de métodos de pagamento', tag: 'PAYMENT_SERVICE');
+      
       // Validações de segurança
       if (!AuthService.isAuthenticated()) {
+        AppLogger.security('payment_access_unauthorized', details: 'User not authenticated');
         throw const UnauthorizedException('Usuário não autenticado');
       }
       
       final userId = AuthService.getCurrentUserId();
       if (userId == null) {
+        AppLogger.security('payment_access_no_user_id', details: 'User ID not available');
         throw const UnauthorizedException('ID do usuário não disponível');
       }
+
+      AppLogger.query('payment_methods', 1, tag: 'PAYMENT_SERVICE', filters: {'user_id': userId, 'is_active': true});
 
       final data = await _supabase
           .from('payment_methods')
@@ -34,17 +43,29 @@ class PaymentService {
           .eq('is_active', true)
           .order('created_at', ascending: false);
 
+      final methodsList = (data as List);
+      final duration = DateTime.now().difference(startTime);
+      
+      AppLogger.performance('get_payment_methods', duration, tag: 'PAYMENT_SERVICE');
+      AppLogger.success('Métodos de pagamento carregados', tag: 'PAYMENT_SERVICE');
+      AppLogger.query('payment_methods', methodsList.length, tag: 'PAYMENT_SERVICE');
+
       // Log de auditoria
       await AuthService.logSecurityEvent(
         eventType: 'PAYMENT_METHODS_ACCESSED',
         description: 'Métodos de pagamento acessados via PaymentService',
         metadata: {
           'user_id': userId,
-          'methods_count': (data as List).length,
+          'methods_count': methodsList.length,
         },
       );
       
-      return (data as List)
+      AppLogger.transaction('payment_methods_access', '0', userId, tag: 'PAYMENT_SERVICE', details: {
+        'methods_count': methodsList.length,
+        'access_time': duration.inMilliseconds
+      });
+      
+      return methodsList
           .map((item) => PaymentMethod.fromMap(item as Map<String, dynamic>))
           .toList();
     } on PostgrestException catch (e) {

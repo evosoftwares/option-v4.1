@@ -46,14 +46,34 @@ class StepperController extends ChangeNotifier {
   List<FavoriteLocation> get locations => _favoriteLocations;
 
   void setUserType(String type) {
+    final previousType = _userType;
     _userType = type;
+    
+    AppLogger.stepper('Tipo de usuário definido', step: _currentStep);
+    AppLogger.update('StepperState', 'user_type', tag: 'STEPPER', changes: {
+      'previous_type': previousType,
+      'new_type': type,
+      'current_step': _currentStep
+    });
+    
     notifyListeners();
     // Auto-save do estado crítico
     _saveState();
   }
 
   void setPhone(String phone) {
-    _phone = _sanitizeStringValue(phone);
+    final sanitizedPhone = _sanitizeStringValue(phone);
+    final previousPhone = _phone;
+    _phone = sanitizedPhone;
+    
+    AppLogger.stepper('Telefone definido', step: _currentStep);
+    AppLogger.validation('phone_format', sanitizedPhone?.isNotEmpty == true, entity: 'StepperController');
+    AppLogger.update('StepperState', 'phone', tag: 'STEPPER', changes: {
+      'has_previous': previousPhone != null,
+      'new_length': sanitizedPhone?.length ?? 0,
+      'current_step': _currentStep
+    });
+    
     notifyListeners();
     // Auto-save do estado crítico
     _saveState();

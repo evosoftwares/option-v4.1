@@ -24,18 +24,19 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
     if (_selectedType == null) return;
     try {
       print('🚀 Iniciando navegação para stepper...');
-      
+
       // Obter o usuário autenticado atual
       final currentUser = Supabase.instance.client.auth.currentUser;
       if (currentUser == null) {
         print('❌ Erro: Usuário não autenticado na tela de tipo');
         throw Exception('Usuário não autenticado');
       }
-      
+
       print('✅ Usuário autenticado: ${currentUser.id}');
 
       // Dados passados do registro (nome e email)
-      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       final fullName = (args?['fullName'] as String?)?.trim();
       final emailFromArgs = (args?['email'] as String?)?.trim();
       final email = emailFromArgs ?? currentUser.email;
@@ -61,10 +62,10 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
 
       // Armazenar em App State (StepperController) e seguir para o stepper
       final controller = Provider.of<StepperController>(context, listen: false);
-      
+
       // Limpar dados persistidos corrompidos antes de definir novos valores
       await controller.clearCorruptedPersistedData();
-      
+
       controller
         ..setUserType(_selectedType!)
         ..setFullName(fullName)
@@ -105,7 +106,8 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
               child: Column(
@@ -137,7 +139,8 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
                   _OptionCard(
                     icon: Icons.drive_eta,
                     title: 'Motorista',
-                    description: 'Dirija e ganhe dinheiro nas suas horas vagas.',
+                    description:
+                        'Dirija e ganhe dinheiro nas suas horas vagas.',
                     selected: _selectedType == 'driver',
                     onTap: () => _onSelect('driver'),
                   ),
@@ -161,7 +164,6 @@ class _UserTypeScreenState extends State<UserTypeScreen> {
 }
 
 class _OptionCard extends StatelessWidget {
-
   const _OptionCard({
     required this.icon,
     required this.title,
@@ -180,21 +182,17 @@ class _OptionCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final containerColor = selected
-        ? colorScheme.primaryContainer
-        : colorScheme.surface;
-    final borderColor = selected
-        ? colorScheme.primary
-        : colorScheme.outlineVariant;
-    final titleColor = selected
-        ? colorScheme.onPrimaryContainer
-        : colorScheme.onSurface;
+    final containerColor =
+        selected ? colorScheme.primaryContainer : colorScheme.surface;
+    final borderColor =
+        selected ? colorScheme.primary : colorScheme.outlineVariant;
+    final titleColor =
+        selected ? colorScheme.onPrimaryContainer : colorScheme.onSurface;
     final descColor = selected
-        ? colorScheme.onPrimaryContainer.withOpacity(0.8)
+        ? colorScheme.onPrimaryContainer.withValues(alpha: 0.8)
         : colorScheme.onSurfaceVariant;
-    final iconColor = selected
-        ? colorScheme.onPrimaryContainer
-        : colorScheme.onSurface;
+    final iconColor =
+        selected ? colorScheme.onPrimaryContainer : colorScheme.onSurface;
 
     return Material(
       color: Colors.transparent,
@@ -226,8 +224,8 @@ class _OptionCard extends StatelessWidget {
                 width: 48,
                 decoration: BoxDecoration(
                   color: selected
-                      ? colorScheme.primary.withOpacity(0.12)
-                      : colorScheme.tertiary.withOpacity(0.2),
+                      ? colorScheme.primary.withValues(alpha: 0.12)
+                      : colorScheme.tertiary.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: iconColor),
@@ -256,10 +254,10 @@ class _OptionCard extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               Icon(
-                selected
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_off,
-                color: selected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: selected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
               ),
             ],
           ),

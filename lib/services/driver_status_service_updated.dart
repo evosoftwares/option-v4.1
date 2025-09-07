@@ -2,10 +2,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../exceptions/app_exceptions.dart';
 import '../models/supabase/driver_status.dart';
-import '../models/supabase/driver_effective_status.dart';
+import '../models/supabase/driver_effective_status_updated.dart';
 
 /// Serviço para gerenciar o status online dos motoristas
-/// Separa a intenção (toggle) do status efetivo (calculado pela view)
+/// Nova lógica: motorista só fica online se todos os documentos estão validados
 class DriverStatusService {
   DriverStatusService(this._supabase);
   final SupabaseClient _supabase;
@@ -34,18 +34,19 @@ class DriverStatusService {
   }
 
   /// Busca o status efetivo do motorista (da view)
+  /// Nova lógica: depende apenas de documentos validados
   Future<DriverEffectiveStatus?> getDriverEffectiveStatus(String driverId) async {
     print('🔵 [DRIVER_STATUS_SERVICE] getDriverEffectiveStatus iniciado');
     print('   🔹 Driver ID recebido: $driverId');
     print('   🔹 Tamanho do driverId: ${driverId.length}');
     print('   🔹 DriverId é vazio: ${driverId.isEmpty}');
-    
+
     // Validação de driverId
     if (driverId.isEmpty) {
       print('❌ [DRIVER_STATUS_SERVICE] Driver ID inválido (vazio)');
       return null;
     }
-    
+
     try {
       print('🔗 [DRIVER_STATUS_SERVICE] Fazendo consulta na view driver_effective_status...');
       print('   🔹 Query: SELECT * FROM driver_effective_status WHERE driver_id = \'$driverId\' LIMIT 1');
@@ -67,13 +68,13 @@ class DriverStatusService {
         print('   🔍 Problemas de permissão na view');
         return null;
       }
-      
+
       print('✅ [DRIVER_STATUS_SERVICE] Dados encontrados na view, criando DriverEffectiveStatus...');
       print('   🔹 Conteúdo da resposta: ${response.toString()}');
       print('   🔹 Chaves da resposta: ${response.keys.toList()}');
-      
+
       // Verificar se os campos necessários estão presentes
-      final requiredFields = ['driver_id', 'online_intent', 'is_within_working_hours', 'effective_online'];
+      final requiredFields = ['driver_id', 'online_intent', 'documents_validated', 'effective_online'];
       for (final field in requiredFields) {
         if (!response.containsKey(field)) {
           print('⚠️ [DRIVER_STATUS_SERVICE] Campo obrigatório ausente: $field');
@@ -81,25 +82,25 @@ class DriverStatusService {
           print('   🔹 $field: ${response[field]}');
         }
       }
-      
+
       final effectiveStatus = DriverEffectiveStatus.fromJson(response);
       print('📋 [DRIVER_STATUS_SERVICE] DriverEffectiveStatus criado com sucesso');
       print('   🔹 Driver ID: ${effectiveStatus.driverId}');
       print('   🔹 Online Intent: ${effectiveStatus.onlineIntent}');
-      print('   🔹 Within Working Hours: ${effectiveStatus.isWithinWorkingHours}');
+      print('   🔹 Documents Validated: ${effectiveStatus.documentsValidated}');
       print('   🔹 Effective Online: ${effectiveStatus.effectiveOnline}');
-      
+
       return effectiveStatus;
     } on PostgrestException catch (e) {
       print('❌ [DRIVER_STATUS_SERVICE] PostgrestException em getDriverEffectiveStatus: ${e.code} - ${e.message}');
       print('❌ [DRIVER_STATUS_SERVICE] Details: ${e.details}');
       print('❌ [DRIVER_STATUS_SERVICE] Hint: ${e.hint}');
-      
+
       if (e.code == '42P01') {
         print('💡 [DRIVER_STATUS_SERVICE] DIAGNÓSTICO: View driver_effective_status não existe!');
-        print('💡 [DRIVER_STATUS_SERVICE] SOLUÇÃO: Execute o arquivo sql/auto_online_schema.sql');
+        print('💡 [DRIVER_STATUS_SERVICE] SOLUÇÃO: Execute a migração para remover working_hours');
       }
-      
+
       throw DatabaseException(
         'Erro ao buscar status efetivo do motorista. Por favor, tente novamente mais tarde.',
         e.code,
@@ -108,7 +109,7 @@ class DriverStatusService {
       print('❌ [DRIVER_STATUS_SERVICE] Erro inesperado em getDriverEffectiveStatus: ${e.toString()}');
       print('❌ [DRIVER_STATUS_SERVICE] Tipo do erro: ${e.runtimeType}');
       print('❌ [DRIVER_STATUS_SERVICE] Stack trace: $stackTrace');
-      
+
       throw const DatabaseException(
         'Erro inesperado ao buscar status efetivo do motorista. Por favor, tente novamente mais tarde.',
       );
@@ -152,54 +153,68 @@ class DriverStatusService {
   }) async => updateOnlineIntent(driverId, onlineIntent);
 
   /// Liga o motorista (define intenção como true)
-  Future<DriverStatus> setDriverOnline(String driverId) async => updateOnlineIntent(driverId, true);
+  /// Verifica se todos os documentos obrigatórios estão aprovados antes de permitir
+  Future<DriverStatus> setDriverOnline(String driverId) async {
+    print('🔵 [DRIVER_STATUS_SERVICE] setDriverOnline iniciado para driver: $driverId');
+
+    // Verificar se todos os documentos obrigatórios estão aprovados
+    final documentsStatus = await checkRequiredDocumentsApproved(driverId);
+
+    if (!documentsStatus['allApproved']) {
+      print('❌ [DRIVER_STATUS_SERVICE] Motorista não pode ficar online - documentos não aprovados');
+      final pendingDocs = documentsStatus['pendingDocuments'] as List<String>;
+      final missingDocs = documentsStatus['missingDocuments'] as List<String>;
+      final rejectedDocs = documentsStatus['rejectedDocuments'] as List<String>;
+
+      var errorMessage = 'Não é possível ficar online. ';
+      if (missingDocs.isNotEmpty) {
+        errorMessage += 'Documentos em falta: ${missingDocs.join(', ')}. ';
+      }
+      if (pendingDocs.isNotEmpty) {
+        errorMessage += 'Documentos pendentes: ${pendingDocs.join(', ')}. ';
+      }
+      if (rejectedDocs.isNotEmpty) {
+        errorMessage += 'Documentos rejeitados: ${rejectedDocs.join(', ')}. ';
+      }
+
+      throw DatabaseException(errorMessage.trim());
+    }
+
+    print('✅ [DRIVER_STATUS_SERVICE] Todos documentos aprovados - atualizando intenção');
+    return updateOnlineIntent(driverId, true);
+  }
 
   /// Desliga o motorista (define intenção como false)
   Future<DriverStatus> setDriverOffline(String driverId) async => updateOnlineIntent(driverId, false);
 
   /// Verifica se o motorista pode ficar online agora
-  /// (documentos aprovados e elegível)
+  /// Nova lógica: APENAS verifica se todos os documentos obrigatórios estão aprovados
   Future<bool> canDriverGoOnlineNow(String driverId) async {
     print('🔵 [DRIVER_STATUS_SERVICE] canDriverGoOnlineNow iniciado');
     print('   🔹 Driver ID recebido: $driverId');
-    
+
     // Validação de driverId
     if (driverId.isEmpty) {
       print('❌ [DRIVER_STATUS_SERVICE] Driver ID inválido (vazio)');
       return false;
     }
-    
+
     try {
-      // 1. Verificar se o motorista está aprovado
-      print('🔗 [DRIVER_STATUS_SERVICE] Verificando aprovação do motorista...');
-      final driverData = await _supabase
-          .from('drivers')
-          .select('approval_status')
-          .eq('id', driverId)
-          .single();
-      
-      final approvalStatus = driverData['approval_status'] as String?;
-      print('📋 [DRIVER_STATUS_SERVICE] Status de aprovação: $approvalStatus');
-      
-      if (approvalStatus != 'approved') {
-        print('❌ [DRIVER_STATUS_SERVICE] Motorista NÃO aprovado - não pode ficar online');
-        return false;
-      }
-      
-      // 2. Verificar se todos os documentos obrigatórios estão aprovados
+      // Verificar se todos os documentos obrigatórios estão aprovados
       print('🔗 [DRIVER_STATUS_SERVICE] Verificando documentos obrigatórios...');
       final documentsStatus = await checkRequiredDocumentsApproved(driverId);
-      
+
       if (!documentsStatus['allApproved']) {
         print('❌ [DRIVER_STATUS_SERVICE] Documentos obrigatórios NÃO aprovados');
+        print('📋 [DRIVER_STATUS_SERVICE] Detalhes: $documentsStatus');
         return false;
       }
-      
-      print('✅ [DRIVER_STATUS_SERVICE] Motorista aprovado e documentos OK - pode ficar online');
+
+      print('✅ [DRIVER_STATUS_SERVICE] Todos documentos aprovados - pode ficar online');
       return true;
-      
+
     } catch (e) {
-      print('❌ [DRIVER_STATUS_SERVICE] Erro ao verificar se pode ficar online: ${e.toString()}');
+      print('❌ [DRIVER_STATUS_SERVICE] Erro ao verificar documentos: ${e.toString()}');
       print('⚠️ [DRIVER_STATUS_SERVICE] Retornando false por segurança');
       return false;
     }
@@ -208,7 +223,7 @@ class DriverStatusService {
   /// Verifica se todos os documentos obrigatórios estão aprovados
   Future<Map<String, dynamic>> checkRequiredDocumentsApproved(String driverId) async {
     print('🔍 [DRIVER_STATUS_SERVICE] Verificando documentos obrigatórios para driver: $driverId');
-    
+
     try {
       // Buscar documentos do motorista
       final documents = await _supabase
@@ -216,30 +231,31 @@ class DriverStatusService {
           .select('document_type, status')
           .eq('driver_id', driverId)
           .eq('is_current', true);
-      
+
       print('📋 [DRIVER_STATUS_SERVICE] Documentos encontrados: ${documents.length}');
-      
+
       // Documentos obrigatórios
       const requiredDocuments = [
         'CNH_FRONT',
-        'CNH_BACK', 
-        'CRLV'
+        'CNH_BACK',
+        'CRLV',
+        'VEHICLE_FRONT'
       ];
-      
+
       final pendingDocuments = <String>[];
       final rejectedDocuments = <String>[];
       final approvedDocuments = <String>[];
       final missingDocuments = <String>[];
-      
+
       // Mapear documentos existentes
       final documentsByType = <String, String>{};
       for (final doc in documents) {
         final type = doc['document_type'] as String;
         final status = doc['status'] as String;
         documentsByType[type] = status;
-        
+
         print('   📄 $type: $status');
-        
+
         switch (status) {
           case 'pending':
             pendingDocuments.add(type);
@@ -252,7 +268,7 @@ class DriverStatusService {
             break;
         }
       }
-      
+
       // Verificar documentos obrigatórios em falta
       for (final required in requiredDocuments) {
         if (!documentsByType.containsKey(required)) {
@@ -260,12 +276,12 @@ class DriverStatusService {
           print('   ❌ Documento obrigatório em falta: $required');
         }
       }
-      
+
       // Determinar se todos os obrigatórios estão aprovados
       final allRequiredApproved = requiredDocuments.every(
         (required) => documentsByType[required] == 'approved'
       );
-      
+
       final result = {
         'allApproved': allRequiredApproved,
         'approvedDocuments': approvedDocuments,
@@ -275,16 +291,16 @@ class DriverStatusService {
         'totalRequired': requiredDocuments.length,
         'totalApproved': approvedDocuments.where(requiredDocuments.contains).length,
       };
-      
+
       print('📊 [DRIVER_STATUS_SERVICE] Resultado da verificação:');
       print('   ✅ Todos aprovados: $allRequiredApproved');
       print('   📋 Aprovados (${approvedDocuments.length}): $approvedDocuments');
       print('   ⏳ Pendentes (${pendingDocuments.length}): $pendingDocuments');
       print('   ❌ Rejeitados (${rejectedDocuments.length}): $rejectedDocuments');
       print('   🔍 Em falta (${missingDocuments.length}): $missingDocuments');
-      
+
       return result;
-      
+
     } catch (e) {
       print('❌ [DRIVER_STATUS_SERVICE] Erro ao verificar documentos: $e');
       return {
@@ -299,6 +315,7 @@ class DriverStatusService {
   }
 
   /// Busca todos os motoristas efetivamente online
+  /// (com documentos aprovados e intenção online)
   Future<List<DriverEffectiveStatus>> getOnlineDrivers() async {
     try {
       final response = await _supabase
@@ -322,8 +339,7 @@ class DriverStatusService {
     }
   }
 
-  /// Busca motoristas com intenção online mas fora do horário
-  /// (Esta função agora não terá muito sentido, mas vamos mantê-la para compatibilidade)
+  /// Busca motoristas com intenção online mas documentos pendentes
   Future<List<DriverEffectiveStatus>> getDriversWithIntentButOffline() async {
     try {
       final response = await _supabase
@@ -381,19 +397,22 @@ class DriverStatusService {
     try {
       final response = await _supabase
           .from('driver_effective_status')
-          .select('online_intent, effective_online');
+          .select('online_intent, documents_validated, effective_online');
 
       var totalDrivers = 0;
       var withIntent = 0;
+      var documentsValidated = 0;
       var effectivelyOnline = 0;
       var intentButOffline = 0;
 
       for (final row in response as List<dynamic>) {
         totalDrivers++;
         final intent = row['online_intent'] as bool;
+        final docsValidated = row['documents_validated'] as bool;
         final effective = row['effective_online'] as bool;
 
         if (intent) withIntent++;
+        if (docsValidated) documentsValidated++;
         if (effective) effectivelyOnline++;
         if (intent && !effective) intentButOffline++;
       }
@@ -401,6 +420,7 @@ class DriverStatusService {
       return {
         'total_drivers': totalDrivers,
         'with_intent': withIntent,
+        'documents_validated': documentsValidated,
         'effectively_online': effectivelyOnline,
         'intent_but_offline': intentButOffline,
         'offline': totalDrivers - withIntent,
@@ -414,6 +434,56 @@ class DriverStatusService {
       throw const DatabaseException(
         'Erro inesperado ao buscar estatísticas de status. Por favor, tente novamente mais tarde.',
       );
+    }
+  }
+
+  /// Obter status detalhado do motorista para debugging
+  /// Foca apenas nos documentos - não verifica mais approval_status da tabela drivers
+  Future<Map<String, dynamic>> getDriverDetailedStatus(String driverId) async {
+    print('🔍 [DRIVER_STATUS_SERVICE] getDriverDetailedStatus iniciado para: $driverId');
+
+    try {
+      // 1. Status básico (intenção online)
+      final basicStatus = await getDriverStatus(driverId);
+
+      // 2. Status efetivo da view (baseado em documentos)
+      final effectiveStatus = await getDriverEffectiveStatus(driverId);
+
+      // 3. Verificação detalhada de documentos
+      final documentsStatus = await checkRequiredDocumentsApproved(driverId);
+
+      // 4. Informações básicas do driver (apenas para contexto)
+      final driverData = await _supabase
+          .from('drivers')
+          .select('user_id, vehicle_plate, vehicle_category')
+          .eq('id', driverId)
+          .maybeSingle();
+
+      final result = {
+        'driver_id': driverId,
+        'basic_status': basicStatus?.toJson(),
+        'effective_status': effectiveStatus?.toJson(),
+        'documents_status': documentsStatus,
+        'driver_info': {
+          'user_id': driverData?['user_id'],
+          'vehicle_plate': driverData?['vehicle_plate'],
+          'vehicle_category': driverData?['vehicle_category'],
+        },
+        'can_go_online': documentsStatus['allApproved'],
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      print('📋 [DRIVER_STATUS_SERVICE] Status detalhado compilado');
+      print('   🔹 Pode ficar online: ${documentsStatus['allApproved']}');
+      return result;
+
+    } catch (e) {
+      print('❌ [DRIVER_STATUS_SERVICE] Erro ao obter status detalhado: $e');
+      return {
+        'driver_id': driverId,
+        'error': e.toString(),
+        'timestamp': DateTime.now().toIso8601String(),
+      };
     }
   }
 }

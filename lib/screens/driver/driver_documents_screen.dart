@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/supabase/driver_document.dart';
 import '../../services/driver_document_service.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
 import 'document_capture_screen.dart';
 
 /// Tela principal para gerenciamento de documentos do motorista
@@ -15,7 +16,7 @@ class DriverDocumentsScreen extends StatefulWidget {
 
 class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
   String _driverId = '';
-  
+
   List<DriverDocument> _documents = [];
   Map<String, dynamic>? _documentationStatus;
   bool _isLoading = true;
@@ -45,7 +46,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
 
       // Garantir que existe um registro de driver
       _driverId = await _ensureDriverExists(user.id);
-      
+
       // Carregar documentos
       await _loadDocuments();
     } catch (e) {
@@ -65,14 +66,14 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
           .select('id')
           .eq('user_id', userId)
           .maybeSingle();
-      
+
       if (existingDriverResponse != null) {
         return existingDriverResponse['id'] as String;
       }
-      
+
       // Se não existe, criar usando dados básicos
       print('⚠️ Registro de driver não encontrado, criando automaticamente...');
-      
+
       // Criar registro de driver básico
       final driverData = {
         'user_id': userId,
@@ -109,17 +110,16 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         'current_longitude': null,
         'last_location_update': null,
       };
-      
+
       final newDriverResponse = await Supabase.instance.client
           .from('drivers')
           .insert(driverData)
           .select('id')
           .single();
-      
+
       final driverId = newDriverResponse['id'] as String;
       print('✅ Registro de driver criado com sucesso: $driverId');
       return driverId;
-      
     } catch (e) {
       throw Exception('Erro ao garantir registro de driver: $e');
     }
@@ -135,8 +135,10 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
     }
 
     try {
-      final documents = await DriverDocumentService.getCurrentDriverDocuments(_driverId);
-      final status = await DriverDocumentService.getDocumentationStatus(_driverId);
+      final documents =
+          await DriverDocumentService.getCurrentDriverDocuments(_driverId);
+      final status =
+          await DriverDocumentService.getDocumentationStatus(_driverId);
 
       setState(() {
         _documents = documents;
@@ -171,7 +173,8 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
         builder: (context) => DocumentCaptureScreen(
           documentType: documentType,
           driverId: _driverId,
-          existingDocument: existingDocument.id.isNotEmpty ? existingDocument : null,
+          existingDocument:
+              existingDocument.id.isNotEmpty ? existingDocument : null,
         ),
       ),
     );
@@ -183,94 +186,94 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      backgroundColor: AppColors.lightBackground,
-      appBar: AppBar(
-        title: const Text(
-          'Meus Documentos',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
+        backgroundColor: AppColors.lightBackground,
+        appBar: AppBar(
+          title: const Text(
+            'Meus Documentos',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+            ),
+          ),
+          backgroundColor: AppColors.lightSurface,
+          foregroundColor: AppColors.lightOnSurface,
+          elevation: 0,
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
           ),
         ),
-        backgroundColor: AppColors.lightSurface,
-        foregroundColor: AppColors.lightOnSurface,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.lightPrimary,
-              ),
-            )
-          : _error != null
-              ? _buildErrorState()
-              : RefreshIndicator(
-                  onRefresh: _loadDocuments,
+        body: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
                   color: AppColors.lightPrimary,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildStatusCard(),
-                        const SizedBox(height: 24),
-                        _buildDocumentsList(),
-                      ],
+                ),
+              )
+            : _error != null
+                ? _buildErrorState()
+                : RefreshIndicator(
+                    onRefresh: _loadDocuments,
+                    color: AppColors.lightPrimary,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildStatusCard(),
+                          SizedBox(height: AppSpacing.xl),
+                          _buildDocumentsList(),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-    );
+      );
 
   Widget _buildErrorState() => Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: AppColors.error.withOpacity(0.7),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Ops! Algo deu errado',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.lightOnSurface,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.grey.withValues(alpha: 0.3),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _error ?? 'Erro desconhecido',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.gray600,
+              const SizedBox(height: 16),
+              Text(
+                'Ops! Algo deu errado',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.lightOnSurface,
+                    ),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _loadDocuments,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.lightPrimary,
-                foregroundColor: AppColors.lightOnPrimary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+              const SizedBox(height: 8),
+              Text(
+                _error ?? 'Erro desconhecido',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.gray600,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: _loadDocuments,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.lightPrimary,
+                  foregroundColor: AppColors.lightOnPrimary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
                 ),
+                child: const Text('Tentar Novamente'),
               ),
-              child: const Text('Tentar Novamente'),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildStatusCard() {
     if (_documentationStatus == null) return const SizedBox.shrink();
@@ -278,9 +281,12 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
     final isComplete = _documentationStatus!['isComplete'] as bool;
     final totalRequired = _documentationStatus!['totalRequired'] as int;
     final totalApproved = _documentationStatus!['totalApproved'] as int;
-    final pendingCount = (_documentationStatus!['pendingDocuments'] as List).length;
-    final rejectedCount = (_documentationStatus!['rejectedDocuments'] as List).length;
-    final missingCount = (_documentationStatus!['missingDocuments'] as List).length;
+    final pendingCount =
+        (_documentationStatus!['pendingDocuments'] as List).length;
+    final rejectedCount =
+        (_documentationStatus!['rejectedDocuments'] as List).length;
+    final missingCount =
+        (_documentationStatus!['missingDocuments'] as List).length;
 
     Color statusColor;
     IconData statusIcon;
@@ -291,36 +297,39 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
       statusColor = AppColors.success;
       statusIcon = Icons.check_circle;
       statusText = 'Documentação Completa';
-      statusDescription = 'Todos os documentos foram aprovados';
+      statusDescription = 'Parabéns! Você pode ficar online e receber corridas';
     } else if (rejectedCount > 0) {
       statusColor = AppColors.error;
       statusIcon = Icons.cancel;
       statusText = 'Documentos Rejeitados';
-      statusDescription = '$rejectedCount documento(s) precisam ser reenviados';
+      statusDescription =
+          '$rejectedCount documento(s) foram rejeitados e precisam ser reenviados';
     } else if (pendingCount > 0) {
       statusColor = AppColors.warning;
       statusIcon = Icons.schedule;
       statusText = 'Aguardando Análise';
-      statusDescription = '$pendingCount documento(s) em análise';
+      statusDescription =
+          '$pendingCount documento(s) estão sendo analisados pela nossa equipe';
     } else {
-      statusColor = AppColors.info;
+      statusColor = AppColors.error;
       statusIcon = Icons.upload_file;
       statusText = 'Documentos Pendentes';
-      statusDescription = '$missingCount documento(s) precisam ser enviados';
+      statusDescription =
+          '$missingCount documento(s) obrigatórios precisam ser enviados';
     }
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         border: Border.all(
-          color: statusColor.withOpacity(0.2),
+          color: statusColor.withValues(alpha: 0.3),
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.gray200.withOpacity(0.5),
+            color: statusColor.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -332,10 +341,10 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   statusIcon,
@@ -343,7 +352,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
                   size: 24,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,40 +360,47 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
                     Text(
                       statusText,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.lightOnSurface,
-                      ),
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.lightOnSurface,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       statusDescription,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.gray600,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.gray600,
+                          ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
+          // Progress bar
+          LinearProgressIndicator(
+            value: totalRequired > 0 ? totalApproved / totalRequired : 0,
+            backgroundColor: AppColors.gray200,
+            valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: LinearProgressIndicator(
-                  value: totalApproved / totalRequired,
-                  backgroundColor: AppColors.gray200,
-                  valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                  minHeight: 6,
-                ),
-              ),
-              const SizedBox(width: 12),
               Text(
-                '$totalApproved/$totalRequired',
+                'Progresso',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.gray600,
-                ),
+                      color: AppColors.gray600,
+                    ),
+              ),
+              Text(
+                '$totalApproved de $totalRequired documentos aprovados',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
             ],
           ),
@@ -454,8 +470,10 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
     ];
 
     // Separar documentos obrigatórios e opcionais
-    final requiredDocs = documentTypes.where((doc) => doc['isRequired'] == true).toList();
-    final optionalDocs = documentTypes.where((doc) => doc['isRequired'] == false).toList();
+    final requiredDocs =
+        documentTypes.where((doc) => doc['isRequired'] == true).toList();
+    final optionalDocs =
+        documentTypes.where((doc) => doc['isRequired'] == false).toList();
 
     // Separar documentos faltantes dos demais
     final missingDocs = <Map<String, dynamic>>[];
@@ -485,22 +503,105 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Seção de documentos faltantes (destacada)
+        // Seção de documentos obrigatórios
+        Text(
+          'Documentos Obrigatórios',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.lightOnSurface,
+              ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        
+        // Mostrar documentos faltantes primeiro (se houver)
         if (missingDocs.isNotEmpty) ...[
-          _buildMissingDocumentsSection(missingDocs),
-          const SizedBox(height: 24),
+          ...missingDocs.map((docType) {
+            final document = _documents.firstWhere(
+              (doc) =>
+                  doc.documentType == (docType['type']! as DocumentType).value,
+              orElse: () => DriverDocument(
+                id: '',
+                driverId: _driverId,
+                documentType: (docType['type']! as DocumentType).value,
+                fileUrl: '',
+                status: 'missing',
+                isCurrent: false,
+                createdAt: DateTime.now(),
+              ),
+            );
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _buildDocumentTile(
+                docType,
+                document,
+                isMissing: true,
+              ),
+            );
+          }),
+          const SizedBox(height: AppSpacing.lg),
         ],
+
+        // Documentos obrigatórios já enviados
+        ...completedDocs.map((docType) {
+          final document = _documents.firstWhere(
+            (doc) =>
+                doc.documentType == (docType['type']! as DocumentType).value,
+            orElse: () => DriverDocument(
+              id: '',
+              driverId: _driverId,
+              documentType: (docType['type']! as DocumentType).value,
+              fileUrl: '',
+              status: 'missing',
+              isCurrent: false,
+              createdAt: DateTime.now(),
+            ),
+          );
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: AppSpacing.sm),
+            child: _buildDocumentTile(
+              docType,
+              document,
+            ),
+          );
+        }),
         
-        // Seção de documentos obrigatórios já enviados
-        if (completedDocs.isNotEmpty) ...[
-          _buildCompletedDocumentsSection(completedDocs),
-          const SizedBox(height: 24),
-        ],
-        
+        const SizedBox(height: AppSpacing.xl),
+
         // Seção de documentos opcionais
-        if (optionalDocs.isNotEmpty) ...[
-          _buildOptionalDocumentsSection(optionalDocs),
-        ],
+        Text(
+          'Documentos Opcionais',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.lightOnSurface,
+              ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        
+        ...optionalDocs.map((docType) {
+          final document = _documents.firstWhere(
+            (doc) =>
+                doc.documentType == (docType['type']! as DocumentType).value,
+            orElse: () => DriverDocument(
+              id: '',
+              driverId: _driverId,
+              documentType: (docType['type']! as DocumentType).value,
+              fileUrl: '',
+              status: 'missing',
+              isCurrent: false,
+              createdAt: DateTime.now(),
+            ),
+          );
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: AppSpacing.sm),
+            child: _buildDocumentTile(
+              docType,
+              document,
+            ),
+          );
+        }),
       ],
     );
   }
@@ -525,203 +626,138 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
     switch (document.status) {
       case 'approved':
         statusColor = AppColors.success;
-        statusIcon = Icons.check_circle;
+        statusIcon = Icons.check_circle_rounded;
         statusText = 'Aprovado';
         if (requiresExpiry && document.expiryDate != null) {
           showExpiry = true;
           isExpired = document.expiryDate!.isBefore(DateTime.now());
           if (isExpired) {
             statusColor = AppColors.error;
-            statusIcon = Icons.error;
+            statusIcon = Icons.error_rounded;
             statusText = 'Expirado';
           }
         }
         break;
       case 'pending':
         statusColor = AppColors.warning;
-        statusIcon = Icons.schedule;
+        statusIcon = Icons.schedule_rounded;
         statusText = 'Em análise';
         break;
       case 'rejected':
         statusColor = AppColors.error;
-        statusIcon = Icons.cancel;
+        statusIcon = Icons.cancel_rounded;
         statusText = 'Rejeitado';
         break;
       default:
-        statusColor = AppColors.gray400;
-        statusIcon = Icons.upload_file;
-        statusText = 'Enviar';
+        statusColor = isMissing ? AppColors.error : AppColors.gray400;
+        statusIcon = Icons.camera_alt_rounded;
+        statusText = isMissing ? 'Enviar agora' : 'Enviar';
     }
 
-    return DecoratedBox(
+    return Container(
       decoration: BoxDecoration(
-        color: isMissing ? AppColors.error.withOpacity(0.05) : AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(
-          color: isMissing ? AppColors.error.withOpacity(0.3) : AppColors.gray200,
-          width: isMissing ? 1.5 : 1.0,
+          color: isMissing
+              ? AppColors.error.withValues(alpha: 0.3)
+              : AppColors.gray200,
         ),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           onTap: () => _navigateToCapture(type),
           child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isMissing ? statusColor.withOpacity(0.15) : AppColors.gray100,
-                        borderRadius: BorderRadius.circular(8),
-                        border: isMissing ? Border.all(
-                          color: statusColor.withOpacity(0.3),
-                        ) : null,
+                // Icon
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: statusColor,
+                    size: 20,
+                  ),
+                ),
+                
+                SizedBox(width: AppSpacing.md),
+                
+                // Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.lightOnSurface,
+                            ),
                       ),
-                      child: Icon(
-                        icon,
-                        color: isMissing ? statusColor : AppColors.gray600,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: isMissing ? FontWeight.w700 : FontWeight.w600,
-                                    color: isMissing ? AppColors.error : AppColors.lightOnSurface,
-                                  ),
-                                ),
-                              ),
-                              if (isMissing)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.error,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    'OBRIGATÓRIO',
-                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            description,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      Text(
+                        description,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: AppColors.gray600,
                             ),
-                          ),
-                        ],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(isMissing ? 0.15 : 0.1),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            statusIcon,
-                            color: statusColor,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            statusText,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: statusColor,
-                              fontWeight: isMissing ? FontWeight.w700 : FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                if (showExpiry && document.expiryDate != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isExpired 
-                          ? AppColors.error.withOpacity(0.1)
-                          : AppColors.info.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          isExpired ? Icons.warning : Icons.schedule,
-                          color: isExpired ? AppColors.error : AppColors.info,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
+                      if (showExpiry && document.expiryDate != null) ...[
+                        const SizedBox(height: 4),
                         Text(
-                          isExpired 
-                              ? 'Expirado em ${_formatDate(document.expiryDate!)}'
-                              : 'Válido até ${_formatDate(document.expiryDate!)}',
+                          'Válido até ${_formatDate(document.expiryDate!)}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isExpired ? AppColors.error : AppColors.info,
-                            fontWeight: FontWeight.w500,
-                          ),
+                                color: isExpired ? AppColors.error : AppColors.info,
+                                fontWeight: FontWeight.w500,
+                              ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                ],
-                if (document.status == 'rejected' && document.rejectionReason != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.info_outline,
-                          color: AppColors.error,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Motivo da rejeição: ${document.rejectionReason}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.error,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+                
+                SizedBox(width: AppSpacing.sm),
+                
+                // Status badge
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
                   ),
-                ],
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        statusIcon,
+                        color: statusColor,
+                        size: 14,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        statusText,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: statusColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -730,162 +766,6 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
     );
   }
 
-  Widget _buildMissingDocumentsSection(List<Map<String, dynamic>> missingDocs) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.error.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.error.withOpacity(0.3),
-              width: 1.5,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.warning_rounded,
-                    color: AppColors.error,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Documentos Obrigatórios Pendentes',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.error,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${missingDocs.length} documento(s) precisam ser enviados para ativar sua conta',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.error.withOpacity(0.8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        ...missingDocs.map((docType) {
-          final document = _documents.firstWhere(
-            (doc) => doc.documentType == (docType['type']! as DocumentType).value,
-            orElse: () => DriverDocument(
-              id: '',
-              driverId: _driverId,
-              documentType: (docType['type']! as DocumentType).value,
-              fileUrl: '',
-              status: 'missing',
-              isCurrent: false,
-              createdAt: DateTime.now(),
-            ),
-          );
-
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildDocumentTile(
-              docType,
-              document,
-              isMissing: true,
-            ),
-          );
-        }),
-      ],
-    );
-
-  Widget _buildCompletedDocumentsSection(List<Map<String, dynamic>> completedDocs) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Documentos Obrigatórios Enviados',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppColors.lightOnSurface,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ...completedDocs.map((docType) {
-          final document = _documents.firstWhere(
-            (doc) => doc.documentType == (docType['type']! as DocumentType).value,
-            orElse: () => DriverDocument(
-              id: '',
-              driverId: _driverId,
-              documentType: (docType['type']! as DocumentType).value,
-              fileUrl: '',
-              status: 'missing',
-              isCurrent: false,
-              createdAt: DateTime.now(),
-            ),
-          );
-
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildDocumentTile(
-              docType,
-              document,
-            ),
-          );
-        }),
-      ],
-    );
-
-  Widget _buildOptionalDocumentsSection(List<Map<String, dynamic>> optionalDocs) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Documentos Opcionais',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppColors.lightOnSurface,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Estes documentos podem ser enviados para melhorar seu perfil',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppColors.gray600,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ...optionalDocs.map((docType) {
-          final document = _documents.firstWhere(
-            (doc) => doc.documentType == (docType['type']! as DocumentType).value,
-            orElse: () => DriverDocument(
-              id: '',
-              driverId: _driverId,
-              documentType: (docType['type']! as DocumentType).value,
-              fileUrl: '',
-              status: 'missing',
-              isCurrent: false,
-              createdAt: DateTime.now(),
-            ),
-          );
-
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildDocumentTile(
-              docType,
-              document,
-            ),
-          );
-        }),
-      ],
-    );
-
-  String _formatDate(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 }

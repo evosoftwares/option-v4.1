@@ -9,17 +9,22 @@ import '../models/user.dart';
 import '../models/vehicle_category.dart';
 import '../utils/supabase_helper.dart';
 import '../validators/user_data_validator.dart';
+import 'app_logger.dart';
 
 class UserService {
   static SupabaseClient get _supabase {
-    print('🔍 [USER_SERVICE] Obtendo cliente Supabase...');
+    AppLogger.process('Obtendo cliente Supabase', tag: 'USER_SERVICE');
     final c = SupabaseHelper.client;
     if (c == null) {
-      print('❌ [USER_SERVICE] SupabaseHelper.client retornou null!');
-      print('❌ [USER_SERVICE] SupabaseHelper.isInitialized: ${SupabaseHelper.isInitialized}');
+      AppLogger.error('SupabaseHelper.client retornou null',
+          tag: 'USER_SERVICE');
+      AppLogger.debug(
+          'SupabaseHelper.isInitialized: ${SupabaseHelper.isInitialized}',
+          tag: 'USER_SERVICE');
       throw Exception('Supabase não inicializado');
     }
-    print('✅ [USER_SERVICE] Cliente Supabase obtido com sucesso');
+    AppLogger.success('Cliente Supabase obtido com sucesso',
+        tag: 'USER_SERVICE');
     return c;
   }
 
@@ -32,23 +37,29 @@ class UserService {
     String? photoUrl,
     required String userType,
   }) async {
+    final startTime = DateTime.now();
     final timestamp = DateTime.now().toIso8601String();
-    print('🔄 [$timestamp] [USER_SERVICE] createUser iniciado');
-    print('  - authUserId: $authUserId');
-    print('  - email: $email');
-    print('  - fullName: $fullName');
-    print('  - phone: ${phone ?? 'null'}');
-    print('  - photoUrl: ${photoUrl ?? 'null'}');
-    print('  - userType: $userType');
 
-    // 🔍 VALIDAÇÃO CRÍTICA: Telefone deve ser obrigatório ANTES de qualquer processamento
-    print('🔍 [$timestamp] [USER_SERVICE] VALIDAÇÃO INICIAL - Telefone recebido: ${phone ?? 'null'}');
-    if (phone == null || phone.trim().isEmpty) {
-      print('❌ [$timestamp] [USER_SERVICE] Telefone é nulo ou vazio na entrada!');
-      throw const DatabaseException('Telefone é obrigatório para criar usuário', 'PHONE_REQUIRED');
+    AppLogger.process('Iniciando criação de usuário', tag: 'USER_SERVICE');
+    AppLogger.create('User Creation Attempt', authUserId,
+        tag: 'USER_SERVICE',
+        data: {
+          'auth_user_id': authUserId,
+          'email': email,
+          'full_name': fullName,
+          'has_phone': phone != null,
+          'has_photo_url': photoUrl != null,
+          'user_type': userType
+        });
+
+    // Telefone é opcional na criação - campo tem DEFAULT 'pending' no banco
+    final initialPhone = phone?.trim();
+    if (initialPhone != null && initialPhone.isNotEmpty) {
+      AppLogger.success('Telefone fornecido na criação', tag: 'USER_SERVICE');
+    } else {
+      AppLogger.info('Usuário será criado com telefone padrão (pending)',
+          tag: 'USER_SERVICE');
     }
-    final initialPhone = phone.trim();
-    print('✅ [$timestamp] [USER_SERVICE] Telefone inicial válido: $initialPhone');
 
     // VALIDAÇÃO SIMPLIFICADA: Apenas validação básica necessária
     try {
@@ -60,27 +71,26 @@ class UserService {
         phone: phone,
         photoUrl: photoUrl,
       );
-      
+
       print('✅ [$timestamp] [USER_SERVICE] UserDataValidator concluído');
       print('📊 [$timestamp] [USER_SERVICE] Dados antes da validação:');
       print('  - fullName: $fullName');
       print('  - email: $email');
       print('  - phone: $phone');
       print('  - photoUrl: $photoUrl');
-      
+
       // Usar dados validados
       fullName = validatedData['full_name'];
       email = validatedData['email'];
       userType = validatedData['user_type'];
       phone = validatedData['phone'];
       photoUrl = validatedData['photo_url'];
-      
+
       print('📊 [$timestamp] [USER_SERVICE] Dados após validação:');
       print('  - fullName: $fullName');
       print('  - email: $email');
       print('  - phone: $phone');
       print('  - photoUrl: $photoUrl');
-      
     } on validation.ValidationException catch (e) {
       print('❌ [$timestamp] [USER_SERVICE] ValidationException: ${e.message}');
       throw DatabaseException('Dados inválidos: ${e.message}');
@@ -88,77 +98,90 @@ class UserService {
 
     try {
       // Verificar se o usuário já existe por ID
-      print('🔍 [$timestamp] [USER_SERVICE] Verificando se usuário já existe por ID...');
+      print(
+          '🔍 [$timestamp] [USER_SERVICE] Verificando se usuário já existe por ID...');
       final existingUser = await getUserById(authUserId);
       if (existingUser != null) {
         print('❌ [$timestamp] [USER_SERVICE] Usuário já existe por ID: $email');
         throw UserAlreadyExistsException(email);
       }
-      print('✅ [$timestamp] [USER_SERVICE] Usuário não existe por ID, continuando...');
+      print(
+          '✅ [$timestamp] [USER_SERVICE] Usuário não existe por ID, continuando...');
     } catch (e) {
       if (e is UserAlreadyExistsException) rethrow;
-      print('ℹ️ [$timestamp] [USER_SERVICE] Erro ao verificar usuário existente por ID (normal): $e');
+      print(
+          'ℹ️ [$timestamp] [USER_SERVICE] Erro ao verificar usuário existente por ID (normal): $e');
       // Se não encontrou o usuário, continua com a criação
     }
 
     // Verificar se já existe usuário com o mesmo email
     try {
-      print('🔍 [$timestamp] [USER_SERVICE] Verificando se email já existe: $email');
+      print(
+          '🔍 [$timestamp] [USER_SERVICE] Verificando se email já existe: $email');
       final existingUserByEmail = await getUserByEmail(email);
       if (existingUserByEmail != null) {
-        print('❌ [$timestamp] [USER_SERVICE] Email já existe: $email (ID: ${existingUserByEmail.id})');
+        print(
+            '❌ [$timestamp] [USER_SERVICE] Email já existe: $email (ID: ${existingUserByEmail.id})');
         throw UserAlreadyExistsException(email);
       }
       print('✅ [$timestamp] [USER_SERVICE] Email disponível: $email');
     } catch (e) {
       if (e is UserAlreadyExistsException) rethrow;
-      print('ℹ️ [$timestamp] [USER_SERVICE] Erro ao verificar email existente (normal): $e');
+      print(
+          'ℹ️ [$timestamp] [USER_SERVICE] Erro ao verificar email existente (normal): $e');
     }
 
     // 🔍 VALIDAÇÃO FINAL: Verificar telefone novamente antes da inserção
-    print('🔍 [$timestamp] [USER_SERVICE] VALIDAÇÃO FINAL - Telefone antes da inserção: ${phone ?? 'null'}');
-    if (phone == null || phone.trim().isEmpty) {
-      print('❌ [$timestamp] [USER_SERVICE] Telefone se tornou nulo/vazio após validação!');
-      print('📊 [$timestamp] [USER_SERVICE] Telefone inicial: $initialPhone');
-      print('📊 [$timestamp] [USER_SERVICE] Telefone atual: ${phone ?? 'null'}');
-      throw const DatabaseException('Telefone é obrigatório para criar usuário', 'PHONE_REQUIRED');
+    print(
+        '🔍 [$timestamp] [USER_SERVICE] Telefone antes da inserção: ${phone ?? 'null (usará default pending)'}');
+    final finalPhone = phone?.trim();
+    if (finalPhone != null && finalPhone.isNotEmpty) {
+      print('✅ [$timestamp] [USER_SERVICE] Telefone fornecido: $finalPhone');
+    } else {
+      print(
+          'ℹ️ [$timestamp] [USER_SERVICE] Usuário será criado com telefone padrão (pending)');
     }
-    final finalPhone = phone.trim();
-    print('✅ [$timestamp] [USER_SERVICE] Telefone final confirmado: $finalPhone');
 
     try {
       final userData = {
-        'id': authUserId,  // PK: UUID do auth.users
+        'id': authUserId, // PK: UUID do auth.users
         'email': email,
         'full_name': fullName,
-        'phone': finalPhone,    // Pode ser vazio, será preenchido no stepper
-        'photo_url': photoUrl,
         'user_type': userType,
         'status': 'active',
         'profile_complete': false, // New users start with incomplete profile
       };
+
+      // Só incluir phone se fornecido, senão usar DEFAULT 'pending' do banco
+      if (finalPhone != null && finalPhone.isNotEmpty) {
+        userData['phone'] = finalPhone;
+      }
+
+      // Só incluir photo_url se fornecida
+      if (photoUrl != null && photoUrl.isNotEmpty) {
+        userData['photo_url'] = photoUrl;
+      }
 
       print('📝 [$timestamp] [USER_SERVICE] Usando telefone: $finalPhone');
 
       print('📝 [$timestamp] [USER_SERVICE] Inserindo dados do usuário:');
       print('  - Dados: $userData');
 
-      final response = await _supabase
-          .from('app_users')
-          .insert(userData)
-          .select()
-          .single();
+      final response =
+          await _supabase.from('app_users').insert(userData).select().single();
 
       print('✅ [$timestamp] [USER_SERVICE] Usuário criado com sucesso!');
       print('📄 [$timestamp] [USER_SERVICE] Resposta: $response');
-      
+
       final user = User.fromMap(response);
-      
+
       // Create corresponding passenger or driver record
-      print('🔄 [$timestamp] [USER_SERVICE] Criando registro específico para ${user.userType}...');
+      print(
+          '🔄 [$timestamp] [USER_SERVICE] Criando registro específico para ${user.userType}...');
       await _createUserSpecificRecord(user);
-      print('✅ [$timestamp] [USER_SERVICE] Processo completo finalizado com sucesso!');
-      
+      print(
+          '✅ [$timestamp] [USER_SERVICE] Processo completo finalizado com sucesso!');
+
       return user;
     } on PostgrestException catch (e) {
       final context = {
@@ -171,14 +194,14 @@ class UserService {
         'postgrestDetails': e.details,
         'postgrestHint': e.hint
       };
-      
+
       await ErrorLoggingService.instance.logException(
-         e,
-         context: context,
-         type: AppErrorType.databaseError,
-         severity: ErrorSeverity.high,
-       );
-      
+        e,
+        context: context,
+        type: AppErrorType.databaseError,
+        severity: ErrorSeverity.high,
+      );
+
       throw PostgrestErrorMapper.mapError(e, context: context);
     } catch (e) {
       final context = {
@@ -188,7 +211,7 @@ class UserService {
         'userType': userType,
         'errorType': e.runtimeType.toString()
       };
-      
+
       if (e is Exception) {
         await ErrorLoggingService.instance.logException(
           e,
@@ -197,60 +220,87 @@ class UserService {
           severity: ErrorSeverity.high,
         );
       }
-      
-      throw DatabaseException('Erro inesperado ao criar usuário: ${e.toString()}');
+
+      throw DatabaseException(
+          'Erro inesperado ao criar usuário: ${e.toString()}');
     }
   }
 
   /// Busca um usuário pelo ID
   static Future<User?> getUserById(String userId) async {
+    final startTime = DateTime.now();
+
     try {
-      print('🔍 [DEBUG] getUserById chamado para ID: $userId');
+      AppLogger.process('Buscando usuário por ID', tag: 'USER_SERVICE');
+      AppLogger.read('User', userId, tag: 'USER_SERVICE');
+
       final response = await _supabase
           .from('app_users')
           .select()
           .eq('id', userId)
           .maybeSingle();
 
-      print('🔍 [DEBUG] Resposta bruta do Supabase: $response');
-      print('🔍 [DEBUG] Tipo da resposta: ${response.runtimeType}');
+      AppLogger.debug('Resposta bruta do Supabase',
+          tag: 'USER_SERVICE',
+          data: {'response_type': response.runtimeType.toString()});
 
       if (response == null) {
-        print('❌ [DEBUG] Resposta é null - usuário não encontrado');
+        AppLogger.warning('Usuário não encontrado', tag: 'USER_SERVICE');
         return null;
       }
-      
-      print('✅ [DEBUG] Resposta é um Map válido');
-      print('🔍 [DEBUG] full_name na resposta: ${response['full_name']}');
-      print('🔍 [DEBUG] email na resposta: ${response['email']}');
-      
+
       final user = User.fromMap(response);
-      print('✅ [DEBUG] User criado: ${user.fullName}');
+      final duration = DateTime.now().difference(startTime);
+
+      AppLogger.performance('get_user_by_id', duration, tag: 'USER_SERVICE');
+      AppLogger.success('Usuário encontrado', tag: 'USER_SERVICE');
+
       return user;
-        } on PostgrestException catch (e) {
+    } on PostgrestException catch (e) {
       print('❌ [DEBUG] PostgrestException: ${e.message}');
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getUserById', 'userId': userId});
+      throw PostgrestErrorMapper.mapError(e,
+          context: {'operation': 'getUserById', 'userId': userId});
     } catch (e) {
       print('❌ [DEBUG] Erro inesperado em getUserById: $e');
-      throw const DatabaseException('Erro inesperado ao buscar usuário. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao buscar usuário. Por favor, tente novamente mais tarde.');
     }
   }
 
   /// Busca um usuário pelo email
   static Future<User?> getUserByEmail(String email) async {
+    final startTime = DateTime.now();
+
     try {
+      AppLogger.process('Buscando usuário por email', tag: 'USER_SERVICE');
+      AppLogger.query('app_users', 1,
+          tag: 'USER_SERVICE', filters: {'email': email});
+
       final response = await _supabase
           .from('app_users')
           .select()
           .eq('email', email)
           .maybeSingle();
 
-      if (response == null) return null;
-      return User.fromMap(response);
+      if (response == null) {
+        AppLogger.warning('Usuário não encontrado por email',
+            tag: 'USER_SERVICE');
+        return null;
+      }
+
+      final user = User.fromMap(response);
+      final duration = DateTime.now().difference(startTime);
+
+      AppLogger.performance('get_user_by_email', duration, tag: 'USER_SERVICE');
+      AppLogger.success('Usuário encontrado por email', tag: 'USER_SERVICE');
+
+      return user;
     } on PostgrestException catch (e) {
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getUserByEmail', 'email': email});
+      throw PostgrestErrorMapper.mapError(e,
+          context: {'operation': 'getUserByEmail', 'email': email});
     } catch (e) {
-      throw Exception('Erro inesperado ao buscar usuário por email. Por favor, tente novamente mais tarde.');
+      throw Exception(
+          'Erro inesperado ao buscar usuário por email. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -266,9 +316,11 @@ class UserService {
       if (response == null) return null;
       return User.fromMap(response);
     } on PostgrestException catch (e) {
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getUserByPhone', 'phone': phone});
+      throw PostgrestErrorMapper.mapError(e,
+          context: {'operation': 'getUserByPhone', 'phone': phone});
     } catch (e) {
-      throw Exception('Erro inesperado ao buscar usuário por telefone. Por favor, tente novamente mais tarde.');
+      throw Exception(
+          'Erro inesperado ao buscar usuário por telefone. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -281,29 +333,46 @@ class UserService {
     String? userType,
     String? status,
   }) async {
+    final startTime = DateTime.now();
+
+    AppLogger.process('Iniciando atualização de usuário', tag: 'USER_SERVICE');
+    AppLogger.update('User', userId, tag: 'USER_SERVICE', changes: {
+      'full_name': fullName != null,
+      'phone': phone != null,
+      'photo_url': photoUrl != null,
+      'user_type': userType != null,
+      'status': status != null
+    });
+
     // 🚨 VALIDAÇÃO CRÍTICA: NUNCA permitir dados corrompidos
     try {
       if (fullName != null) {
         UserDataValidator.validateAndSanitizeFullName(fullName);
+        AppLogger.validation('full_name', true, entity: 'User');
       }
       if (phone != null) {
         UserDataValidator.validatePhone(phone);
+        AppLogger.validation('phone', true, entity: 'User');
       }
       if (userType != null) {
         UserDataValidator.validateUserType(userType);
+        AppLogger.validation('user_type', true, entity: 'User');
       }
     } on validation.ValidationException catch (e) {
-      throw DatabaseException('Dados inválidos fornecidos para atualização: ${e.message}');
+      AppLogger.validation('user_data', false,
+          entity: 'User', error: e.message);
+      throw DatabaseException(
+          'Dados inválidos fornecidos para atualização: ${e.message}');
     }
 
     final updateData = <String, dynamic>{};
-    
+
     if (fullName != null) updateData['full_name'] = fullName;
     if (phone != null) updateData['phone'] = phone;
     if (photoUrl != null) updateData['photo_url'] = photoUrl;
     if (userType != null) updateData['user_type'] = userType;
     if (status != null) updateData['status'] = status;
-    
+
     // Sempre atualiza o updated_at
     updateData['updated_at'] = DateTime.now().toIso8601String();
 
@@ -323,19 +392,22 @@ class UserService {
       print('  - Message: ${e.message}');
       print('  - Details: ${e.details}');
       print('  - Hint: ${e.hint}');
-      
+
       // Tratamento específico para sync_control antes do mapeamento geral
       if (e.code == '42P01' && (e.message.contains('sync_control') ?? false)) {
-        throw const DatabaseException('Sistema de sincronização não configurado. Entre em contato com o suporte.', 'SYNC_ERROR');
+        throw const DatabaseException(
+            'Sistema de sincronização não configurado. Entre em contato com o suporte.',
+            'SYNC_ERROR');
       }
-      
+
       throw PostgrestErrorMapper.mapError(e, context: {
         'operation': 'updateUser',
         'userId': userId,
         'updateFields': updateData.keys.toList()
       });
     } catch (e) {
-      throw const DatabaseException('Erro inesperado ao atualizar usuário. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao atualizar usuário. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -354,9 +426,14 @@ class UserService {
 
       return User.fromMap(response);
     } on PostgrestException catch (e) {
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'updateUserType', 'userId': userId, 'userType': userType});
+      throw PostgrestErrorMapper.mapError(e, context: {
+        'operation': 'updateUserType',
+        'userId': userId,
+        'userType': userType
+      });
     } catch (e) {
-      throw const DatabaseException('Erro inesperado ao atualizar tipo de usuário. Por favor, tente novamente mais tarde.');
+      throw const DatabaseException(
+          'Erro inesperado ao atualizar tipo de usuário. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -371,9 +448,11 @@ class UserService {
 
       return response != null;
     } on PostgrestException catch (e) {
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'userExists', 'userId': userId});
+      throw PostgrestErrorMapper.mapError(e,
+          context: {'operation': 'userExists', 'userId': userId});
     } catch (e) {
-      throw Exception('Erro inesperado ao verificar usuário. Por favor, tente novamente mais tarde.');
+      throw Exception(
+          'Erro inesperado ao verificar usuário. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -389,35 +468,35 @@ class UserService {
 
       print('✅ [DEBUG] Auth user encontrado: ${authUser.id}');
       final user = await getUserById(authUser.id);
-      
+
       if (user != null) {
         print('✅ [DEBUG] Usuário encontrado: ${user.fullName} (${user.email})');
         print('🔍 [DEBUG] Dados completos do usuário: $user');
       } else {
         print('❌ [DEBUG] Usuário não encontrado na tabela app_users');
       }
-      
+
       return user;
     } catch (e) {
       print('❌ [DEBUG] Erro em getCurrentUser: $e');
-      throw Exception('Erro ao obter usuário atual. Por favor, tente novamente mais tarde.');
+      throw Exception(
+          'Erro ao obter usuário atual. Por favor, tente novamente mais tarde.');
     }
   }
 
   /// Deleta um usuário (soft delete - marca como inativo)
   static Future<void> deactivateUser(String userId) async {
     try {
-      await _supabase
-          .from('app_users')
-          .update({
-            'status': 'inactive',
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', userId);
+      await _supabase.from('app_users').update({
+        'status': 'inactive',
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
     } on PostgrestException catch (e) {
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'deactivateUser', 'userId': userId});
+      throw PostgrestErrorMapper.mapError(e,
+          context: {'operation': 'deactivateUser', 'userId': userId});
     } catch (e) {
-      throw Exception('Erro inesperado ao desativar usuário. Por favor, tente novamente mais tarde.');
+      throw Exception(
+          'Erro inesperado ao desativar usuário. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -438,9 +517,15 @@ class UserService {
 
       return response.map(User.fromMap).toList();
     } on PostgrestException catch (e) {
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getUsersByType', 'userType': userType, 'limit': limit, 'offset': offset});
+      throw PostgrestErrorMapper.mapError(e, context: {
+        'operation': 'getUsersByType',
+        'userType': userType,
+        'limit': limit,
+        'offset': offset
+      });
     } catch (e) {
-      throw Exception('Erro inesperado ao buscar usuários. Por favor, tente novamente mais tarde.');
+      throw Exception(
+          'Erro inesperado ao buscar usuários. Por favor, tente novamente mais tarde.');
     }
   }
 
@@ -448,13 +533,13 @@ class UserService {
   static Future<void> _createUserSpecificRecord(User user) async {
     try {
       print('🔄 Criando registro específico para ${user.userType}: ${user.id}');
-      
+
       if (user.userType.toLowerCase() == 'passenger') {
         await _createPassengerRecord(user);
       } else if (user.userType.toLowerCase() == 'driver') {
         await _createDriverRecord(user);
       }
-      
+
       print('✅ Registro específico criado com sucesso');
     } catch (e) {
       print('❌ Erro ao criar registro específico: $e');
@@ -467,19 +552,19 @@ class UserService {
   static Future<void> _createPassengerRecord(User user) async {
     try {
       print('📝 Criando registro de passageiro...');
-      
+
       // Check if passenger record already exists
       final existingPassenger = await _supabase
           .from('passengers')
           .select('id')
           .eq('user_id', user.id)
           .maybeSingle();
-          
+
       if (existingPassenger != null) {
         print('ℹ️ Registro de passageiro já existe');
         return;
       }
-      
+
       final passengerData = {
         'user_id': user.id,
         'consecutive_cancellations': 0,
@@ -488,17 +573,18 @@ class UserService {
         'payment_method_id': null,
       };
 
-      await _supabase
-          .from('passengers')
-          .insert(passengerData);
-          
+      await _supabase.from('passengers').insert(passengerData);
+
       print('✅ Registro de passageiro criado com sucesso');
     } on PostgrestException catch (e) {
-      print('❌ PostgrestException ao criar passageiro: ${e.code} - ${e.message}');
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'createPassengerRecord', 'userId': user.id});
+      print(
+          '❌ PostgrestException ao criar passageiro: ${e.code} - ${e.message}');
+      throw PostgrestErrorMapper.mapError(e,
+          context: {'operation': 'createPassengerRecord', 'userId': user.id});
     } catch (e) {
       print('❌ Erro inesperado ao criar passageiro: $e');
-      throw DatabaseException('Erro inesperado ao criar registro de passageiro: ${e.toString()}');
+      throw DatabaseException(
+          'Erro inesperado ao criar registro de passageiro: ${e.toString()}');
     }
   }
 
@@ -511,28 +597,29 @@ class UserService {
   static Future<void> createDriverRecord(User user) async {
     try {
       print('📝 Criando registro básico de motorista...');
-      
+
       // Check if driver record already exists
       final existingDriver = await _supabase
           .from('drivers')
           .select('id')
           .eq('user_id', user.id)
           .maybeSingle();
-          
+
       if (existingDriver != null) {
         print('ℹ️ Registro de motorista já existe');
         return;
       }
-      
+
       // Create basic driver record with placeholder values - will be filled during driver onboarding
       final driverData = {
         'user_id': user.id,
         'vehicle_brand': 'PENDENTE',
-        'vehicle_model': 'PENDENTE', 
+        'vehicle_model': 'PENDENTE',
         'vehicle_year': 2020,
         'vehicle_color': 'PENDENTE',
         'vehicle_plate': 'PENDENTE_${user.id.substring(0, 8)}',
-        'vehicle_category': VehicleCategory.comum.id, // Usar enum para garantir consistência
+        'vehicle_category':
+            VehicleCategory.comum.id, // Usar enum para garantir consistência
         'approval_status': 'pending',
         'approved_by': null,
         'approved_at': null,
@@ -561,41 +648,45 @@ class UserService {
         'last_location_update': null,
       };
 
-      await _supabase
-          .from('drivers')
-          .insert(driverData);
-          
+      await _supabase.from('drivers').insert(driverData);
+
       print('✅ Registro básico de motorista criado com sucesso');
     } on PostgrestException catch (e) {
-      print('❌ PostgrestException ao criar motorista: ${e.code} - ${e.message}');
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'createDriverRecord', 'userId': user.id});
+      print(
+          '❌ PostgrestException ao criar motorista: ${e.code} - ${e.message}');
+      throw PostgrestErrorMapper.mapError(e,
+          context: {'operation': 'createDriverRecord', 'userId': user.id});
     } catch (e) {
       print('❌ Erro inesperado ao criar motorista: $e');
-      throw DatabaseException('Erro inesperado ao criar registro de motorista: ${e.toString()}');
+      throw DatabaseException(
+          'Erro inesperado ao criar registro de motorista: ${e.toString()}');
     }
   }
 
   /// Marca o perfil do usuário como completo
   static Future<void> markProfileComplete(String userId) async {
     final timestamp = DateTime.now().toIso8601String();
-    print('🏁 [$timestamp] [USER_SERVICE] Marcando perfil como completo para usuário: $userId');
-    
+    print(
+        '🏁 [$timestamp] [USER_SERVICE] Marcando perfil como completo para usuário: $userId');
+
     try {
-      await _supabase
-          .from('app_users')
-          .update({
-            'profile_complete': true,
-            'updated_at': timestamp,
-          })
-          .eq('id', userId);
-      
-      print('✅ [$timestamp] [USER_SERVICE] Perfil marcado como completo com sucesso');
+      await _supabase.from('app_users').update({
+        'profile_complete': true,
+        'updated_at': timestamp,
+      }).eq('id', userId);
+
+      print(
+          '✅ [$timestamp] [USER_SERVICE] Perfil marcado como completo com sucesso');
     } on PostgrestException catch (e) {
-      print('❌ [$timestamp] [USER_SERVICE] PostgrestException ao marcar perfil: ${e.code} - ${e.message}');
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'markProfileComplete', 'userId': userId});
+      print(
+          '❌ [$timestamp] [USER_SERVICE] PostgrestException ao marcar perfil: ${e.code} - ${e.message}');
+      throw PostgrestErrorMapper.mapError(e,
+          context: {'operation': 'markProfileComplete', 'userId': userId});
     } catch (e) {
-      print('❌ [$timestamp] [USER_SERVICE] Erro ao marcar perfil como completo: $e');
-      throw DatabaseException('Erro ao marcar perfil como completo: ${e.toString()}');
+      print(
+          '❌ [$timestamp] [USER_SERVICE] Erro ao marcar perfil como completo: $e');
+      throw DatabaseException(
+          'Erro ao marcar perfil como completo: ${e.toString()}');
     }
   }
 

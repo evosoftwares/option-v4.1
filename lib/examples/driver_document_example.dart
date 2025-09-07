@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/supabase/driver_document.dart';
 import '../services/driver_document_service.dart';
 import '../services/driver_document_refresh_service.dart';
 import '../utils/storage_url_freshner.dart';
@@ -15,10 +16,11 @@ class DriverDocumentExample extends StatefulWidget {
 
 class _DriverDocumentExampleState extends State<DriverDocumentExample> {
   final String driverId = 'motorista-123'; // ID do motorista atual
-  List<DriverDocument> _documents = [];
+  List<Map<String, dynamic>> _documents = [];
   bool _isLoading = false;
   String? _error;
-  final DriverDocumentRefreshService _refreshService = DriverDocumentRefreshService(Supabase.instance.client);
+  final DriverDocumentRefreshService _refreshService =
+      DriverDocumentRefreshService(Supabase.instance.client);
 
   @override
   void initState() {
@@ -35,8 +37,9 @@ class _DriverDocumentExampleState extends State<DriverDocumentExample> {
 
     try {
       // Método 1: Usar o serviço direto com RPC
-      final documents = await DriverDocumentService.getDriverDocuments(driverId);
-      
+      final documents =
+          await DriverDocumentService.getDriverDocuments(driverId);
+
       setState(() {
         _documents = documents;
         _isLoading = false;
@@ -52,20 +55,24 @@ class _DriverDocumentExampleState extends State<DriverDocumentExample> {
   /// Atualiza URL fresca para um documento específico
   Future<void> _refreshDocumentUrl(String documentType) async {
     try {
-      final freshUrl = await _refreshService.getFreshDocumentUrl(driverId, documentType);
-      
+      final freshUrl =
+          await _refreshService.getFreshDocumentUrl(driverId, documentType);
+
       // Atualiza o documento na lista
       setState(() {
-        final index = _documents.indexWhere((doc) => doc.documentType == documentType);
+        final index = _documents
+            .indexWhere((doc) => doc['document_type'] == documentType);
         if (index != -1) {
-          _documents[index] = _documents[index].copyWith(fileUrl: freshUrl);
+          _documents[index] = Map<String, dynamic>.from(_documents[index])
+            ..['file_url'] = freshUrl;
         }
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('URL atualizada para ${getDocumentTypeName(documentType)}'),
+            content: Text(
+                'URL atualizada para ${getDocumentTypeName(documentType)}'),
             backgroundColor: Colors.green,
           ),
         );
@@ -91,12 +98,15 @@ class _DriverDocumentExampleState extends State<DriverDocumentExample> {
     try {
       // Obtém URLs frescas para todos os documentos
       final freshUrls = await _refreshService.getFreshDocumentUrls(driverId);
-      
+
       // Atualiza cada documento
       setState(() {
         _documents = _documents.map((doc) {
-          final freshUrl = freshUrls[doc.documentType];
-          return freshUrl != null ? doc.copyWith(fileUrl: freshUrl) : doc;
+          final freshUrl = freshUrls[doc['document_type']];
+          if (freshUrl != null) {
+            return Map<String, dynamic>.from(doc)..['file_url'] = freshUrl;
+          }
+          return doc;
         }).toList();
         _isLoading = false;
       });
@@ -127,7 +137,7 @@ class _DriverDocumentExampleState extends State<DriverDocumentExample> {
   /// Limpa o cache de URLs
   Future<void> _clearUrlCache() async {
     await StorageUrlFreshner.clearCache();
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -181,7 +191,7 @@ class _DriverDocumentExampleState extends State<DriverDocumentExample> {
               ],
             ),
           ),
-          
+
           // Conteúdo principal
           Expanded(
             child: _buildContent(),
@@ -240,7 +250,8 @@ class _DriverDocumentExampleState extends State<DriverDocumentExample> {
         final document = _documents[index];
         return DriverDocumentCardFresh(
           document: document,
-          onRefreshUrl: () => _refreshDocumentUrl(document.documentType),
+          onRefresh: () =>
+              _refreshDocumentUrl(document['document_type'] as String),
         );
       },
     );
@@ -265,7 +276,7 @@ class _DriverDocumentExampleState extends State<DriverDocumentExample> {
 /// Widget de exemplo para demonstrar uso em outras partes do app
 class DriverDocumentSection extends StatelessWidget {
   final String driverId;
-  
+
   const DriverDocumentSection({
     Key? key,
     required this.driverId,
@@ -305,7 +316,7 @@ class DriverDocumentSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            FutureBuilder<List<DriverDocument>>(
+            FutureBuilder<List<Map<String, dynamic>>>(
               future: DriverDocumentService.getDriverDocuments(driverId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -317,7 +328,7 @@ class DriverDocumentSection extends StatelessWidget {
                 }
 
                 final documents = snapshot.data ?? [];
-                
+
                 if (documents.isEmpty) {
                   return const Text('Nenhum documento encontrado');
                 }
@@ -325,19 +336,23 @@ class DriverDocumentSection extends StatelessWidget {
                 return Column(
                   children: documents.take(3).map((doc) {
                     return ListTile(
-                      leading: Icon(_getDocumentIcon(doc.documentType)),
-                      title: Text(_getDocumentName(doc.documentType)),
-                      subtitle: Text(_getStatusText(doc.status)),
+                      leading: Icon(
+                          _getDocumentIcon(doc['document_type'] as String)),
+                      title: Text(
+                          _getDocumentName(doc['document_type'] as String)),
+                      subtitle: Text(_getStatusText(doc['status'] as String)),
                       trailing: IconButton(
                         icon: const Icon(Icons.refresh),
                         onPressed: () async {
                           try {
-                            final service = DriverDocumentRefreshService(Supabase.instance.client);
+                            final service = DriverDocumentRefreshService(
+                                Supabase.instance.client);
+                            // ignore: unused_local_variable
                             final freshUrl = await service.getFreshDocumentUrl(
                               driverId,
-                              doc.documentType,
+                              doc['document_type'] as String,
                             );
-                            
+
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -415,7 +430,7 @@ class DriverDocumentSection extends StatelessWidget {
 /// Exemplo de uso em uma página de perfil do motorista
 class DriverProfilePage extends StatelessWidget {
   final String driverId;
-  
+
   const DriverProfilePage({
     Key? key,
     required this.driverId,
@@ -446,28 +461,29 @@ class DriverProfilePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ListTile(
-                      leading: const Icon(Icons.person),
-                      title: const Text('Nome'),
+                    const ListTile(
+                      leading: Icon(Icons.person),
+                      title: Text('Nome'),
                       subtitle: Text('Nome do Motorista'), // Buscar do banco
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.email),
-                      title: const Text('Email'),
-                      subtitle: Text('motorista@example.com'), // Buscar do banco
+                    const ListTile(
+                      leading: Icon(Icons.email),
+                      title: Text('Email'),
+                      subtitle:
+                          Text('motorista@example.com'), // Buscar do banco
                     ),
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Seção de documentos usando o widget de exemplo
             DriverDocumentSection(driverId: driverId),
-            
+
             const SizedBox(height: 16),
-            
+
             // Botão para ver todos os documentos
             SizedBox(
               width: double.infinity,
@@ -476,7 +492,7 @@ class DriverProfilePage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => DriverDocumentExample(),
+                      builder: (context) => const DriverDocumentExample(),
                     ),
                   );
                 },

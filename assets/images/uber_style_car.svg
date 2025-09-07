@@ -1,0 +1,20 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main car body - elongated rectangle like Uber -->
+  <rect x="12" y="8" width="24" height="32" rx="3" fill="#000000"/>
+
+  <!-- Front bumper -->
+  <rect x="14" y="6" width="20" height="3" rx="1.5" fill="#000000"/>
+
+  <!-- Rear bumper -->
+  <rect x="14" y="39" width="20" height="3" rx="1.5" fill="#000000"/>
+
+  <!-- Windshield -->
+  <rect x="16" y="12" width="16" height="8" rx="1" fill="#333333"/>
+
+  <!-- Rear window -->
+  <rect x="16" y="28" width="16" height="8" rx="1" fill="#333333"/>
+
+  <!-- Simple door separators (subtle lines) -->
+  <rect x="15" y="18" width="1" height="12" fill="#1a1a1a"/>
+  <rect x="32" y="18" width="1" height="12" fill="#1a1a1a"/>
+</svg>

@@ -13,6 +13,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../main.dart';
 import 'local_notification_service.dart';
+import 'app_logger.dart';
 
 /// Serviço completo para gerenciamento de OneSignal
 /// Inclui registro de tokens, envio de notificações, segmentação e histórico
@@ -30,33 +31,36 @@ class OneSignalService {
   bool _isInitialized = false;
   
   // OneSignal App ID - configurar no seu dashboard
-  static const String _appId = '117ec6b9-5a4b-411d-96bd-dd3eb7009600';
+  static const String _appId = '15d681a5-31f6-49cb-a66f-4ef4237aba72';
   
   // OneSignal REST API constants
   static const String _baseUrl = 'https://onesignal.com/api/v1';
-  static const String _restApiKey = 'os_v2_app_cf7mnok2jnar3fv53u7loaewaaaxjc6lppnulmu4pjlen2vkwujlae3m2c4xioyszq7opy7vqvwlh34s5pcx4uv2vtfmrapilf7q6ni';
+  static const String _restApiKey = 'YOUR_ONESIGNAL_REST_API_KEY'; // You need to get this from your OneSignal dashboard
   
   /// Inicializa o serviço OneSignal
   Future<void> initialize() async {
+    final startTime = DateTime.now();
+    
     if (_isInitialized) {
-      _logger.w('🔵 [ONESIGNAL] Tentativa de inicialização dupla detectada - ignorando');
+      AppLogger.warning('Tentativa de inicialização dupla detectada', tag: 'ONESIGNAL');
       return;
     }
     
-    _logger.i('🚀 [ONESIGNAL] Iniciando processo de inicialização...');
-    _logger.i('🔍 [ONESIGNAL] App ID: $_appId');
-    _logger.i('🔍 [ONESIGNAL] Platform: ${kIsWeb ? 'Web' : Platform.operatingSystem}');
+    AppLogger.process('Iniciando processo de inicialização OneSignal', tag: 'ONESIGNAL');
+    AppLogger.device('app_id', _appId, category: 'OneSignal', tag: 'ONESIGNAL');
+    AppLogger.device('platform', kIsWeb ? 'Web' : Platform.operatingSystem, category: 'OneSignal', tag: 'ONESIGNAL');
     
     try {
       // Ignorar plataformas não suportadas (somente Android/iOS e Web são suportados)
       if (!kIsWeb && !(Platform.isAndroid || Platform.isIOS)) {
-        _logger.w('❌ [ONESIGNAL] Plataforma ${Platform.operatingSystem} não suportada para OneSignal');
-        _logger.w('⚠️ [ONESIGNAL] Plataformas suportadas: Android, iOS, Web');
+        AppLogger.device('platform_support', false, category: 'OneSignal', tag: 'ONESIGNAL');
+        AppLogger.warning('Plataforma não suportada para OneSignal', tag: 'ONESIGNAL');
+        AppLogger.debug('Plataformas suportadas: Android, iOS, Web', tag: 'ONESIGNAL');
         _isInitialized = true;
         return;
       }
 
-      _logger.i('✅ [ONESIGNAL] Plataforma suportada confirmada');
+      AppLogger.device('platform_support', true, category: 'OneSignal', tag: 'ONESIGNAL');
 
       // Verificar se é plataforma web
       if (kIsWeb) {

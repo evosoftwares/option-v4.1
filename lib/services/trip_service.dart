@@ -8,6 +8,7 @@ import '../models/supabase/location.dart';
 import '../models/supabase/trip.dart';
 import '../models/supabase/trip_request.dart';
 import 'auth_service.dart';
+import 'app_logger.dart';
 
 class TripService {
 
@@ -36,19 +37,39 @@ class TripService {
     String? originNeighborhood,
     String? destinationNeighborhood,
   }) async {
+    final startTime = DateTime.now();
+    
     try {
+      AppLogger.process('Iniciando criação de solicitação de viagem', tag: 'TRIP_SERVICE');
+      AppLogger.create('TripRequest', passengerId, tag: 'TRIP_SERVICE', data: {
+        'passenger_id': passengerId,
+        'origin_address': originAddress,
+        'destination_address': destinationAddress,
+        'vehicle_category': vehicleCategory,
+        'estimated_distance_km': estimatedDistanceKm,
+        'estimated_fare': estimatedFare
+      });
+      
       // Validar autenticação e autorização
       if (!AuthService.isAuthenticated()) {
+        AppLogger.security('trip_request_unauthorized', details: 'User not authenticated');
         throw const UnauthorizedException('Usuário não autenticado');
       }
       
       final currentUserId = AuthService.getCurrentUserId();
+      AppLogger.security('trip_request_auth_validated', userId: currentUserId);
       
       // Verificar se o usuário pode criar trip request para este passageiro
       await AuthService.validateUserAccess(
         resourceUserId: passengerId,
         operation: 'create_trip_request',
       );
+      
+      AppLogger.trip('solicitation_created', 'GENERATING', passengerId: passengerId, data: {
+        'origin': originAddress,
+        'destination': destinationAddress,
+        'category': vehicleCategory
+      });
       
       // Log de auditoria
       await AuthService.logSecurityEvent(

@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/app_config.dart';
 import '../../exceptions/app_exceptions.dart';
 import '../../models/supabase/driver_excluded_zone.dart';
-import '../../services/location_service.dart';
+import '../../services/location_service_factory.dart';
 import '../../services/secure_driver_excluded_zones_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
@@ -24,7 +24,7 @@ class DriverExcludedZonesScreen extends StatefulWidget {
 
 class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
   late final SecureDriverExcludedZonesService _service;
-  late final LocationService _locationService;
+  late final LocationServiceBase _locationService;
   final TextEditingController _neighborhoodController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
@@ -39,7 +39,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
   void initState() {
     super.initState();
     _service = SecureDriverExcludedZonesService(Supabase.instance.client);
-    _locationService = LocationService(apiKey: AppConfig.googleMapsApiKey);
+    _locationService = LocationServiceFactory.create(apiKey: AppConfig.googleMapsApiKey);
     _loadDriverData();
   }
 
@@ -313,9 +313,11 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
           }
         }
       } catch (e) {
+        // Handle any other exceptions that might occur
+        print('DEBUG - Erro inesperado: $e');
         if (mounted && Navigator.canPop(loadingContext)) {
           Navigator.of(loadingContext).pop();
-          _showErrorSnackBar('Erro ao adicionar zona: ${e.toString()}');
+          _showErrorSnackBar('Ocorreu um erro inesperado. Por favor, tente novamente.');
         }
       }
     }
@@ -462,10 +464,10 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
     return Scaffold(
       appBar: StandardAppBar(
         title: 'Zonas Excluídas',
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
         showMenuIcon: true,
         showBackButton: true,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
       ),
       floatingActionButton: _driverId != null
           ? FloatingActionButton(

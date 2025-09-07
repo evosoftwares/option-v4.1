@@ -29,33 +29,7 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyB1WJiIpqAhWt0P_ZqlkbleZ5hUmqTQHBc"/>
 
-        <!-- OneSignal FCM Configuration -->
-        <service android:name="com.onesignal.FCMIntentService" android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
-
-        <service
-            android:name="com.onesignal.FCMIntentJobService"
-            android:permission="android.permission.BIND_JOB_SERVICE"
-            android:exported="false" />
-
-        <receiver android:name="com.onesignal.BootUpReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-            </intent-filter>
-        </receiver>
-
-        <receiver android:name="com.onesignal.UpgradeReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-                <data android:scheme="package" />
-            </intent-filter>
-        </receiver>
+        <!-- OneSignal 5.x configuration is handled automatically -->
     </application>
     
     <!-- Permissões necessárias -->
@@ -70,11 +44,8 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     
-    <!-- OneSignal/FCM Permissions -->
-    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- OneSignal/FCM permissions (automatically handled by OneSignal 5.x) -->
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Background/Foreground location tracking -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />

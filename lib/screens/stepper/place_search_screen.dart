@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../services/location_service.dart';
+import '../../services/location_service_factory.dart';
 import '../../widgets/logo_branding.dart';
 
 class PlaceSearchScreen extends StatefulWidget {
@@ -9,7 +9,7 @@ class PlaceSearchScreen extends StatefulWidget {
     super.key,
     required this.locationService,
   });
-  final LocationService locationService;
+  final LocationServiceBase locationService;
 
   @override
   State<PlaceSearchScreen> createState() => _PlaceSearchScreenState();
