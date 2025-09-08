@@ -6,6 +6,8 @@ class DriverExcludedZone {
     required this.city,
     required this.state,
     required this.createdAt,
+    this.keyword,
+    this.zoneType,
   });
 
   factory DriverExcludedZone.fromJson(Map<String, dynamic> json) => DriverExcludedZone(
@@ -15,6 +17,8 @@ class DriverExcludedZone {
       city: json['city'] as String,
       state: json['state'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
+      keyword: json['keyword'] as String?,
+      zoneType: json['zone_type'] as String?,
     );
 
   Map<String, dynamic> toJson() => {
@@ -24,6 +28,8 @@ class DriverExcludedZone {
       'city': city,
       'state': state,
       'created_at': createdAt.toIso8601String(),
+      if (keyword != null) 'keyword': keyword,
+      if (zoneType != null) 'zone_type': zoneType,
     };
 
   Map<String, dynamic> toInsertJson() => {
@@ -31,6 +37,8 @@ class DriverExcludedZone {
       'neighborhood_name': neighborhoodName,
       'city': city,
       'state': state,
+      if (keyword != null) 'keyword': keyword,
+      if (zoneType != null) 'zone_type': zoneType,
     };
 
   final String id;
@@ -39,6 +47,8 @@ class DriverExcludedZone {
   final String city;
   final String state;
   final DateTime createdAt;
+  final String? keyword;
+  final String? zoneType;
 
   @override
   bool operator ==(Object other) {
@@ -48,7 +58,9 @@ class DriverExcludedZone {
         other.driverId == driverId &&
         other.neighborhoodName == neighborhoodName &&
         other.city == city &&
-        other.state == state;
+        other.state == state &&
+        other.keyword == keyword &&
+        other.zoneType == zoneType;
   }
 
   @override
@@ -58,13 +70,39 @@ class DriverExcludedZone {
       neighborhoodName,
       city,
       state,
+      keyword,
+      zoneType,
     );
 
   @override
-  String toString() => 'DriverExcludedZone(id: $id, driverId: $driverId, neighborhoodName: $neighborhoodName, city: $city, state: $state, createdAt: $createdAt)';
+  String toString() => 'DriverExcludedZone(id: $id, driverId: $driverId, neighborhoodName: $neighborhoodName, city: $city, state: $state, keyword: $keyword, zoneType: $zoneType, createdAt: $createdAt)';
 
   /// Retorna uma representação legível da zona excluída
-  String get displayName => '$neighborhoodName, $city - $state';
+  String get displayName {
+    if (keyword != null && zoneType != null) {
+      final typeLabel = _getTypeLabel(zoneType!);
+      return '$keyword ($typeLabel)';
+    }
+    return '$neighborhoodName, $city - $state';
+  }
+
+  /// Converte tipo de zona para label legível
+  String _getTypeLabel(String type) {
+    switch (type.toLowerCase()) {
+      case 'rua': return 'Rua/Avenida';
+      case 'bairro': return 'Bairro';
+      case 'cidade': return 'Cidade';
+      case 'estado': return 'Estado';
+      case 'regiao': return 'Região';
+      default: return type;
+    }
+  }
+
+  /// Verifica se é uma exclusão baseada em palavra-chave
+  bool get isKeywordBased => keyword != null && keyword!.isNotEmpty;
+
+  /// Retorna a palavra-chave de exclusão ou o nome do bairro como fallback
+  String get exclusionTerm => keyword ?? neighborhoodName;
 
   /// Cria uma cópia com campos atualizados
   DriverExcludedZone copyWith({
@@ -74,6 +112,8 @@ class DriverExcludedZone {
     String? city,
     String? state,
     DateTime? createdAt,
+    String? keyword,
+    String? zoneType,
   }) => DriverExcludedZone(
       id: id ?? this.id,
       driverId: driverId ?? this.driverId,
@@ -81,5 +121,7 @@ class DriverExcludedZone {
       city: city ?? this.city,
       state: state ?? this.state,
       createdAt: createdAt ?? this.createdAt,
+      keyword: keyword ?? this.keyword,
+      zoneType: zoneType ?? this.zoneType,
     );
 }

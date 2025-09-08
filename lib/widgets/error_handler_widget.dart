@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../services/app_logger.dart';
-import '../services/real_saved_places_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
@@ -14,12 +13,7 @@ class ErrorHandlerWidget {
     Color backgroundColor;
     IconData icon;
 
-    if (error is ValidationException) {
-      message = error.message;
-      backgroundColor = AppColors.warning;
-      icon = Icons.warning;
-      AppLogger.warning('Erro de validação exibido ao usuário: ${error.message}');
-    } else if (error is DatabaseException) {
+    if (error is DatabaseException) {
       message = 'Erro no banco de dados. Tente novamente.';
       backgroundColor = AppColors.error;
       icon = Icons.error;
@@ -69,12 +63,7 @@ class ErrorHandlerWidget {
     IconData icon;
     Color iconColor;
 
-    if (error is ValidationException) {
-      title = 'Dados Inválidos';
-      message = error.message;
-      icon = Icons.warning;
-      iconColor = Colors.orange;
-    } else if (error is DatabaseException) {
+    if (error is DatabaseException) {
       title = 'Erro no Banco de Dados';
       message = 'Não foi possível salvar os dados. Tente novamente em alguns instantes.';
       icon = Icons.error;

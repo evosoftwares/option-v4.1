@@ -15,15 +15,15 @@ class LocationService {
 
   Future<List<Map<String, dynamic>>> searchPlaces(String query) async {
     final startTime = DateTime.now();
-    
+
     if (query.isEmpty) {
       AppLogger.validation('search_query', false, entity: 'LocationService', error: 'Empty query');
       return [];
     }
-    
+
     AppLogger.process('Iniciando busca de lugares', tag: 'LOCATION');
     AppLogger.query('google_places_api', 1, tag: 'LOCATION', filters: {'query': query, 'country': 'br'});
-    
+
     final url = Uri.parse(
       'https://maps.googleapis.com/maps/api/place/autocomplete/json'
       '?input=${Uri.encodeComponent(query)}'
@@ -35,18 +35,18 @@ class LocationService {
     try {
       AppLogger.network('Google Places API Request', url.toString(), method: 'GET', tag: 'LOCATION');
       final response = await http.get(url);
-      
+
       final duration = DateTime.now().difference(startTime);
-      AppLogger.network('Google Places API Response', url.toString(), 
-        method: 'GET', 
-        statusCode: response.statusCode, 
-        duration: duration, 
+      AppLogger.network('Google Places API Response', url.toString(),
+        method: 'GET',
+        statusCode: response.statusCode,
+        duration: duration,
         tag: 'LOCATION'
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         // Verificar se há erro na resposta da API
         if (data['status'] != 'OK') {
           AppLogger.warning('Erro da API Google Places', tag: 'LOCATION');
@@ -55,22 +55,22 @@ class LocationService {
             'error_message': data['error_message'] ?? 'Sem mensagem de erro',
             'query': query
           });
-          
+
           AppLogger.rateLimit('google_places_api', 'quota_exceeded', tag: 'LOCATION');
-          
+
           // Se a API falhar, retornar resultado básico para entrada manual
           return _createManualSearchResult(query);
         }
-        
+
         final predictions = data['predictions'] as List? ?? [];
-        
+
         AppLogger.success('Busca de lugares concluída', tag: 'LOCATION');
         AppLogger.performance('search_places', duration, tag: 'LOCATION', metrics: {
           'results_count': predictions.length,
           'query_length': query.length,
           'api_status': data['status']
         });
-        
+
         return predictions.map((prediction) => {
             'placeId': prediction['place_id'],
             'description': prediction['description'],
@@ -78,14 +78,14 @@ class LocationService {
             'secondaryText': prediction['structured_formatting']?['secondary_text'] ?? '',
           },).toList();
       } else {
-        AppLogger.network('HTTP Error', url.toString(), 
-          method: 'GET', 
-          statusCode: response.statusCode, 
-          duration: duration, 
+        AppLogger.network('HTTP Error', url.toString(),
+          method: 'GET',
+          statusCode: response.statusCode,
+          duration: duration,
           tag: 'LOCATION'
         );
         AppLogger.error('Erro HTTP na busca de lugares', tag: 'LOCATION', error: 'Status: ${response.statusCode}');
-        
+
         // Se houve erro HTTP, retornar resultado básico para entrada manual
         return _createManualSearchResult(query);
       }
@@ -97,7 +97,7 @@ class LocationService {
         'query': query,
         'duration_ms': duration.inMilliseconds
       });
-      
+
       // Se houve erro de conexão, retornar resultado básico para entrada manual
       return _createManualSearchResult(query);
     }
@@ -136,25 +136,62 @@ class LocationService {
 
     try {
       final response = await http.get(url);
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         // Verificar se há erro na resposta da API
         if (data['status'] != 'OK') {
           print('Erro da API Place Details: ${data['status']} - ${data['error_message'] ?? 'Sem mensagem de erro'}');
           return null;
         }
-        
+
         final result = data['result'];
-        
+
         if (result != null) {
+          // Extrair informações de bairro, cidade e estado
+          final addressComponents = result['address_components'] as List?;
+          String? neighborhood;
+          String? city;
+          String? state;
+
+          if (addressComponents != null) {
+            for (final component in addressComponents) {
+              final types = List<String>.from(component['types'] ?? []);
+
+              // Bairro pode ser sublocality_level_1, neighborhood, ou political
+              if (neighborhood == null && (
+                types.contains('sublocality_level_1') ||
+                types.contains('neighborhood') ||
+                types.contains('sublocality')
+              )) {
+                neighborhood = component['long_name'] as String?;
+              }
+
+              // Cidade pode ser locality, administrative_area_level_2
+              if (city == null && (
+                types.contains('locality') ||
+                types.contains('administrative_area_level_2')
+              )) {
+                city = component['long_name'] as String?;
+              }
+
+              // Estado é administrative_area_level_1
+              if (state == null && types.contains('administrative_area_level_1')) {
+                state = component['short_name'] as String?;
+              }
+            }
+          }
+
           return {
             'name': result['name'] ?? '',
             'formattedAddress': result['formatted_address'] ?? '',
             'lat': result['geometry']['location']['lat'],
             'lng': result['geometry']['location']['lng'],
             'placeId': placeId,
+            'neighborhood': neighborhood,
+            'city': city,
+            'state': state,
           };
         }
       } else {
@@ -163,7 +200,7 @@ class LocationService {
     } catch (e) {
       print('Erro ao obter detalhes do lugar: $e');
     }
-    
+
     return null;
   }
 
@@ -329,6 +366,7 @@ class LocationService {
   }
 
   /// Geocodifica um endereço para obter coordenadas (latitude/longitude)
+  /// e informações de bairro, cidade e estado
   Future<Map<String, dynamic>?> geocodeAddress(String address) async {
     if (address.trim().isEmpty) return null;
 
@@ -343,22 +381,61 @@ class LocationService {
     try {
       print('🌍 Geocodificando endereço: $address');
       final response = await http.get(url);
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         if (data['status'] == 'OK') {
           final results = data['results'] as List?;
           if (results != null && results.isNotEmpty) {
             final result = results.first;
             final location = result['geometry']['location'];
             final formattedAddress = result['formatted_address'];
-            
+
+            // Extrair informações de bairro, cidade e estado
+            final addressComponents = result['address_components'] as List?;
+            String? neighborhood;
+            String? city;
+            String? state;
+
+            if (addressComponents != null) {
+              for (final component in addressComponents) {
+                final types = List<String>.from(component['types'] ?? []);
+
+                // Bairro pode ser sublocality_level_1, neighborhood, ou political
+                if (neighborhood == null && (
+                  types.contains('sublocality_level_1') ||
+                  types.contains('neighborhood') ||
+                  types.contains('sublocality')
+                )) {
+                  neighborhood = component['long_name'] as String?;
+                }
+
+                // Cidade pode ser locality, administrative_area_level_2
+                if (city == null && (
+                  types.contains('locality') ||
+                  types.contains('administrative_area_level_2')
+                )) {
+                  city = component['long_name'] as String?;
+                }
+
+                // Estado é administrative_area_level_1
+                if (state == null && types.contains('administrative_area_level_1')) {
+                  state = component['short_name'] as String?;
+                }
+              }
+            }
+
             print('✅ Geocodificação bem-sucedida: $formattedAddress');
+            print('   📍 Bairro: ${neighborhood ?? 'N/A'}, Cidade: ${city ?? 'N/A'}, Estado: ${state ?? 'N/A'}');
+
             return {
               'latitude': location['lat'].toDouble(),
               'longitude': location['lng'].toDouble(),
               'formatted_address': formattedAddress,
+              'neighborhood': neighborhood,
+              'city': city,
+              'state': state,
             };
           }
         } else {
@@ -370,7 +447,7 @@ class LocationService {
     } catch (e) {
       print('❌ Exceção na geocodificação: $e');
     }
-    
+
     return null;
   }
 
@@ -409,6 +486,356 @@ class LocationService {
     }
 
     return poly;
+  }
+
+  /// Extrai informações de bairro de um endereço completo usando geocoding reverso
+  /// quando apenas coordenadas estão disponíveis
+  Future<Map<String, dynamic>?> reverseGeocode({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final url = Uri.parse(
+      'https://maps.googleapis.com/maps/api/geocode/json'
+      '?latlng=$latitude,$longitude'
+      '&key=$apiKey'
+      '&language=pt-BR'
+    );
+
+    try {
+      print('🔄 Geocodificação reversa: $latitude, $longitude');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data['status'] == 'OK') {
+          final results = data['results'] as List?;
+          if (results != null && results.isNotEmpty) {
+            final result = results.first;
+            final formattedAddress = result['formatted_address'];
+
+            // Extrair informações de bairro, cidade e estado
+            final addressComponents = result['address_components'] as List?;
+            String? neighborhood;
+            String? city;
+            String? state;
+
+            if (addressComponents != null) {
+              for (final component in addressComponents) {
+                final types = List<String>.from(component['types'] ?? []);
+
+                if (neighborhood == null && (
+                  types.contains('sublocality_level_1') ||
+                  types.contains('neighborhood') ||
+                  types.contains('sublocality')
+                )) {
+                  neighborhood = component['long_name'] as String?;
+                }
+
+                if (city == null && (
+                  types.contains('locality') ||
+                  types.contains('administrative_area_level_2')
+                )) {
+                  city = component['long_name'] as String?;
+                }
+
+                if (state == null && types.contains('administrative_area_level_1')) {
+                  state = component['short_name'] as String?;
+                }
+              }
+            }
+
+            print('✅ Geocodificação reversa bem-sucedida');
+            print('   📍 Bairro: ${neighborhood ?? 'N/A'}, Cidade: ${city ?? 'N/A'}, Estado: ${state ?? 'N/A'}');
+
+            return {
+              'latitude': latitude,
+              'longitude': longitude,
+              'formatted_address': formattedAddress,
+              'neighborhood': neighborhood,
+              'city': city,
+              'state': state,
+            };
+          }
+        } else {
+          print('❌ Erro na geocodificação reversa: ${data['status']}');
+        }
+      } else {
+        print('❌ Erro HTTP na geocodificação reversa: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exceção na geocodificação reversa: $e');
+    }
+
+    return null;
+  }
+
+  /// Extrai informações de bairro de um endereço com múltiplas estratégias para garantir 100% de cobertura
+  /// Combina regex avançado + análise semântica + fallbacks inteligentes
+  static Map<String, String?> parseAddressString(String fullAddress) {
+    String? neighborhood;
+    String? city;
+    String? state;
+
+    try {
+      if (fullAddress.trim().isEmpty) {
+        return {'neighborhood': null, 'city': null, 'state': null};
+      }
+
+      final originalAddress = fullAddress.trim();
+      print('🔍 Analisando endereço: "$originalAddress"');
+
+      // ESTRATÉGIA 1: Regex específico para padrões brasileiros
+      final result1 = _extractWithBrazilianPatterns(originalAddress);
+      if (result1['neighborhood'] != null) {
+        print('✅ Estratégia 1 (padrões BR): Bairro encontrado');
+        return result1;
+      }
+
+      // ESTRATÉGIA 2: Separadores múltiplos
+      final result2 = _extractWithMultipleSeparators(originalAddress);
+      if (result2['neighborhood'] != null) {
+        print('✅ Estratégia 2 (separadores): Bairro encontrado');
+        return result2;
+      }
+
+      // ESTRATÉGIA 3: Análise semântica por palavras-chave
+      final result3 = _extractWithSemanticAnalysis(originalAddress);
+      if (result3['neighborhood'] != null) {
+        print('✅ Estratégia 3 (semântica): Bairro encontrado');
+        return result3;
+      }
+
+      // ESTRATÉGIA 4: Fallback inteligente - usar partes do endereço como bairro
+      final result4 = _extractWithIntelligentFallback(originalAddress);
+      if (result4['neighborhood'] != null) {
+        print('✅ Estratégia 4 (fallback): Bairro inferido');
+        return result4;
+      }
+
+      // ESTRATÉGIA 5: Último recurso - usar o endereço completo para matching
+      final result5 = _createFallbackForMatching(originalAddress);
+      print('⚠️ Estratégia 5 (último recurso): Usando endereço completo para matching');
+      return result5;
+
+    } catch (e) {
+      print('❌ Erro ao extrair informações do endereço: $e');
+      // Mesmo com erro, retornar algo útil para matching
+      return _createFallbackForMatching(fullAddress);
+    }
+  }
+
+  /// Estratégia 1: Padrões específicos para endereços brasileiros
+  static Map<String, String?> _extractWithBrazilianPatterns(String address) {
+    // Padrões mais específicos para endereços brasileiros
+    final patterns = [
+      // Formato: "Rua X, 123 - Bairro - Cidade - Estado"
+      RegExp(r'^.*?(?:,\s*\d+)?\s*-\s*([^-]+?)\s*-\s*([^-]+?)\s*-\s*([A-Z]{2})(?:\s*-.*)?$'),
+      // Formato: "Rua X, 123, Bairro, Cidade - Estado"
+      RegExp(r'^.*?(?:,\s*\d+)?,\s*([^,]+?),\s*([^,-]+?)\s*-\s*([A-Z]{2})(?:\s|$)'),
+      // Formato: "Rua X, 123 - Bairro, Cidade - Estado"
+      RegExp(r'^.*?(?:,\s*\d+)?\s*-\s*([^,]+?),\s*([^-]+?)\s*-\s*([A-Z]{2})(?:\s|$)'),
+      // Formato: "Endereço - Bairro - Cidade/Estado"
+      RegExp(r'^.*?\s*-\s*([^-]+?)\s*-\s*([^/]+?)/([A-Z]{2})(?:\s|$)'),
+    ];
+
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(address);
+      if (match != null && match.groupCount >= 3) {
+        final neighborhood = match.group(1)?.trim();
+        final city = match.group(2)?.trim();
+        final state = match.group(3)?.trim().toUpperCase();
+
+        if (neighborhood != null && neighborhood.isNotEmpty &&
+            city != null && city.isNotEmpty &&
+            state != null && state.length == 2) {
+          return {
+            'neighborhood': neighborhood,
+            'city': city,
+            'state': state,
+          };
+        }
+      }
+    }
+    return {'neighborhood': null, 'city': null, 'state': null};
+  }
+
+  /// Estratégia 2: Múltiplos separadores e normalização
+  static Map<String, String?> _extractWithMultipleSeparators(String address) {
+    // Normalizar diferentes tipos de separadores
+    String normalized = address
+        .replaceAll(' - ', ' | ')
+        .replaceAll(', ', ' | ')
+        .replaceAll(' – ', ' | ')  // travessão longo
+        .replaceAll('  ', ' ')     // espaços duplos
+        .trim();
+
+    final parts = normalized.split(' | ').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+
+    if (parts.length >= 3) {
+      // Procurar estado (sempre últimas 2 letras ou parte que termina com estado)
+      String? state;
+      int stateIndex = -1;
+
+      for (int i = parts.length - 1; i >= 0; i--) {
+        final part = parts[i];
+        // Estado pode ser "SP", "RJ", ou "São Paulo - SP"
+        final stateMatch = RegExp(r'\b([A-Z]{2})(?:\s|$)').firstMatch(part);
+        if (stateMatch != null) {
+          state = stateMatch.group(1);
+          stateIndex = i;
+          break;
+        }
+      }
+
+      if (state != null && stateIndex >= 2) {
+        // Cidade é a parte antes do estado
+        final city = parts[stateIndex - 1].replaceAll(RegExp(r'\s*-\s*[A-Z]{2}$'), '').trim();
+        // Bairro é a parte antes da cidade
+        final neighborhood = parts[stateIndex - 2].trim();
+
+        if (neighborhood.isNotEmpty && city.isNotEmpty) {
+          return {
+            'neighborhood': neighborhood,
+            'city': city,
+            'state': state,
+          };
+        }
+      }
+    }
+    return {'neighborhood': null, 'city': null, 'state': null};
+  }
+
+  /// Estratégia 3: Análise semântica por palavras-chave conhecidas
+  static Map<String, String?> _extractWithSemanticAnalysis(String address) {
+    // Palavras-chave que indicam bairros conhecidos
+    final knownNeighborhoods = [
+      'centro', 'copacabana', 'ipanema', 'leblon', 'barra', 'tijuca', 'botafogo',
+      'flamengo', 'jardins', 'moema', 'vila madalena', 'pinheiros', 'itaim',
+      'consolação', 'bela vista', 'liberdade', 'higienópolis', 'perdizes',
+      'boa vista', 'savassi', 'funcionários', 'lourdes', 'centro histórico',
+    ];
+
+    final lowerAddress = address.toLowerCase();
+
+    for (final neighborhood in knownNeighborhoods) {
+      if (lowerAddress.contains(neighborhood)) {
+        // Encontrou bairro conhecido, tentar extrair cidade e estado também
+        final stateMatch = RegExp(r'\b([A-Z]{2})\b').firstMatch(address);
+
+        return {
+          'neighborhood': _capitalizeWords(neighborhood),
+          'city': _inferCityFromNeighborhood(neighborhood),
+          'state': stateMatch?.group(1),
+        };
+      }
+    }
+    return {'neighborhood': null, 'city': null, 'state': null};
+  }
+
+  /// Estratégia 4: Fallback inteligente baseado na estrutura
+  static Map<String, String?> _extractWithIntelligentFallback(String address) {
+    // Remover números de endereço e CEP para focar na localização
+    String cleaned = address
+        .replaceAll(RegExp(r',?\s*\d+[a-zA-Z]?(?:\s*-\s*\d+[a-zA-Z]?)?'), '') // números
+        .replaceAll(RegExp(r'\b\d{5}-?\d{3}\b'), '') // CEP
+        .replaceAll(RegExp(r'\b(rua|r\.|avenida|av\.|travessa|trav\.|alameda|al\.)', caseSensitive: false), '')
+        .trim();
+
+    // Dividir o que restou e usar a primeira parte significativa como bairro
+    final parts = cleaned.split(RegExp(r'[-,]')).map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+
+    if (parts.isNotEmpty) {
+      String potentialNeighborhood = parts[0].trim();
+
+      // Se a primeira parte é muito longa, pode ser rua + bairro
+      if (potentialNeighborhood.length > 30 && parts.length > 1) {
+        potentialNeighborhood = parts[1].trim();
+      }
+
+      // Validar se não é apenas um nome de rua
+      if (potentialNeighborhood.isNotEmpty && !potentialNeighborhood.toLowerCase().startsWith('rua ')) {
+        final state = _extractStateFromParts(parts);
+
+        return {
+          'neighborhood': _capitalizeWords(potentialNeighborhood),
+          'city': parts.length > 2 ? _capitalizeWords(parts[parts.length - 2]) : null,
+          'state': state,
+        };
+      }
+    }
+    return {'neighborhood': null, 'city': null, 'state': null};
+  }
+
+  /// Estratégia 5: Último recurso - criar dados úteis para matching
+  static Map<String, String?> _createFallbackForMatching(String address) {
+    // Mesmo sem parsing perfeito, criar algo útil para o sistema de exclusão
+    final cleanAddress = address.trim();
+
+    if (cleanAddress.isEmpty) {
+      return {'neighborhood': 'endereço não informado', 'city': null, 'state': null};
+    }
+
+    // Usar palavras-chave do endereço como "bairro" para matching
+    final words = cleanAddress
+        .replaceAll(RegExp(r'[,\-]'), ' ')
+        .split(' ')
+        .where((w) => w.trim().length > 2)
+        .map((w) => w.trim())
+        .toList();
+
+    // Criar um "bairro virtual" combinando palavras significativas
+    final virtualNeighborhood = words.take(3).join(' ');
+    final state = _extractStateFromText(cleanAddress);
+
+    return {
+      'neighborhood': virtualNeighborhood.isNotEmpty ? virtualNeighborhood : cleanAddress,
+      'city': null,
+      'state': state,
+    };
+  }
+
+  /// Utilitários auxiliares
+  static String _capitalizeWords(String text) {
+    return text.split(' ')
+        .map((word) => word.isNotEmpty
+            ? '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}'
+            : word)
+        .join(' ');
+  }
+
+  static String? _inferCityFromNeighborhood(String neighborhood) {
+    final neighborhoodToCityMap = {
+      'copacabana': 'Rio de Janeiro',
+      'ipanema': 'Rio de Janeiro',
+      'leblon': 'Rio de Janeiro',
+      'barra': 'Rio de Janeiro',
+      'tijuca': 'Rio de Janeiro',
+      'jardins': 'São Paulo',
+      'moema': 'São Paulo',
+      'vila madalena': 'São Paulo',
+      'pinheiros': 'São Paulo',
+      'itaim': 'São Paulo',
+      'savassi': 'Belo Horizonte',
+      'funcionários': 'Belo Horizonte',
+    };
+
+    return neighborhoodToCityMap[neighborhood.toLowerCase()];
+  }
+
+  static String? _extractStateFromParts(List<String> parts) {
+    for (final part in parts.reversed) {
+      final stateMatch = RegExp(r'\b([A-Z]{2})\b').firstMatch(part);
+      if (stateMatch != null) {
+        return stateMatch.group(1);
+      }
+    }
+    return null;
+  }
+
+  static String? _extractStateFromText(String text) {
+    final stateMatch = RegExp(r'\b([A-Z]{2})\b').firstMatch(text);
+    return stateMatch?.group(1);
   }
 }
 

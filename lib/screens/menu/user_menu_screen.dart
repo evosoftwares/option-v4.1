@@ -153,14 +153,6 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
               //     Navigator.pushNamed(context, '/payments');
               //   },
               // ),
-              _MenuTile(
-                icon: Icons.place_outlined,
-                label: 'Locais salvos',
-                onTap: () {
-                  MenuLogger.logScreenNavigation('USER', 'Locais salvos');
-                  Navigator.pushNamed(context, '/saved_places');
-                },
-              ),
 
               const SizedBox(height: AppSpacing.sectionSpacing),
               const _SectionTitle(title: 'Viagens'),

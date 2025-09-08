@@ -34,7 +34,6 @@ import 'screens/passenger/passenger_trip_screen.dart';
 import 'screens/payments/payments_screen.dart';
 import 'screens/profile/profile_edit_screen.dart';
 import 'screens/rating/trip_rating_screen.dart';
-import 'screens/saved_places_screen.dart';
 import 'screens/stepper/driver_stepper.dart';
 import 'screens/stepper/stepper_demo_screen.dart';
 import 'screens/stepper/user_registration_stepper.dart';
@@ -444,7 +443,6 @@ class MyApp extends StatelessWidget {
             '/wallet': (context) => const WalletScreen(),
             '/notifications': (context) => const NotificationsScreen(),
             '/trip_history': (context) => const TripHistoryScreen(),
-            '/saved_places': (context) => const SavedPlacesScreen(),
             '/about': (context) => const AboutScreen(),
             '/driver_excluded_zones': (context) =>
                 const DriverExcludedZonesScreen(),

@@ -4,8 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/favorite_location.dart';
 import 'app_logger.dart';
 
-/// Serviço responsável por persistir e recuperar dados do stepper
-/// para melhorar a UX em caso de interrupção do processo de registro
+/// Serviço de persistência SELETIVO - apenas para dados de cadastro
+/// Status de aprovação e dados críticos sempre buscados frescos do banco
 class StepperPersistenceService {
   static const String _prefix = 'stepper_';
   static const String _keyUserType = '${_prefix}user_type';
@@ -13,17 +13,18 @@ class StepperPersistenceService {
   static const String _keyFullName = '${_prefix}full_name';
   static const String _keyEmail = '${_prefix}email';
   static const String _keyCurrentStep = '${_prefix}current_step';
-  static const String _keyFavoriteLocations = '${_prefix}favorite_locations';
   static const String _keyUploadedPhotoUrl = '${_prefix}uploaded_photo_url';
+  
+  // NOTA: Locais favoritos e dados de aprovação NÃO são mais persistidos
 
-  /// Salva o estado atual do stepper para persistência
+  /// Salva APENAS dados básicos de cadastro (não salva dados de aprovação)
   static Future<void> saveStepperState({
     String? userType,
     String? phone,
     String? fullName,
     String? email,
     int? currentStep,
-    List<FavoriteLocation>? favoriteLocations,
+    List<FavoriteLocation>? favoriteLocations, // IGNORADO - não mais persistido
     String? uploadedPhotoUrl,
   }) async {
     try {
@@ -49,23 +50,18 @@ class StepperPersistenceService {
         await prefs.setInt(_keyCurrentStep, currentStep);
       }
       
-      if (favoriteLocations != null) {
-        final locationsJson = favoriteLocations
-            .map((location) => location.toJson())
-            .toList();
-        await prefs.setString(_keyFavoriteLocations, jsonEncode(locationsJson));
-      }
-      
       if (uploadedPhotoUrl != null && uploadedPhotoUrl.isNotEmpty) {
         await prefs.setString(_keyUploadedPhotoUrl, uploadedPhotoUrl);
       }
       
+      AppLogger.debug('Dados básicos de cadastro salvos (sem dados de aprovação)', tag: 'STEPPER_PERSISTENCE');
+      
     } catch (e) {
-      AppLogger.error('Erro ao salvar estado do stepper', error: e);
+      AppLogger.error('Erro ao salvar dados básicos do stepper', error: e);
     }
   }
 
-  /// Recupera os dados persistidos do stepper
+  /// Recupera APENAS dados básicos de cadastro (não dados de aprovação)
   static Future<Map<String, dynamic>> loadStepperState() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -77,18 +73,7 @@ class StepperPersistenceService {
       final currentStep = prefs.getInt(_keyCurrentStep) ?? 0;
       final uploadedPhotoUrl = prefs.getString(_keyUploadedPhotoUrl);
       
-      var favoriteLocations = <FavoriteLocation>[];
-      final locationsJson = prefs.getString(_keyFavoriteLocations);
-      if (locationsJson != null && locationsJson.isNotEmpty) {
-        try {
-          final locationsData = jsonDecode(locationsJson) as List;
-          favoriteLocations = locationsData
-              .map((locationData) => FavoriteLocation.fromJson(locationData))
-              .toList();
-        } catch (e) {
-          AppLogger.warning('Erro ao deserializar locais favoritos');
-        }
-      }
+      AppLogger.debug('Dados básicos de cadastro recuperados (sem dados de aprovação)', tag: 'STEPPER_PERSISTENCE');
       
       return {
         'userType': userType,
@@ -96,16 +81,24 @@ class StepperPersistenceService {
         'fullName': fullName,
         'email': email,
         'currentStep': currentStep,
-        'favoriteLocations': favoriteLocations,
+        'favoriteLocations': <FavoriteLocation>[], // Sempre vazio - não mais persistido
         'uploadedPhotoUrl': uploadedPhotoUrl,
       };
     } catch (e) {
-      AppLogger.error('Erro ao carregar estado do stepper', error: e);
-      return {};
+      AppLogger.error('Erro ao carregar dados básicos do stepper', error: e);
+      return {
+        'userType': null,
+        'phone': null,
+        'fullName': null,
+        'email': null,
+        'currentStep': 0,
+        'favoriteLocations': <FavoriteLocation>[],
+        'uploadedPhotoUrl': null,
+      };
     }
   }
 
-  /// Verifica se existe um estado salvo do stepper
+  /// Verifica se existe dados básicos de cadastro salvos
   static Future<bool> hasPersistedState() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -115,7 +108,7 @@ class StepperPersistenceService {
     }
   }
 
-  /// Limpa todos os dados persistidos do stepper
+  /// Limpa dados básicos de cadastro (mantém dados críticos sempre frescos)
   static Future<void> clearStepperState() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -125,16 +118,15 @@ class StepperPersistenceService {
       await prefs.remove(_keyFullName);
       await prefs.remove(_keyEmail);
       await prefs.remove(_keyCurrentStep);
-      await prefs.remove(_keyFavoriteLocations);
       await prefs.remove(_keyUploadedPhotoUrl);
       
-      AppLogger.persistence('Estado do stepper limpo com sucesso');
+      AppLogger.persistence('Dados básicos do stepper limpos (dados críticos sempre frescos)');
     } catch (e) {
-      AppLogger.error('Erro ao limpar estado do stepper', error: e);
+      AppLogger.error('Erro ao limpar dados básicos do stepper', error: e);
     }
   }
 
-  /// Salva apenas dados críticos (performance otimizada)
+  /// Salva apenas dados críticos básicos (performance otimizada)
   static Future<void> saveMinimalState({
     String? userType,
     String? phone,
@@ -154,6 +146,8 @@ class StepperPersistenceService {
       if (currentStep != null) {
         await prefs.setInt(_keyCurrentStep, currentStep);
       }
+      
+      AppLogger.debug('Estado mínimo salvo (dados críticos sempre frescos)', tag: 'STEPPER_PERSISTENCE');
       
     } catch (e) {
       AppLogger.error('Erro ao salvar estado mínimo', error: e);

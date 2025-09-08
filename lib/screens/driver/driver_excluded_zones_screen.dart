@@ -32,7 +32,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
 
   List<DriverExcludedZone> _excludedZones = [];
   bool _isLoading = true;
-  bool _isSubmitting = false;
+
   String? _driverId;
 
   @override
@@ -102,53 +102,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
     }
   }
 
-  Future<void> _addExcludedZone() async {
-    if (!_formKey.currentState!.validate() || _driverId == null) return;
 
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    try {
-      await _service.addExcludedZone(
-        driverId: _driverId!,
-        neighborhoodName: _neighborhoodController.text.trim(),
-        city: _cityController.text.trim(),
-        state: _stateController.text.trim(),
-      );
-
-      // Clear form
-      _neighborhoodController.clear();
-      _cityController.clear();
-      _stateController.clear();
-
-      // Reload zones
-      await _loadExcludedZones();
-
-      if (mounted) {
-        _showSuccessSnackBar('Zona excluída adicionada com sucesso!');
-      }
-    } on ValidationException catch (e) {
-      if (mounted) {
-        _showErrorSnackBar(e.message);
-      }
-    } on DatabaseException catch (e) {
-      if (mounted) {
-        _showErrorSnackBar(e.message);
-      }
-    } catch (e) {
-      if (mounted) {
-        _showErrorSnackBar(
-            'Erro inesperado ao adicionar zona excluída. Tente novamente.');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
-    }
-  }
 
   Future<void> _removeExcludedZone(DriverExcludedZone zone) async {
     try {
@@ -181,6 +135,137 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
         backgroundColor: Theme.of(context).colorScheme.primary,
       ),
     );
+  }
+
+  Future<void> _showZoneTypeSelectionDialog({
+    required String address,
+    required String neighborhood,
+    required String city,
+    required String state,
+  }) async {
+    final zoneOptions = [
+      {
+        'type': 'bairro',
+        'icon': Icons.location_city,
+        'title': 'Apenas este bairro',
+        'subtitle': 'Excluir: $neighborhood',
+        'description': 'Não receber corridas apenas neste bairro específico',
+        'keyword': neighborhood,
+      },
+      {
+        'type': 'cidade',
+        'icon': Icons.location_on,
+        'title': 'Toda a cidade',
+        'subtitle': 'Excluir: $city',
+        'description': 'Não receber corridas em toda a cidade de $city',
+        'keyword': city,
+      },
+      {
+        'type': 'estado',
+        'icon': Icons.map,
+        'title': 'Todo o estado',
+        'subtitle': 'Excluir: $state',
+        'description': 'Não receber corridas em todo o estado de $state',
+        'keyword': state,
+      },
+    ];
+
+    final selectedOption = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Escolha o tipo de exclusão'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Local selecionado:',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  address,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                const Text('Selecione o nível de exclusão desejado:'),
+                const SizedBox(height: 16),
+                ...zoneOptions.map((option) => Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: Icon(option['icon'] as IconData),
+                    title: Text(option['title'] as String),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          option['subtitle'] as String,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          option['description'] as String,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                    onTap: () => Navigator.of(context).pop(option),
+                  ),
+                )).toList(),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (selectedOption != null && mounted) {
+      await _addZoneWithSelectedType(selectedOption, city, state);
+    }
+  }
+
+  Future<void> _addZoneWithSelectedType(
+    Map<String, dynamic> selectedOption,
+    String city,
+    String state,
+  ) async {
+    try {
+      final zoneType = selectedOption['type'] as String;
+      final keyword = selectedOption['keyword'] as String;
+
+      print('DEBUG - Adicionando zona: type=$zoneType, keyword=$keyword');
+
+      final zone = await _service.addExcludedZoneWithType(
+        driverId: _driverId!,
+        keyword: keyword,
+        zoneType: zoneType,
+        city: city,
+        state: state,
+      );
+
+      print('DEBUG - Zona salva com sucesso: ${zone.id}');
+
+      // Recarregar lista
+      await _loadExcludedZones();
+
+      _showSuccessSnackBar(
+        'Zona excluída adicionada: ${selectedOption['subtitle']}',
+      );
+    } catch (error) {
+      print('DEBUG - Erro ao salvar zona: $error');
+      _showErrorSnackBar('Erro ao salvar: ${error.toString()}');
+    }
   }
 
   Future<void> _showAddZoneDialog() async {
@@ -265,36 +350,17 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
           };
 
           if (validStates.contains(state)) {
-            print(
-                'DEBUG - Tentando salvar zona: driverId=$_driverId, neighborhood=$neighborhood, city=$city, state=$state');
+            // Fechar dialog de loading e mostrar seleção de tipo
+            if (mounted && Navigator.canPop(loadingContext)) {
+              Navigator.of(loadingContext).pop();
 
-            try {
-              // Adicionar diretamente via serviço com driverId
-              final zone = await _service.addExcludedZone(
-                driverId: _driverId!,
-                neighborhoodName: neighborhood,
+              // Mostrar dialog para selecionar tipo de exclusão
+              await _showZoneTypeSelectionDialog(
+                address: address,
+                neighborhood: neighborhood,
                 city: city,
                 state: state,
-                fromGooglePlaces: true, // Dados vindos do Google Places
               );
-
-              print('DEBUG - Zona salva com sucesso: ${zone.id}');
-
-              // Recarregar lista
-              await _loadExcludedZones();
-
-              if (mounted && Navigator.canPop(loadingContext)) {
-                Navigator.of(loadingContext).pop();
-                _showSuccessSnackBar(
-                    'Zona excluída adicionada: $neighborhood, $city - $state');
-              }
-            } catch (serviceError) {
-              print('DEBUG - Erro do serviço: $serviceError');
-              if (mounted && Navigator.canPop(loadingContext)) {
-                Navigator.of(loadingContext).pop();
-                _showErrorSnackBar(
-                    'Erro ao salvar: ${serviceError.toString()}');
-              }
             }
           } else {
             // Estado inválido
@@ -435,7 +501,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Remover Zona Excluída'),
         content: Text(
-          'Deseja remover "${zone.neighborhoodName}, ${zone.city} - ${zone.state}" das suas zonas excluídas?',
+          'Deseja remover "${zone.displayName}" das suas zonas excluídas?',
         ),
         actions: [
           TextButton(
@@ -629,12 +695,14 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
                                     ),
                                   ),
                                   title: Text(
-                                    zone.neighborhoodName,
+                                    zone.displayName,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  subtitle: Text('${zone.city}, ${zone.state}'),
+                                  subtitle: zone.isKeywordBased
+                                    ? Text('${zone.city}, ${zone.state}')
+                                    : Text('${zone.city}, ${zone.state}'),
                                   trailing: IconButton(
                                     icon: const Icon(Icons.delete_outline),
                                     onPressed: () =>

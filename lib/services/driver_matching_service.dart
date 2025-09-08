@@ -7,6 +7,7 @@ import '../models/supabase/driver.dart';
 import '../models/supabase/passenger_request.dart';
 import 'driver_excluded_zones_service.dart';
 import 'driver_service.dart';
+import 'location_service.dart';
 
 /// Resultado do matching com informações detalhadas do motorista
 class DriverMatchResult {
@@ -230,10 +231,9 @@ class DriverMatchingService {
       return true;
     }).toList();
 
-  /// Filtra motoristas por zonas de exclusão
-  /// Remove condutores se a origem OU destino da viagem estiver em sua lista de bairros excluídos
+  /// Filtra motoristas por zonas de exclusão (sistema flexível com palavras-chave)
+  /// Remove condutores que excluíram a origem OU destino da viagem
   Future<List<Driver>> _filterByExclusionZones(List<Driver> drivers, MatchingCriteria criteria) async {
-    // Otimização: verificar zonas excluídas em lote
     final filteredDrivers = <Driver>[];
     final driverIds = drivers.map((d) => d.id).toList();
     
@@ -241,70 +241,121 @@ class DriverMatchingService {
       // Lista de IDs de motoristas que devem ser excluídos
       final excludedDriverIds = <String>{};
 
-      // Filtrar por zona de ORIGEM (se disponível)
-      if (criteria.originNeighborhood != null && 
-          criteria.originCity != null && 
-          criteria.originState != null) {
-        final originExcludedDrivers = await _getExcludedZonesForDrivers(
+      // Construir endereços completos para verificação
+      final originAddress = _buildFullAddress(
+        neighborhood: criteria.originNeighborhood,
+        city: criteria.originCity,
+        state: criteria.originState,
+      );
+      
+      final destinationAddress = _buildFullAddress(
+        neighborhood: criteria.destinationNeighborhood,
+        city: criteria.destinationCity,
+        state: criteria.destinationState,
+      );
+
+      // Filtrar por endereço de ORIGEM (se disponível)
+      if (originAddress.isNotEmpty) {
+        final originExcludedDrivers = await _getExcludedDriversForAddress(
           driverIds,
-          criteria.originNeighborhood!,
-          criteria.originCity!,
-          criteria.originState!,
+          originAddress,
         );
         excludedDriverIds.addAll(originExcludedDrivers);
+        print('🚫 ${originExcludedDrivers.length} motoristas excluíram origem: "$originAddress"');
       }
 
-      // Filtrar por zona de DESTINO (se disponível)
-      if (criteria.destinationNeighborhood != null && 
-          criteria.destinationCity != null && 
-          criteria.destinationState != null) {
-        final destinationExcludedDrivers = await _getExcludedZonesForDrivers(
+      // Filtrar por endereço de DESTINO (se disponível)
+      if (destinationAddress.isNotEmpty) {
+        final destinationExcludedDrivers = await _getExcludedDriversForAddress(
           driverIds,
-          criteria.destinationNeighborhood!,
-          criteria.destinationCity!,
-          criteria.destinationState!,
+          destinationAddress,
         );
         excludedDriverIds.addAll(destinationExcludedDrivers);
+        print('🚫 ${destinationExcludedDrivers.length} motoristas excluíram destino: "$destinationAddress"');
       }
 
-      // Filtrar motoristas que não têm nem origem nem destino excluídos
+      // Filtrar motoristas que não excluíram nem origem nem destino
       for (final driver in drivers) {
         if (!excludedDriverIds.contains(driver.id)) {
           filteredDrivers.add(driver);
         }
       }
 
+      print('✅ ${filteredDrivers.length}/${drivers.length} motoristas após filtro de zonas excluídas');
       return filteredDrivers;
     } catch (e) {
       // Em caso de erro, retorna todos os motoristas para não impactar a funcionalidade
-      print('⚠️ Erro ao verificar zonas excluídas em lote: $e');
+      print('⚠️ Erro ao verificar zonas excluídas: $e');
       return drivers;
     }
   }
 
-  /// Busca motoristas que têm uma zona específica excluída (otimizado para lote)
-  Future<Set<String>> _getExcludedZonesForDrivers(
+  /// Busca motoristas que excluíram um endereço específico (sistema flexível)
+  Future<Set<String>> _getExcludedDriversForAddress(
     List<String> driverIds,
-    String neighborhoodName,
-    String city,
-    String state,
+    String fullAddress,
   ) async {
     try {
+      // Usar a função SQL get_excluded_drivers_for_address
+      final response = await _supabase
+          .rpc('get_excluded_drivers_for_address', params: {
+            'full_address': fullAddress,
+          });
+
+      final excludedDrivers = (response as List<dynamic>)
+          .map((row) => row['driver_id'] as String)
+          .where((driverId) => driverIds.contains(driverId))
+          .toSet();
+
+      return excludedDrivers;
+    } catch (e) {
+      print('❌ Erro ao buscar motoristas excluídos para endereço "$fullAddress": $e');
+      // Fallback para sistema legado se a função RPC falhar
+      return await _getExcludedZonesForDriversLegacy(driverIds, fullAddress);
+    }
+  }
+
+  /// Fallback para sistema legado de exclusão por bairro
+  Future<Set<String>> _getExcludedZonesForDriversLegacy(
+    List<String> driverIds,
+    String fullAddress,
+  ) async {
+    try {
+      // Busca por correspondência simples usando ILIKE
       final response = await _supabase
           .from('driver_excluded_zones')
           .select('driver_id')
           .inFilter('driver_id', driverIds)
-          .eq('neighborhood_name', neighborhoodName)
-          .eq('city', city)
-          .eq('state', state);
+          .or('neighborhood_name.ilike.%${_extractSearchTerms(fullAddress)}%');
 
       return (response as List<dynamic>)
           .map((row) => row['driver_id'] as String)
           .toSet();
     } catch (e) {
-      print('❌ Erro ao buscar zonas excluídas em lote: $e');
+      print('❌ Erro no fallback legado: $e');
       return <String>{};
     }
+  }
+
+  /// Constrói endereço completo a partir dos componentes
+  String _buildFullAddress({
+    String? neighborhood,
+    String? city,
+    String? state,
+  }) {
+    final parts = <String>[];
+    if (neighborhood != null && neighborhood.isNotEmpty) parts.add(neighborhood);
+    if (city != null && city.isNotEmpty) parts.add(city);
+    if (state != null && state.isNotEmpty) parts.add(state);
+    return parts.join(' - ');
+  }
+
+  /// Extrai termos de busca do endereço para fallback
+  String _extractSearchTerms(String address) {
+    // Remove caracteres especiais e pega a primeira palavra significativa
+    final cleaned = address.replaceAll(RegExp(r'[^\w\s]'), ' ').trim();
+    final words = cleaned.split(RegExp(r'\s+'));
+    return words.isNotEmpty ? words.first : '';
   }
 
   /// Verifica disponibilidade em tempo real dos motoristas
@@ -439,12 +490,29 @@ class DriverMatchingService {
   static MatchingCriteria fromPassengerRequest(PassengerRequest request, {
     double maxRadiusKm = 10.0,
     int maxDrivers = 10,
-  }) => MatchingCriteria(
+  }) {
+    // Tentar extrair informações de bairro dos endereços existentes
+    final originInfo = LocationService.parseAddressString(request.originAddress);
+    final destinationInfo = LocationService.parseAddressString(request.destinationAddress);
+    
+    print('🔍 Extraindo bairros dos endereços:');
+    print('   📍 Origem: "${request.originAddress}" → Bairro: ${originInfo['neighborhood'] ?? 'N/A'}');
+    print('   🎯 Destino: "${request.destinationAddress}" → Bairro: ${destinationInfo['neighborhood'] ?? 'N/A'}');
+    
+    return MatchingCriteria(
       passengerLatitude: request.originLat,
       passengerLongitude: request.originLng,
       destinationLatitude: request.destinationLat,
       destinationLongitude: request.destinationLng,
       maxRadiusKm: maxRadiusKm,
       maxDrivers: maxDrivers,
+      // Popula campos de bairro que estavam sempre nulos
+      originNeighborhood: originInfo['neighborhood'],
+      originCity: originInfo['city'],
+      originState: originInfo['state'],
+      destinationNeighborhood: destinationInfo['neighborhood'],
+      destinationCity: destinationInfo['city'], 
+      destinationState: destinationInfo['state'],
     );
+  }
 }

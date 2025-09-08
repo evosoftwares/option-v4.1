@@ -156,9 +156,9 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      print('📊 [LOGIN] Status da aprovação: ${driver.approvalStatus}');
+      print('📊 [LOGIN] Status da aprovação: ${driver.approvalStatus} (dados frescos do banco - sem cache)');
 
-      // Verificar status de aprovação
+      // Verificar status de aprovação (dados sempre frescos)
       switch (driver.approvalStatus.toLowerCase()) {
         case 'pending':
         case 'under_review':

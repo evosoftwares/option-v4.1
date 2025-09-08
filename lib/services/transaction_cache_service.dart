@@ -1,13 +1,7 @@
-/// Serviço de cache para transações da carteira
+/// Serviço de cache DESABILITADO para transações da carteira
 /// 
-/// Implementa cache em memória com TTL (Time To Live) para otimizar
-/// o carregamento de transações e reduzir chamadas desnecessárias ao banco.
-/// 
-/// Funcionalidades:
-/// - Cache em memória com expiração automática
-/// - Invalidação seletiva por usuário
-/// - Paginação inteligente
-/// - Prevenção de vazamentos de memória
+/// Cache foi desabilitado para evitar problemas de sincronização.
+/// Todos os métodos retornam valores padrão ou são no-ops.
 library;
 
 import 'dart:async';
@@ -90,32 +84,16 @@ class TransactionCacheService {
     _cache.clear();
   }
   
-  /// Obtém transações do cache se disponíveis e válidas
+  /// Cache desabilitado - sempre retorna null para forçar busca no banco
   List<PassengerWalletTransaction>? getCachedTransactions({
     required String passengerId,
     required int page,
     required int limit,
   }) {
-    final key = _CacheKey(
-      passengerId: passengerId,
-      page: page,
-      limit: limit,
-    );
-    
-    final entry = _cache[key];
-    if (entry != null && entry.isValid) {
-      return List.from(entry.transactions); // Retorna cópia para evitar modificações
-    }
-    
-    // Remove entrada expirada
-    if (entry != null) {
-      _cache.remove(key);
-    }
-    
-    return null;
+    return null; // Força busca sempre no banco
   }
   
-  /// Armazena transações no cache
+  /// Cache desabilitado - método no-op
   void cacheTransactions({
     required String passengerId,
     required int page,
@@ -123,50 +101,26 @@ class TransactionCacheService {
     required List<PassengerWalletTransaction> transactions,
     required int totalCount,
   }) {
-    final key = _CacheKey(
-      passengerId: passengerId,
-      page: page,
-      limit: limit,
-    );
-    
-    final entry = _CacheEntry(
-      transactions: List.from(transactions), // Armazena cópia
-      timestamp: DateTime.now(),
-      totalCount: totalCount,
-    );
-    
-    _cache[key] = entry;
-    
-    // Limita o tamanho do cache para evitar vazamentos de memória
-    if (_cache.length > WalletConstants.maxCacheEntries) {
-      _removeOldestEntries();
-    }
+    // Cache desabilitado - não armazena nada
   }
   
-  /// Invalida cache para um usuário específico
+  /// Cache desabilitado - método no-op
   void invalidateUserCache(String passengerId) {
-    _cache.removeWhere((key, _) => key.passengerId == passengerId);
+    // Cache desabilitado - não há cache para invalidar
   }
   
-  /// Invalida todo o cache
+  /// Cache desabilitado - método no-op
   void invalidateAllCache() {
-    _cache.clear();
+    // Cache desabilitado - não há cache para limpar
   }
   
-  /// Verifica se existe cache válido para uma página específica
+  /// Cache desabilitado - sempre retorna false
   bool hasCachedPage({
     required String passengerId,
     required int page,
     required int limit,
   }) {
-    final key = _CacheKey(
-      passengerId: passengerId,
-      page: page,
-      limit: limit,
-    );
-    
-    final entry = _cache[key];
-    return entry != null && entry.isValid;
+    return false; // Sempre força busca no banco
   }
   
   /// Obtém estatísticas do cache para monitoramento

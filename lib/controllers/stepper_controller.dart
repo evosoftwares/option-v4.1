@@ -8,13 +8,10 @@ import '../models/favorite_location.dart';
 import '../models/user.dart';
 import '../services/app_logger.dart';
 import '../services/firebase_file_upload_service.dart';
-import '../services/real_saved_places_service.dart' as places_service show ValidationException, SavedPlacesDatabaseException;
-import '../services/real_saved_places_service.dart';
 import '../services/stepper_persistence_service.dart';
 import '../services/user_service.dart';
 import '../utils/supabase_helper.dart';
 
-export '../services/real_saved_places_service.dart' show NetworkException;
 
 class StepperController extends ChangeNotifier {
 
@@ -29,9 +26,7 @@ class StepperController extends ChangeNotifier {
   String? _uploadedPhotoUrl;
   bool _isUploadingPhoto = false;
   String? _uploadedPhotoPath;
-  List<FavoriteLocation> _favoriteLocations = [];
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-  final RealSavedPlacesService _savedPlacesService = RealSavedPlacesService();
   int get currentStep => _currentStep;
   String? get userType => _userType;
   String? get phone => _phone;
@@ -40,10 +35,35 @@ class StepperController extends ChangeNotifier {
   File? get profilePhoto => _profilePhoto;
   String? get uploadedPhotoUrl => _uploadedPhotoUrl;
   bool get isUploadingPhoto => _isUploadingPhoto;
-  List<FavoriteLocation> get favoriteLocations => _favoriteLocations;
   
+  // DEPRECATED: Locais salvos foram removidos - métodos mantidos para compatibilidade
+  @Deprecated('Locais salvos foram removidos do projeto')
+  List<FavoriteLocation> get favoriteLocations => [];
+  
+  @Deprecated('Locais salvos foram removidos do projeto')  
+  List<FavoriteLocation> get locations => [];
+  
+  @Deprecated('Locais salvos foram removidos do projeto')
+  void addLocation(FavoriteLocation location) {
+    // Método vazio - locais salvos foram removidos
+  }
+  
+  @Deprecated('Locais salvos foram removidos do projeto')
+  void removeLocation(int index) {
+    // Método vazio - locais salvos foram removidos
+  }
+  
+  @Deprecated('Locais salvos foram removidos do projeto')
+  void updateLocations(List<FavoriteLocation> locations) {
+    // Método vazio - locais salvos foram removidos
+  }
+  
+  @Deprecated('Locais salvos foram removidos do projeto')
+  Future<void> saveFavoriteLocations(List<FavoriteLocation> locations) async {
+    // Método vazio - locais salvos foram removidos
+  }
+
   // Alias para compatibilidade com add_location_modal
-  List<FavoriteLocation> get locations => _favoriteLocations;
 
   void setUserType(String type) {
     final previousType = _userType;
@@ -220,70 +240,6 @@ class StepperController extends ChangeNotifier {
     }
   }
 
-  void addLocation(FavoriteLocation location) {
-    _favoriteLocations.add(location);
-    notifyListeners();
-  }
-
-  void removeLocation(int index) {
-    if (index >= 0 && index < _favoriteLocations.length) {
-      _favoriteLocations.removeAt(index);
-      notifyListeners();
-    }
-  }
-  
-  // Método para atualizar toda a lista de locations
-  void updateLocations(List<FavoriteLocation> locations) {
-    _favoriteLocations = List<FavoriteLocation>.from(locations);
-    notifyListeners();
-    // Auto-save do estado
-    _saveState();
-  }
-
-  Future<void> saveFavoriteLocations(List<FavoriteLocation> locations) async {
-    try {
-      final authUser = SupabaseHelper.client?.auth.currentUser;
-      if (authUser == null) {
-        throw Exception('Usuário não autenticado');
-      }
-
-      if (locations.isEmpty) {
-        AppLogger.info('Nenhum local favorito para salvar');
-        return;
-      }
-
-      AppLogger.info('Salvando ${locations.length} locais favoritos...');
-      
-      // Salvar cada local no banco usando RealSavedPlacesService
-      final savedLocations = <FavoriteLocation>[];
-      
-      for (final location in locations) {
-        try {
-          final locationWithUserId = location.copyWith(userId: authUser.id);
-          final savedLocation = await _savedPlacesService.addPlace(locationWithUserId);
-          savedLocations.add(savedLocation);
-          AppLogger.info('Local "${location.name}" salvo com sucesso');
-        } on places_service.ValidationException catch (e) {
-          AppLogger.error('Erro de validação ao salvar local "${location.name}": ${e.message}');
-          throw Exception('Dados inválidos para o local "${location.name}": ${e.message}');
-        } on places_service.SavedPlacesDatabaseException catch (e) {
-          AppLogger.error('Erro de banco ao salvar local "${location.name}": ${e.message}');
-          throw Exception('Erro no banco de dados ao salvar local "${location.name}": ${e.message}');
-        } on NetworkException catch (e) {
-          AppLogger.error('Erro de rede ao salvar local "${location.name}": ${e.message}');
-          throw Exception('Erro de conexão ao salvar local "${location.name}": ${e.message}');
-        }
-      }
-      
-      _favoriteLocations = savedLocations;
-      notifyListeners();
-      
-      AppLogger.success('${savedLocations.length} locais favoritos salvos no banco');
-    } catch (e) {
-      AppLogger.error('Erro ao salvar locais favoritos no banco', error: e);
-      rethrow;
-    }
-  }
 
 
 
@@ -423,17 +379,17 @@ class StepperController extends ChangeNotifier {
     } on SocketException catch (e) {
       print('❌ Erro de conexão ao completar registro: ${e.message}');
       AppLogger.error('Erro de conexão ao completar registro', error: e);
-      throw NetworkException('Erro de conexão. Verifique sua internet e tente novamente.');
+      throw Exception('Erro de conexão. Verifique sua internet e tente novamente.');
     } on TimeoutException catch (e) {
       print('❌ Timeout ao completar registro: ${e.message}');
       AppLogger.error('Timeout ao completar registro', error: e);
-      throw NetworkException('Operação demorou muito. Verifique sua conexão e tente novamente.');
+      throw Exception('Operação demorou muito. Verifique sua conexão e tente novamente.');
     } catch (e) {
       print('❌ Erro ao completar registro: $e');
       
       if (e.toString().contains('Failed host lookup')) {
         AppLogger.error('Erro de DNS ao completar registro', error: e);
-        throw NetworkException('Erro de conexão com o servidor. Verifique sua internet.');
+        throw Exception('Erro de conexão com o servidor. Verifique sua internet.');
       }
       
       // Mapear exceção para tipo específico de registro
@@ -454,7 +410,6 @@ class StepperController extends ChangeNotifier {
     _uploadedPhotoUrl = null;
     _uploadedPhotoPath = null;
     _isUploadingPhoto = false;
-    _favoriteLocations = [];
     notifyListeners();
   }
 
@@ -491,7 +446,6 @@ class StepperController extends ChangeNotifier {
       fullName: _fullName,
       email: _email,
       currentStep: _currentStep,
-      favoriteLocations: const [],
       uploadedPhotoUrl: _uploadedPhotoUrl,
     );
   }

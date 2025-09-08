@@ -11,7 +11,6 @@ import 'package:option/screens/emergency/emergency_screen.dart';
 import 'package:option/screens/notifications/notifications_screen.dart';
 import 'package:option/screens/payments/payments_screen.dart';
 import 'package:option/screens/profile/profile_edit_screen.dart';
-import 'package:option/screens/saved_places_screen.dart';
 import 'package:option/screens/trips/trip_history_screen.dart';
 import 'package:option/screens/wallet/wallet_screen.dart';
 
@@ -61,7 +60,6 @@ class MenuNavigationTester {
       'Carteira': () => const WalletScreen(),
       'Perfil': () => const ProfileEditScreen(),
       'Pagamentos': () => const PaymentsScreen(),
-      'Locais salvos': () => const SavedPlacesScreen(),
       'Histórico de viagens': () => const TripHistoryScreen(),
       'Emergência': () => const EmergencyScreen(),
       'Notificações': () => const NotificationsScreen(),
@@ -271,7 +269,6 @@ void main() {
         TripHistoryScreen,
         AboutScreen,
         NotificationsScreen,
-        SavedPlacesScreen,
         PaymentsScreen,
         EmergencyScreen,
         DriverDocumentsScreen,

@@ -123,14 +123,14 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
 
       if ((lat == null || lng == null) && widget.origin.placeId != null) {
         final details = await _locationService.getPlaceDetails(widget.origin.placeId!);
-        lat = (details?['lat'] as num?)?.toDouble();
-        lng = (details?['lng'] as num?)?.toDouble();
+        lat = (details?['lat'] as num?)?.toDouble() ?? lat;
+        lng = (details?['lng'] as num?)?.toDouble() ?? lng;
       }
 
       if (lat == null || lng == null) {
         final current = await _locationService.getCurrentLocation();
-        lat = (current?['lat'] as num?)?.toDouble();
-        lng = (current?['lng'] as num?)?.toDouble();
+        lat = (current?['lat'] as num?)?.toDouble() ?? lat;
+        lng = (current?['lng'] as num?)?.toDouble() ?? lng;
       }
 
       if (lat == null || lng == null) {

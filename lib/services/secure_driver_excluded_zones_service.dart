@@ -89,7 +89,7 @@ class SecureDriverExcludedZonesService {
         driverId: driverId,
         context: {'step': 'data_validation'},
       );
-      
+
       final normalizedData = await ZoneValidationService.validateAndNormalizeZoneData(
         neighborhood: neighborhoodName,
         city: city,
@@ -110,13 +110,13 @@ class SecureDriverExcludedZonesService {
         driverId: driverId,
         context: {'step': 'driver_validation'},
       );
-      
+
       final driverExists = await _supabase
           .from('drivers')
           .select('id')
           .eq('id', driverId)
           .maybeSingle();
-      
+
       if (driverExists == null) {
         ZoneExclusionLogger.logValidationError(
           driverId: driverId,
@@ -129,7 +129,7 @@ class SecureDriverExcludedZonesService {
           'Por favor, verifique se você está logado como motorista.',
         );
       }
-      
+
       ZoneExclusionLogger.logValidationSuccess(
         driverId: driverId,
         context: {'step': 'driver_validation'},
@@ -140,7 +140,7 @@ class SecureDriverExcludedZonesService {
         driverId: driverId,
         context: {'operation': 'zone_limit_check'},
       );
-      
+
       final currentCount = await getExcludedZonesCount(driverId);
       ZoneExclusionLogger.logCurrentCount(
         driverId: driverId,
@@ -204,7 +204,7 @@ class SecureDriverExcludedZonesService {
           .single();
 
       final zone = DriverExcludedZone.fromJson(response);
-      
+
       ZoneExclusionLogger.logAddSuccess(
         driverId: driverId,
         neighborhood: normalizedData['neighborhood_name']!,
@@ -212,7 +212,7 @@ class SecureDriverExcludedZonesService {
         state: normalizedData['state']!,
         zoneId: zone.id,
       );
-      
+
       // 5. Log the action for audit
       await _logZoneAction(
         action: 'CREATE',
@@ -228,7 +228,7 @@ class SecureDriverExcludedZonesService {
         errorCode: e.code,
         context: {'details': e.details},
       );
-      
+
       if (e.code == '23505') {
         ZoneExclusionLogger.logDuplicateZone(
           driverId: driverId,
@@ -296,6 +296,82 @@ class SecureDriverExcludedZonesService {
     }
   }
 
+  /// Método melhorado: Adiciona zona com tipo específico escolhido pelo usuário
+  Future<DriverExcludedZone> addExcludedZoneWithType({
+    required String driverId,
+    required String keyword,
+    required String zoneType,
+    String? city,
+    String? state,
+    String? reason,
+  }) async {
+    try {
+      // Validação de entrada
+      if (driverId.isEmpty || keyword.isEmpty || zoneType.isEmpty) {
+        throw ArgumentError('driverId, keyword e zoneType são obrigatórios');
+      }
+
+      // Verificação de permissões
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw UnauthorizedException('Usuário não autenticado');
+      }
+
+      // Log da operação
+      ZoneExclusionLogger.logAddStart(
+        driverId: driverId,
+        context: {
+          'operation': 'addExcludedZoneWithType',
+          'keyword': keyword,
+          'zoneType': zoneType,
+          'city': city,
+          'state': state,
+        },
+      );
+
+      // Preparar dados para inserção
+      final zoneData = {
+        'driver_id': driverId,
+        'neighborhood_name': keyword, // Campo obrigatório - usar keyword como neighborhood_name
+        'city': city ?? 'N/A',
+        'state': state ?? 'N/A',
+        'zone_type': zoneType,
+        'keyword': keyword,
+      };
+
+      // Inserir no banco
+      final response = await _supabase
+          .from('driver_excluded_zones')
+          .insert(zoneData)
+          .select()
+          .single();
+
+      final zone = DriverExcludedZone.fromJson(response);
+
+      ZoneExclusionLogger.logAddSuccess(
+        driverId: driverId,
+        neighborhood: keyword,
+        city: city ?? '',
+        state: state ?? '',
+        zoneId: zone.id,
+      );
+
+      return zone;
+    } catch (e) {
+      ZoneExclusionLogger.logAddError(
+        driverId: driverId,
+        error: e.toString(),
+        context: {'operation': 'addExcludedZoneWithType'},
+      );
+
+      if (e is PostgrestException) {
+        throw DatabaseException('Erro ao salvar zona excluída: ${e.message}');
+      }
+
+      rethrow;
+    }
+  }
+
   /// Adiciona múltiplas zonas excluídas com validação e transação
   Future<List<DriverExcludedZone>> addMultipleExcludedZones({
     required String driverId,
@@ -312,18 +388,18 @@ class SecureDriverExcludedZonesService {
           .select('id')
           .eq('id', driverId)
           .maybeSingle();
-      
+
       if (driverExists == null) {
         throw const ValidationException(
           'Não foi possível adicionar zonas excluídas: motorista não encontrado. '
           'Por favor, verifique se você está logado como motorista.',
         );
       }
-      
+
       // 2. Check total limit before processing
       final currentCount = await getExcludedZonesCount(driverId);
       final totalAfterAdd = currentCount + zones.length;
-      
+
       if (totalAfterAdd > ZoneValidationService.maxZonesPerDriver) {
         final remaining = ZoneValidationService.getRemainingZoneSlots(currentCount);
         throw ValidationException(
@@ -340,7 +416,7 @@ class SecureDriverExcludedZonesService {
           city: zone['city'] ?? '',
           state: zone['state'] ?? '',
         );
-        
+
         validatedZones.add({
           'driver_id': driverId,
           'neighborhood_name': normalizedData['neighborhood_name']!,
@@ -599,7 +675,7 @@ class SecureDriverExcludedZonesService {
 
       // Get current zones for logging
       final currentZones = await getDriverExcludedZones(driverId);
-      
+
       ZoneExclusionLogger.logRemovalValidation(
         driverId: driverId,
         zoneId: 'all_zones',

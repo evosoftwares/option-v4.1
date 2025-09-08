@@ -1,5 +1,8 @@
 import 'dart:async';
+
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -7,18 +10,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../models/supabase/driver.dart';
 import '../../models/supabase/trip.dart';
+import '../../models/user.dart' as app_user;
 import '../../screens/chat/chat_screen.dart';
 import '../../services/driver_service.dart';
 import '../../services/phone_service.dart';
 import '../../services/trip_service.dart';
+import '../../services/user_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_card.dart';
 
-
 class PassengerTripScreen extends StatefulWidget {
-  
   const PassengerTripScreen({
     super.key,
     required this.tripId,
@@ -53,6 +56,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
   BitmapDescriptor? _originMarkerIcon;
   BitmapDescriptor? _destinationMarkerIcon;
 
+  app_user.User? _driverUser;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -83,22 +87,23 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
 
   Future<void> _loadCustomMarkers() async {
     try {
-      // Carrega ícone personalizado do carrinho para o motorista
-      _driverMarkerIcon = await BitmapDescriptor.fromAssetImage(
+      // Carrega ícone personalizado do carrinho para o motorista (fallback)
+      _driverMarkerIcon = await BitmapDescriptor.asset(
         const ImageConfiguration(size: Size(48, 48)),
         'assets/images/car_marker.png',
       );
     } catch (e) {
       // Fallback para o ícone padrão se houver erro
-      _driverMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+      _driverMarkerIcon =
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
     }
-    
+
     // Usando ícones padrão para origem e destino
-    _originMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
-    _destinationMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+    _originMarkerIcon =
+        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+    _destinationMarkerIcon =
+        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
   }
-
-
 
   Future<void> _subscribeToTrip() async {
     _tripSubscription = _tripService.subscribeToTrip(widget.tripId).listen(
@@ -111,7 +116,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
           });
           _subscribeToDriver(trip.driverId);
           _updateTripMarkers();
-          
+
           // Verificar mudanças de status para notificações
           if (previousStatus != null && previousStatus != trip.status) {
             _handleTripStatusChange(previousStatus, trip.status);
@@ -139,6 +144,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
         setState(() {
           _currentDriver = driver;
         });
+        _loadDriverUserData();
         _updateDriverMarker();
       },
       onError: (error) {
@@ -176,7 +182,8 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
           _currentTrip!.destinationLatitude,
           _currentTrip!.destinationLongitude,
         ),
-        icon: _destinationMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(0),
+        icon:
+            _destinationMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(0),
         infoWindow: InfoWindow(
           title: 'Destino',
           snippet: _currentTrip!.destinationAddress,
@@ -185,18 +192,15 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
     );
 
     setState(() {
-      _markers.removeWhere((marker) => 
-        marker.markerId.value == 'origin' || 
-        marker.markerId.value == 'destination'
-      );
+      _markers.removeWhere((marker) =>
+          marker.markerId.value == 'origin' ||
+          marker.markerId.value == 'destination');
       _markers.addAll(newMarkers);
     });
   }
 
-
-
   void _updateDriverMarker() {
-    if (_currentDriver?.currentLatitude == null || 
+    if (_currentDriver?.currentLatitude == null ||
         _currentDriver?.currentLongitude == null) {
       return;
     }
@@ -210,7 +214,8 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
       icon: _driverMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(0),
       infoWindow: InfoWindow(
         title: 'Seu motorista',
-        snippet: '${_currentDriver!.brand} ${_currentDriver!.model} - ${_currentDriver!.plate}',
+        snippet:
+            '${_currentDriver!.brand} ${_currentDriver!.model} - ${_currentDriver!.plate}',
       ),
     );
 
@@ -223,7 +228,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
   }
 
   Future<void> _animateCameraToDriver() async {
-    if (_currentDriver?.currentLatitude == null || 
+    if (_currentDriver?.currentLatitude == null ||
         _currentDriver?.currentLongitude == null) {
       return;
     }
@@ -239,6 +244,127 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
     );
   }
 
+  Future<void> _loadDriverUserData() async {
+    if (_currentDriver == null) return;
+
+    try {
+      final user = await UserService.getUserById(_currentDriver!.userId);
+      if (user != null && user.photoUrl != null) {
+        setState(() {
+          _driverUser = user;
+        });
+        await _createDriverProfileMarker();
+      }
+    } catch (e) {
+      debugPrint('Erro ao carregar dados do usuário do motorista: $e');
+    }
+  }
+
+  Future<void> _createDriverProfileMarker() async {
+    if (_driverUser?.photoUrl == null) return;
+
+    try {
+      final markerIcon =
+          await _createCircularMarkerFromUrl(_driverUser!.photoUrl!, 60);
+      setState(() {
+        _driverMarkerIcon = markerIcon;
+      });
+      _updateDriverMarker();
+    } catch (e) {
+      debugPrint('Erro ao criar marcador com foto do perfil: $e');
+    }
+  }
+
+  Future<BitmapDescriptor> _createCircularMarkerFromUrl(
+      String imageUrl, int size) async {
+    try {
+      // Verificar se a URL é válida
+      if (imageUrl.isEmpty) {
+        throw Exception('URL da imagem está vazia');
+      }
+
+      // Baixar a imagem com timeout
+      final imageProvider = NetworkImage(imageUrl);
+      final imageStream = imageProvider.resolve(const ImageConfiguration());
+      final Completer<ui.Image> completer = Completer();
+
+      late ImageStreamListener listener;
+      listener = ImageStreamListener(
+        (ImageInfo info, bool _) {
+          imageStream.removeListener(listener);
+          completer.complete(info.image);
+        },
+        onError: (dynamic exception, StackTrace? stackTrace) {
+          imageStream.removeListener(listener);
+          completer.completeError(exception);
+        },
+      );
+
+      imageStream.addListener(listener);
+
+      // Timeout de 10 segundos para carregar a imagem
+      final ui.Image image = await completer.future.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () =>
+            throw Exception('Timeout ao carregar imagem do perfil'),
+      );
+
+      // Criar um canvas circular
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder);
+
+      final double radius = size / 2;
+
+      // Desenhar círculo de fundo branco
+      final Paint backgroundPaint = Paint()..color = Colors.white;
+      canvas.drawCircle(Offset(radius, radius), radius, backgroundPaint);
+
+      // Criar um clipping circular
+      canvas.clipPath(Path()
+        ..addOval(Rect.fromCircle(
+            center: Offset(radius, radius), radius: radius - 2)));
+
+      // Desenhar a imagem redimensionada
+      canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        Rect.fromLTWH(2, 2, size - 4.0, size - 4.0),
+        Paint(),
+      );
+
+      // Desenhar borda branca
+      final Paint borderPaint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.0;
+      canvas.drawCircle(Offset(radius, radius), radius - 1.5, borderPaint);
+
+      // Desenhar borda externa cinza para contraste
+      final Paint outerBorderPaint = Paint()
+        ..color = Colors.grey.shade300
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0;
+      canvas.drawCircle(Offset(radius, radius), radius - 0.5, outerBorderPaint);
+
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image markerImage = await picture.toImage(size, size);
+      final ByteData? byteData =
+          await markerImage.toByteData(format: ui.ImageByteFormat.png);
+
+      if (byteData == null) {
+        throw Exception('Falha ao converter imagem para bytes');
+      }
+
+      final Uint8List uint8List = byteData.buffer.asUint8List();
+      return BitmapDescriptor.bytes(uint8List);
+    } catch (e) {
+      debugPrint('Erro ao criar marcador circular da foto de perfil: $e');
+      // Fallback para ícone de carro padrão
+      return _driverMarkerIcon ??
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+    }
+  }
+
   Future<void> _callDriver() async {
     if (_currentDriver == null) {
       _showErrorSnackBar('Informações do motorista não disponíveis');
@@ -247,17 +373,18 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
 
     try {
       final phoneService = PhoneService();
-      
+
       // Obter telefone do motorista através da tabela app_users
-      final driverPhone = await phoneService.getUserPhone(_currentDriver!.userId);
-      
+      final driverPhone =
+          await phoneService.getUserPhone(_currentDriver!.userId);
+
       if (driverPhone == null) {
         _showErrorSnackBar('Telefone do motorista não disponível');
         return;
       }
 
       final success = await phoneService.makePhoneCall(driverPhone);
-      
+
       if (!success) {
         _showErrorSnackBar('Não foi possível fazer a ligação');
       }
@@ -307,32 +434,24 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
     );
   }
 
-  void _showInfoSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   void _handleTripStatusChange(String previousStatus, String newStatus) {
     // Evitar notificações duplicadas
     if (_lastNotificationStatus == newStatus) return;
-    
+
     _lastNotificationStatus = newStatus;
-    
+
     String? notificationMessage;
     Color? backgroundColor;
-    
+
     switch (newStatus.toLowerCase()) {
       case 'accepted':
-        notificationMessage = '🚗 Motorista a caminho! Prepare-se para o embarque.';
+        notificationMessage =
+            '🚗 Motorista a caminho! Prepare-se para o embarque.';
         backgroundColor = Theme.of(context).colorScheme.primary;
         break;
       case 'driver_arrived':
-        notificationMessage = '📍 Motorista chegou! Dirija-se ao local de embarque.';
+        notificationMessage =
+            '📍 Motorista chegou! Dirija-se ao local de embarque.';
         backgroundColor = AppColors.success;
         break;
       case 'in_progress':
@@ -341,7 +460,8 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
         backgroundColor = AppColors.blue;
         break;
       case 'completed':
-        notificationMessage = '✅ Viagem concluída! Obrigado por usar nosso serviço.';
+        notificationMessage =
+            '✅ Viagem concluída! Obrigado por usar nosso serviço.';
         backgroundColor = AppColors.success;
         break;
       case 'cancelled':
@@ -349,12 +469,12 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
         backgroundColor = Theme.of(context).colorScheme.error;
         break;
     }
-    
+
     if (notificationMessage != null) {
       _showTripNotification(notificationMessage, backgroundColor);
     }
   }
-  
+
   void _showTripNotification(String message, Color? backgroundColor) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -377,7 +497,8 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
             ),
           ],
         ),
-        backgroundColor: backgroundColor ?? Theme.of(context).colorScheme.primary,
+        backgroundColor:
+            backgroundColor ?? Theme.of(context).colorScheme.primary,
         behavior: SnackBarBehavior.floating,
         margin: AppSpacing.paddingMd,
         shape: RoundedRectangleBorder(
@@ -389,7 +510,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
 
   String _getTripStatusText() {
     if (_currentTrip == null) return 'Carregando...';
-    
+
     switch (_currentTrip!.status.toLowerCase()) {
       case 'accepted':
         return 'Motorista a caminho';
@@ -406,7 +527,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
 
   Color _getTripStatusColor() {
     if (_currentTrip == null) return AppColors.gray500;
-    
+
     switch (_currentTrip!.status.toLowerCase()) {
       case 'accepted':
         return AppColors.warning;
@@ -420,44 +541,6 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
         return AppColors.gray500;
     }
   }
-
-  Widget _buildRouteInfo({
-    required IconData icon,
-    required String label,
-    required String address,
-    required Color color,
-  }) => Row(
-      children: [
-        Icon(
-          icon,
-          color: color,
-          size: 20,
-        ),
-        const SizedBox(width: AppSpacing.xs * 3),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontWeight: AppTypography.medium,
-                ),
-              ),
-              Text(
-                address,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: AppTypography.medium,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
 
   @override
   Widget build(BuildContext context) {
@@ -541,7 +624,7 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
             zoomControlsEnabled: false,
             mapToolbarEnabled: false,
           ),
-          
+
           // Card de informações da viagem
           Positioned(
             left: AppSpacing.md,
@@ -555,8 +638,8 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
   }
 
   String _getEstimatedArrival() {
-    if (_currentDriver?.currentLatitude == null || 
-        _currentDriver?.currentLongitude == null || 
+    if (_currentDriver?.currentLatitude == null ||
+        _currentDriver?.currentLongitude == null ||
         _currentTrip == null) {
       return '5-8 min'; // Estimativa padrão quando não há dados
     }
@@ -599,284 +682,287 @@ class _PassengerTripScreenState extends State<PassengerTripScreen> {
     }
   }
 
-  double _calculateDistanceInKm(double lat1, double lon1, double lat2, double lon2) {
+  double _calculateDistanceInKm(
+      double lat1, double lon1, double lat2, double lon2) {
     const double earthRadius = 6371; // Raio da Terra em km
-    
+
     final dLat = _degreesToRadians(lat2 - lat1);
     final dLon = _degreesToRadians(lon2 - lon1);
-    
+
     final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_degreesToRadians(lat1)) * cos(_degreesToRadians(lat2)) *
-        sin(dLon / 2) * sin(dLon / 2);
-    
+        cos(_degreesToRadians(lat1)) *
+            cos(_degreesToRadians(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    
+
     return earthRadius * c;
   }
 
   double _degreesToRadians(double degrees) => degrees * pi / 180;
 
   Widget _buildTripInfoCard() => AppCard(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Status da viagem
-            Row(
-              children: [
-                Container(
-                  width: AppSpacing.xs * 3,
-                  height: AppSpacing.xs * 3,
-                  decoration: BoxDecoration(
-                    color: _getTripStatusColor(),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    _getTripStatusText(),
-                    style: AppTypography.titleMedium.copyWith(
-                      color: _getTripStatusColor(),
-                      fontWeight: AppTypography.bold,
-                    ),
-                  ),
-                ),
-                if (_currentTrip != null)
-                  Text(
-                    'R\$ ${_currentTrip!.finalFare.toStringAsFixed(2)}',
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: AppTypography.bold,
-                    ),
-                  ),
-              ],
-            ),
-            
-            if (_currentTrip != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              
-              // Informações da rota
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: AppColors.gray50,
-                  borderRadius: BorderRadius.circular(AppSpacing.sm),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: AppSpacing.sm,
-                          height: AppSpacing.sm,
-                          decoration: const BoxDecoration(
-                            color: AppColors.success,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Text(
-                            _currentTrip!.originAddress,
-                            style: AppTypography.bodyMedium,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Container(
-                      margin: const EdgeInsets.only(left: 4),
-                      child: Row(
-                        children: [
-                          Container(
-                          width: 2,
-                          height: AppSpacing.lg,
-                            color: AppColors.gray300,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Row(
-                      children: [
-                        Container(
-                          width: AppSpacing.sm,
-                          height: AppSpacing.sm,
-                          decoration: const BoxDecoration(
-                            color: AppColors.error,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Text(
-                            _currentTrip!.destinationAddress,
-                            style: AppTypography.bodyMedium,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            
-            if (_currentDriver != null) ...[
-              const SizedBox(height: AppSpacing.lg),
-              
-              // Informações do motorista
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Status da viagem
               Row(
                 children: [
-                  const CircleAvatar(
-                    radius: AppSpacing.lg,
-                    backgroundColor: AppColors.lightPrimary,
-                    child: Icon(
-                      Icons.person,
-                      color: AppColors.lightOnPrimary,
+                  Container(
+                    width: AppSpacing.xs * 3,
+                    height: AppSpacing.xs * 3,
+                    decoration: BoxDecoration(
+                      color: _getTripStatusColor(),
+                      shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Motorista',
-                          style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.gray500,
-                          ),
-                        ),
-                        Text(
-                          'Motorista ${_currentDriver!.id.substring(0, 8)}',
-                          style: AppTypography.titleSmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Avaliação do motorista
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star,
-                        size: AppSpacing.md,
-                        color: AppColors.warning,
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        _currentDriver!.ratings.toStringAsFixed(1),
-                        style: AppTypography.bodySmall,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: AppSpacing.md),
-              
-              // Informações do veículo
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: AppColors.lightSurface,
-                  borderRadius: BorderRadius.circular(AppSpacing.sm),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.directions_car,
-                      color: AppColors.lightPrimary,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        '${_currentDriver!.brand} ${_currentDriver!.model} ${_currentDriver!.color}',
-                        style: AppTypography.bodyMedium,
-                      ),
-                    ),
-                    Text(
-                      _currentDriver!.plate,
-                      style: AppTypography.titleSmall.copyWith(
+                    child: Text(
+                      _getTripStatusText(),
+                      style: AppTypography.titleMedium.copyWith(
+                        color: _getTripStatusColor(),
                         fontWeight: AppTypography.bold,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: AppSpacing.md),
-              
-              // Tempo estimado de chegada
-              if (_currentTrip!.status.toLowerCase() == 'accepted')
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppSpacing.sm),
-                    border: Border.all(
-                      color: AppColors.warning.withOpacity(0.3),
-                    ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time,
-                        size: AppSpacing.md,
-                        color: AppColors.warning,
+                  if (_currentTrip != null)
+                    Text(
+                      'R\$ ${_currentTrip!.finalFare.toStringAsFixed(2)}',
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: AppTypography.bold,
                       ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        'Chegada estimada: ${_getEstimatedArrival()}',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.warning,
-                          fontWeight: AppTypography.medium,
+                    ),
+                ],
+              ),
+
+              if (_currentTrip != null) ...[
+                const SizedBox(height: AppSpacing.md),
+
+                // Informações da rota
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.gray50,
+                    borderRadius: BorderRadius.circular(AppSpacing.sm),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: AppSpacing.sm,
+                            height: AppSpacing.sm,
+                            decoration: const BoxDecoration(
+                              color: AppColors.success,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              _currentTrip!.originAddress,
+                              style: AppTypography.bodyMedium,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Container(
+                        margin: const EdgeInsets.only(left: 4),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 2,
+                              height: AppSpacing.lg,
+                              color: AppColors.gray300,
+                            ),
+                          ],
                         ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Row(
+                        children: [
+                          Container(
+                            width: AppSpacing.sm,
+                            height: AppSpacing.sm,
+                            decoration: const BoxDecoration(
+                              color: AppColors.error,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              _currentTrip!.destinationAddress,
+                              style: AppTypography.bodyMedium,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              
-              // Botões de ação (Chat e Ligar) - apenas quando motorista está a caminho ou em viagem
-              if (_currentTrip != null && 
-                  (_currentTrip!.status.toLowerCase() == 'accepted' || 
-                   _currentTrip!.status.toLowerCase() == 'in_progress')) ...[
+              ],
+
+              if (_currentDriver != null) ...[
                 const SizedBox(height: AppSpacing.lg),
-                
+
+                // Informações do motorista
                 Row(
                   children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _callDriver,
-                        icon: const Icon(Icons.phone),
-                        label: const Text('Ligar'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.lightPrimary,
-                          side: const BorderSide(),
-                        ),
+                    const CircleAvatar(
+                      radius: AppSpacing.lg,
+                      backgroundColor: AppColors.lightPrimary,
+                      child: Icon(
+                        Icons.person,
+                        color: AppColors.lightOnPrimary,
                       ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _chatWithDriver,
-                        icon: const Icon(Icons.chat),
-                        label: const Text('Chat'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.lightPrimary,
-                          side: const BorderSide(),
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Motorista',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.gray500,
+                            ),
+                          ),
+                          Text(
+                            'Motorista ${_currentDriver!.id.substring(0, 8)}',
+                            style: AppTypography.titleSmall,
+                          ),
+                        ],
                       ),
+                    ),
+                    // Avaliação do motorista
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.star,
+                          size: AppSpacing.md,
+                          color: AppColors.warning,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          _currentDriver!.ratings.toStringAsFixed(1),
+                          style: AppTypography.bodySmall,
+                        ),
+                      ],
                     ),
                   ],
                 ),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // Informações do veículo
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightSurface,
+                    borderRadius: BorderRadius.circular(AppSpacing.sm),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.directions_car,
+                        color: AppColors.lightPrimary,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          '${_currentDriver!.brand} ${_currentDriver!.model} ${_currentDriver!.color}',
+                          style: AppTypography.bodyMedium,
+                        ),
+                      ),
+                      Text(
+                        _currentDriver!.plate,
+                        style: AppTypography.titleSmall.copyWith(
+                          fontWeight: AppTypography.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // Tempo estimado de chegada
+                if (_currentTrip!.status.toLowerCase() == 'accepted')
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppSpacing.sm),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          size: AppSpacing.md,
+                          color: AppColors.warning,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          'Chegada estimada: ${_getEstimatedArrival()}',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.warning,
+                            fontWeight: AppTypography.medium,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Botões de ação (Chat e Ligar) - apenas quando motorista está a caminho ou em viagem
+                if (_currentTrip != null &&
+                    (_currentTrip!.status.toLowerCase() == 'accepted' ||
+                        _currentTrip!.status.toLowerCase() ==
+                            'in_progress')) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _callDriver,
+                          icon: const Icon(Icons.phone),
+                          label: const Text('Ligar'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.lightPrimary,
+                            side: const BorderSide(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _chatWithDriver,
+                          icon: const Icon(Icons.chat),
+                          label: const Text('Chat'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.lightPrimary,
+                            side: const BorderSide(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ],
-          ],
+          ),
         ),
-      ),
-    );
+      );
 }
