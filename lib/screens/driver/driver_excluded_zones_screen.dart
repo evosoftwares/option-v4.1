@@ -4,18 +4,19 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/app_config.dart';
 import '../../exceptions/app_exceptions.dart';
 import '../../models/supabase/driver_excluded_zone.dart';
-import '../../services/location_service_factory.dart';
+
 import '../../services/secure_driver_excluded_zones_service.dart';
 import '../../services/user_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/logo_branding.dart';
-import '../stepper/place_search_screen.dart';
 
+/// Tela de gerenciamento de zonas excluídas do motorista
+/// Sistema simplificado baseado em palavras-chave com 2 passos:
+/// Passo 1: Selecionar tipo de zona (Rua/Avenida, Bairro, Cidade)
+/// Passo 2: Digite a palavra-chave para exclusão
 class DriverExcludedZonesScreen extends StatefulWidget {
   const DriverExcludedZonesScreen({super.key});
-
-  static const routeName = '/driver_excluded_zones';
 
   @override
   State<DriverExcludedZonesScreen> createState() =>
@@ -23,31 +24,34 @@ class DriverExcludedZonesScreen extends StatefulWidget {
 }
 
 class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
+  // === SERVIÇOS ===
+  /// Serviço seguro para gerenciar zonas excluídas com validações
   late final SecureDriverExcludedZonesService _service;
-  late final LocationServiceBase _locationService;
-  final TextEditingController _neighborhoodController = TextEditingController();
-  final TextEditingController _cityController = TextEditingController();
-  final TextEditingController _stateController = TextEditingController();
+
+  // === CONTROLADORES ===
+  /// Controlador para o campo de entrada da palavra-chave
+  final TextEditingController _keywordController = TextEditingController();
+  /// Chave do formulário para validação
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
+  // === ESTADO DA TELA ===
+  /// Lista de zonas excluídas carregadas do banco de dados
   List<DriverExcludedZone> _excludedZones = [];
+  /// Indica se está carregando dados do servidor
   bool _isLoading = true;
-
+  /// ID do motorista logado - obtido do contexto de autenticação
   String? _driverId;
 
   @override
   void initState() {
     super.initState();
-    _service = SecureDriverExcludedZonesService(Supabase.instance.client);
-    _locationService = LocationServiceFactory.create(apiKey: AppConfig.googleMapsApiKey);
+    _service = SecureDriverExcludedZonesService();
     _loadDriverData();
   }
 
   @override
   void dispose() {
-    _neighborhoodController.dispose();
-    _cityController.dispose();
-    _stateController.dispose();
+    _keywordController.dispose();
     super.dispose();
   }
 
@@ -77,18 +81,21 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
     }
   }
 
+  /// Carrega todas as zonas excluídas do motorista do banco de dados
+  /// Atualiza a lista local com os dados mais recentes
   Future<void> _loadExcludedZones() async {
+    // Verifica se temos o ID do motorista necessário
     if (_driverId == null) {
-      print('DEBUG - Não foi possível carregar zonas: driverId é null');
+      print('DEBUG - Driver ID é null, não é possível carregar zonas');
       return;
     }
 
-    print('DEBUG - Carregando zonas para driver: $_driverId');
-
     try {
+      // Busca todas as zonas excluídas do motorista no banco
       final zones = await _service.getDriverExcludedZones(_driverId!);
       print('DEBUG - Zonas carregadas: ${zones.length} zonas encontradas');
 
+      // Atualiza o estado local com as zonas carregadas
       if (mounted) {
         setState(() {
           _excludedZones = zones;
@@ -103,10 +110,14 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
   }
 
 
-
+  /// Remove uma zona excluída específica do motorista
+  /// Chama o serviço para deletar do banco e atualiza a lista local
   Future<void> _removeExcludedZone(DriverExcludedZone zone) async {
     try {
+      // Remove a zona do banco de dados
       await _service.removeExcludedZone(zone.id);
+
+      // Recarrega a lista para refletir a remoção
       await _loadExcludedZones();
 
       if (mounted) {
@@ -137,82 +148,95 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
     );
   }
 
-  Future<void> _showZoneTypeSelectionDialog({
-    required String address,
-    required String neighborhood,
-    required String city,
-    required String state,
-  }) async {
+  /// PASSO 1: Exibe diálogo para selecionar o tipo de zona a excluir
+  /// Opções: Rua/Avenida, Bairro, Cidade
+  /// Sistema simplificado sem busca de endereço
+  Future<void> _showZoneTypeSelectionDialog() async {
+    // Define as opções de tipos de zona disponíveis
     final zoneOptions = [
+      {
+        'type': 'rua',
+        'icon': Icons.add_road,
+        'title': 'Rua/Avenida',
+        'description': 'Excluir uma rua ou avenida específica\n(ex: "Av. Paulista", "Rua Augusta")',
+      },
       {
         'type': 'bairro',
         'icon': Icons.location_city,
-        'title': 'Apenas este bairro',
-        'subtitle': 'Excluir: $neighborhood',
-        'description': 'Não receber corridas apenas neste bairro específico',
-        'keyword': neighborhood,
+        'title': 'Bairro',
+        'description': 'Excluir um bairro completo\n(ex: "Centro", "Copacabana")',
       },
       {
         'type': 'cidade',
         'icon': Icons.location_on,
-        'title': 'Toda a cidade',
-        'subtitle': 'Excluir: $city',
-        'description': 'Não receber corridas em toda a cidade de $city',
-        'keyword': city,
-      },
-      {
-        'type': 'estado',
-        'icon': Icons.map,
-        'title': 'Todo o estado',
-        'subtitle': 'Excluir: $state',
-        'description': 'Não receber corridas em todo o estado de $state',
-        'keyword': state,
+        'title': 'Cidade',
+        'description': 'Excluir uma cidade inteira\n(ex: "São Paulo", "Rio de Janeiro")',
       },
     ];
 
+    // Exibe o diálogo de seleção de tipo
     final selectedOption = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Escolha o tipo de exclusão'),
+          title: Row(
+            children: [
+              Icon(Icons.block, color: Theme.of(context).primaryColor),
+              const SizedBox(width: 8),
+              const Text('Escolha o tipo de exclusão'),
+            ],
+          ),
           content: SizedBox(
             width: double.maxFinite,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'Local selecionado:',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                // Texto explicativo
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info, color: Colors.blue.shade600, size: 20),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Selecione o que você deseja excluir das suas zonas de trabalho:',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  address,
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
                 const SizedBox(height: 16),
-                const Text('Selecione o nível de exclusão desejado:'),
-                const SizedBox(height: 16),
+
+                // Lista de opções de tipo de zona
                 ...zoneOptions.map((option) => Card(
                   margin: const EdgeInsets.only(bottom: 8),
+                  elevation: 2,
                   child: ListTile(
-                    leading: Icon(option['icon'] as IconData),
-                    title: Text(option['title'] as String),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          option['subtitle'] as String,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          option['description'] as String,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        option['icon'] as IconData,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    title: Text(
+                      option['title'] as String,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      option['description'] as String,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                     onTap: () => Navigator.of(context).pop(option),
                   ),
@@ -230,271 +254,218 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
       },
     );
 
+    // Se o usuário selecionou um tipo, prossegue para o passo 2
     if (selectedOption != null && mounted) {
-      await _addZoneWithSelectedType(selectedOption, city, state);
+      await _showKeywordInputDialog(selectedOption);
     }
   }
 
-  Future<void> _addZoneWithSelectedType(
-    Map<String, dynamic> selectedOption,
-    String city,
-    String state,
-  ) async {
+  /// PASSO 2: Exibe diálogo para capturar a palavra-chave
+  /// Campo de texto simples onde o usuário digita o que deseja excluir
+  Future<void> _showKeywordInputDialog(Map<String, dynamic> zoneType) async {
+    // Limpa o campo antes de exibir
+    _keywordController.clear();
+
+    // Define texto de ajuda baseado no tipo selecionado
+    String hintText;
+    String helperText;
+    List<String> examples;
+
+    switch (zoneType['type'] as String) {
+      case 'rua':
+        hintText = 'Digite o nome da rua ou avenida';
+        helperText = 'Nome completo ou parte do nome da via';
+        examples = ['Av. Paulista', 'Rua Augusta', 'Marginal Tietê'];
+        break;
+      case 'bairro':
+        hintText = 'Digite o nome do bairro';
+        helperText = 'Nome do bairro que deseja excluir';
+        examples = ['Centro', 'Copacabana', 'Vila Madalena'];
+        break;
+      case 'cidade':
+        hintText = 'Digite o nome da cidade';
+        helperText = 'Nome da cidade que deseja excluir';
+        examples = ['São Paulo', 'Rio de Janeiro', 'Belo Horizonte'];
+        break;
+      default:
+        hintText = 'Digite a palavra-chave';
+        helperText = 'Termo que deseja excluir';
+        examples = ['Exemplo'];
+    }
+
+    // Exibe o diálogo de entrada de palavra-chave
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(zoneType['icon'] as IconData, color: Theme.of(context).primaryColor),
+              const SizedBox(width: 8),
+              Text('Excluir ${zoneType['title']}'),
+            ],
+          ),
+          content: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Explicação do que será feito
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.warning_amber, color: Colors.orange.shade600, size: 20),
+                          const SizedBox(width: 8),
+                          const Text('Você não receberá corridas em:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Qualquer ${zoneType['title'].toString().toLowerCase()} que contenha a palavra digitada',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Campo de entrada da palavra-chave
+                TextFormField(
+                  controller: _keywordController,
+                  decoration: InputDecoration(
+                    labelText: zoneType['title'] as String,
+                    hintText: hintText,
+                    helperText: helperText,
+                    helperMaxLines: 2,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: Icon(zoneType['icon'] as IconData),
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Digite a palavra-chave para exclusão';
+                    }
+                    if (value.trim().length < 2) {
+                      return 'Digite pelo menos 2 caracteres';
+                    }
+                    return null;
+                  },
+                  autofocus: true,
+                ),
+                const SizedBox(height: 16),
+
+                // Exemplos para ajudar o usuário
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.lightbulb, color: Colors.green.shade600, size: 20),
+                          const SizedBox(width: 8),
+                          const Text('Exemplos:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        examples.join(', '),
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  Navigator.of(context).pop(true);
+                }
+              },
+              child: const Text('Adicionar Exclusão'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // Se o usuário confirmou, adiciona a zona excluída
+    if (confirmed == true && mounted) {
+      await _addZoneWithKeyword(zoneType);
+    }
+  }
+
+  /// Adiciona uma nova zona excluída com a palavra-chave digitada pelo usuário
+  /// Salva no banco de dados e atualiza a lista local
+  Future<void> _addZoneWithKeyword(Map<String, dynamic> zoneType) async {
     try {
-      final zoneType = selectedOption['type'] as String;
-      final keyword = selectedOption['keyword'] as String;
+      // Obtém dados do formulário
+      final keyword = _keywordController.text.trim();
+      final type = zoneType['type'] as String;
 
-      print('DEBUG - Adicionando zona: type=$zoneType, keyword=$keyword');
+      print('DEBUG - Adicionando zona: type=$type, keyword=$keyword');
 
+      // Chama o serviço para salvar no banco
       final zone = await _service.addExcludedZoneWithType(
         driverId: _driverId!,
         keyword: keyword,
-        zoneType: zoneType,
-        city: city,
-        state: state,
+        zoneType: type,
+        city: 'N/A', // Sistema simplificado não requer cidade específica
+        state: 'N/A', // Sistema simplificado não requer estado específico
       );
 
       print('DEBUG - Zona salva com sucesso: ${zone.id}');
 
-      // Recarregar lista
+      // Recarrega a lista para mostrar a nova zona
       await _loadExcludedZones();
 
+      // Exibe mensagem de sucesso
       _showSuccessSnackBar(
-        'Zona excluída adicionada: ${selectedOption['subtitle']}',
+        'Exclusão adicionada: $keyword (${zoneType['title']})',
       );
     } catch (error) {
       print('DEBUG - Erro ao salvar zona: $error');
-      _showErrorSnackBar('Erro ao salvar: ${error.toString()}');
+      _showErrorSnackBar('Erro ao salvar exclusão: ${error.toString()}');
     }
   }
 
+  /// Inicia o processo de adição de nova zona excluída
+  /// Sistema simplificado: apenas verifica autenticação e chama o primeiro passo
   Future<void> _showAddZoneDialog() async {
+    // Verifica se o motorista está identificado
     if (_driverId == null) {
       _showErrorSnackBar('Erro: Motorista não identificado');
       return;
     }
 
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PlaceSearchScreen(
-          locationService: _locationService,
-        ),
-      ),
-    );
-
-    if (result != null && mounted) {
-      // Debug: Ver o que foi retornado
-      print('DEBUG - Resultado da busca: $result');
-
-      // Mostrar loading enquanto processa
-      final loadingContext = context;
-      showDialog(
-        context: loadingContext,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-
-      try {
-        // Extrair informações do local selecionado
-        final address = result['address'] as String? ?? '';
-        print('DEBUG - Endereço recebido: "$address"');
-
-        final addressParts = _parseAddress(address);
-        print('DEBUG - Partes do endereço: $addressParts');
-
-        // Preparar dados para adição com validação robusta
-        final neighborhood = (addressParts['neighborhood'] ?? '').trim();
-        final city = (addressParts['city'] ?? '').trim();
-        final state = (addressParts['state'] ?? '').trim().toUpperCase();
-
-        print(
-            'DEBUG - Processado: neighborhood="$neighborhood", city="$city", state="$state"');
-
-        // Validar se temos informações mínimas
-        if (neighborhood.isNotEmpty &&
-            city.isNotEmpty &&
-            state.isNotEmpty &&
-            state.length == 2) {
-          // Verificar se é uma sigla de estado válida
-          final validStates = {
-            'AC',
-            'AL',
-            'AP',
-            'AM',
-            'BA',
-            'CE',
-            'DF',
-            'ES',
-            'GO',
-            'MA',
-            'MT',
-            'MS',
-            'MG',
-            'PA',
-            'PB',
-            'PR',
-            'PE',
-            'PI',
-            'RJ',
-            'RN',
-            'RS',
-            'RO',
-            'RR',
-            'SC',
-            'SP',
-            'SE',
-            'TO'
-          };
-
-          if (validStates.contains(state)) {
-            // Fechar dialog de loading e mostrar seleção de tipo
-            if (mounted && Navigator.canPop(loadingContext)) {
-              Navigator.of(loadingContext).pop();
-
-              // Mostrar dialog para selecionar tipo de exclusão
-              await _showZoneTypeSelectionDialog(
-                address: address,
-                neighborhood: neighborhood,
-                city: city,
-                state: state,
-              );
-            }
-          } else {
-            // Estado inválido
-            if (mounted && Navigator.canPop(loadingContext)) {
-              Navigator.of(loadingContext).pop();
-              _showErrorSnackBar(
-                  'Estado inválido identificado. Por favor, selecione um endereço no Brasil.');
-            }
-          }
-        } else {
-          // Informações incompletas
-          if (mounted && Navigator.canPop(loadingContext)) {
-            Navigator.of(loadingContext).pop();
-            _showErrorSnackBar(
-                'Não foi possível identificar o endereço completo. Tente um endereço mais específico.');
-          }
-        }
-      } catch (e) {
-        // Handle any other exceptions that might occur
-        print('DEBUG - Erro inesperado: $e');
-        if (mounted && Navigator.canPop(loadingContext)) {
-          Navigator.of(loadingContext).pop();
-          _showErrorSnackBar('Ocorreu um erro inesperado. Por favor, tente novamente.');
-        }
-      }
-    }
+    // Inicia o processo de 2 passos: primeiro seleciona o tipo
+    await _showZoneTypeSelectionDialog();
   }
 
-  Map<String, String> _parseAddress(String address) {
-    final parts = address.split(',').map((p) => p.trim()).toList();
-    final result = <String, String>{};
-
-    print('DEBUG - Partes separadas: $parts');
-
-    if (parts.isEmpty) return result;
-
-    // 1. Identificar o estado (sigla de 2 letras)
-    String? state;
-    for (int i = parts.length - 1; i >= 0; i--) {
-      final stateMatch = RegExp(r'\b([A-Z]{2})\b').firstMatch(parts[i]);
-      if (stateMatch != null) {
-        state = stateMatch.group(1)!;
-        result['state'] = state;
-        break;
-      }
-    }
-
-    // 2. Identificar a cidade (busca sistemática)
-    String? city;
-    for (int i = 0; i < parts.length; i++) {
-      String part = parts[i].trim();
-
-      // Pular se for o país
-      if (part.toLowerCase().contains('brasil')) continue;
-
-      // Pular se for só CEP
-      if (RegExp(r'^\d{5}-?\d{3}$').hasMatch(part)) continue;
-
-      // Limpar CEP da parte
-      part = part.replaceAll(RegExp(r'\d{5}-?\d{3}'), '').trim();
-
-      // Se tem estado junto, remover (ex: "Cairu - BA" -> "Cairu")
-      if (state != null && part.endsWith(' - $state')) {
-        part = part.replaceAll(' - $state', '').trim();
-      }
-
-      // Verificar se é uma cidade válida
-      if (part.isNotEmpty &&
-          part.length > 1 &&
-          !RegExp(r'^[A-Z]{2}$').hasMatch(part) && // Não é só sigla do estado
-          !part.toLowerCase().contains('brasil')) {
-        // Se não tem hífen, é provável que seja cidade
-        if (!part.contains(' - ')) {
-          // Verificar se não é a primeira parte (que geralmente é bairro)
-          if (i > 0 || parts.length <= 2) {
-            city = part;
-            break;
-          }
-        }
-        // Se tem hífen, pode ser cidade composta (ex: "Rio de Janeiro")
-        else {
-          // Verificar se parece com nome de cidade (mais de uma palavra sem hífen interno)
-          final cityCandidate = part.split(' - ').last.trim();
-          if (cityCandidate.split(' ').length >= 2 ||
-              cityCandidate.length > 4) {
-            city = cityCandidate;
-            break;
-          }
-        }
-      }
-    }
-
-    // Fallback para cidade: pegar parte não-Brasil, não-CEP, não-primeira-parte
-    if (city == null && parts.length > 2) {
-      for (int i = 1; i < parts.length - 1; i++) {
-        String part = parts[i].replaceAll(RegExp(r'\d{5}-?\d{3}'), '').trim();
-        if (state != null) {
-          part = part.replaceAll(' - $state', '').trim();
-        }
-
-        if (part.isNotEmpty &&
-            !part.toLowerCase().contains('brasil') &&
-            !RegExp(r'^[A-Z]{2}$').hasMatch(part)) {
-          city = part;
-          break;
-        }
-      }
-    }
-
-    if (city != null) {
-      result['city'] = city;
-    }
-
-    // 3. Identificar o bairro (primeira parte, antes do hífen)
-    if (parts.isNotEmpty) {
-      String neighborhood = parts.first.trim();
-
-      // Se tem hífen, pegar só a primeira parte antes do hífen
-      if (neighborhood.contains(' - ')) {
-        neighborhood = neighborhood.split(' - ').first.trim();
-      }
-
-      if (neighborhood.isNotEmpty &&
-          !neighborhood.toLowerCase().contains('brasil') &&
-          neighborhood != city &&
-          neighborhood != state) {
-        result['neighborhood'] = neighborhood;
-      }
-    }
-
-    print('DEBUG - Resultado do parsing: $result');
-    return result;
-  }
-
+  /// Exibe diálogo de confirmação antes de remover uma zona excluída
+  /// Mostra informações claras sobre o que será removido usando displayName
   void _showRemoveConfirmation(DriverExcludedZone zone) {
     showDialog(
       context: context,
@@ -718,6 +689,149 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  /// Constrói o estado vazio quando não há zonas excluídas
+  /// Mostra ilustração e instruções sobre o novo sistema
+  Widget _buildEmptyState(ColorScheme colorScheme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Ícone ilustrativo
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceVariant.withOpacity(0.5),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.location_off,
+              size: 64,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Título do estado vazio
+          Text(
+            'Nenhuma zona excluída',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Instruções sobre o novo sistema
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              'Use o botão acima para adicionar palavras-chave e excluir ruas, bairros ou cidades específicas.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Exemplos de uso do sistema
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.lightbulb, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    const Text('Exemplos de exclusões:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text('• Rua: "Av. Paulista", "Rua Augusta"', style: TextStyle(fontSize: 13)),
+                const Text('• Bairro: "Centro", "Copacabana"', style: TextStyle(fontSize: 13)),
+                const Text('• Cidade: "São Paulo", "Rio de Janeiro"', style: TextStyle(fontSize: 13)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Constrói a lista de zonas excluídas
+  /// Cada item mostra a palavra-chave e tipo usando displayName
+  Widget _buildZonesList(ColorScheme colorScheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Cabeçalho da lista com contador
+        Text(
+          'Exclusões Ativas (${_excludedZones.length})',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Lista scrollável das zonas excluídas
+        Expanded(
+          child: ListView.builder(
+            itemCount: _excludedZones.length,
+            itemBuilder: (context, index) {
+              final zone = _excludedZones[index];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: AppCard(
+                  child: ListTile(
+                    // Ícone indicativo de exclusão
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.error.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.location_off,
+                        color: colorScheme.error,
+                      ),
+                    ),
+
+                    // Título: usa displayName para mostrar keyword e tipo corretamente
+                    // Ex: "Centro (Bairro)" ou "Av. Paulista (Rua/Avenida)"
+                    title: Text(
+                      zone.displayName, // ✅ Usa propriedade correta que trata keyword-based e legacy
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    // Subtítulo: mostra informações adicionais se disponíveis
+                    subtitle: zone.isKeywordBased
+                        ? Text('Tipo: ${zone.zoneType?.toUpperCase() ?? "N/A"}')
+                        : Text('${zone.city}, ${zone.state}'), // Para zonas legadas
+
+                    // Botão de remoção
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      tooltip: 'Remover exclusão',
+                      onPressed: () => _showRemoveConfirmation(zone),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
