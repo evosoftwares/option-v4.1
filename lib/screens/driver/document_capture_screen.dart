@@ -530,7 +530,7 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
               },
               errorBuilder: (context, error, stackTrace) => Container(
                 color: AppColors.gray100,
-                child: Column(
+                child: const Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
@@ -538,7 +538,7 @@ class _DocumentCaptureScreenState extends State<DocumentCaptureScreen> {
                       color: AppColors.error,
                       size: 32,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(
                       'Erro ao carregar imagem',
                       style: TextStyle(

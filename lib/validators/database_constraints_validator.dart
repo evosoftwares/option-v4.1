@@ -257,13 +257,13 @@ class DatabaseConstraintsValidator {
     final cleanPlate = plateStr.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
     
     if (cleanPlate.length != 7) {
-      throw ValidationException('Placa deve ter exatamente 7 caracteres (ex: ABC1234)');
+      throw const ValidationException('Placa deve ter exatamente 7 caracteres (ex: ABC1234)');
     }
     
     // Formato brasileiro: ABC1234 ou ABC1D23 (Mercosul)
     final plateRegex = RegExp(r'^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$');
     if (!plateRegex.hasMatch(cleanPlate)) {
-      throw ValidationException('Formato de placa inválido. Use ABC1234 ou ABC1D23');
+      throw const ValidationException('Formato de placa inválido. Use ABC1234 ou ABC1D23');
     }
   }
   

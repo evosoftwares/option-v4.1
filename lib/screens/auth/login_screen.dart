@@ -196,8 +196,8 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Text('Cadastro Não Aprovado'),
-        content: Text(
+        title: const Text('Cadastro Não Aprovado'),
+        content: const Text(
           'Infelizmente sua solicitação para se tornar motorista parceiro não foi aprovada.\n\n'
           'Você pode tentar novamente atualizando seus documentos ou entrar em contato com nosso suporte.',
         ),
@@ -207,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Navigator.of(context).pop();
               Navigator.of(context).pushReplacementNamed('/driver_documents');
             },
-            child: Text('Atualizar Documentos'),
+            child: const Text('Atualizar Documentos'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -215,7 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Navigator.of(context)
                   .pushReplacementNamed('/driver_approval_pending');
             },
-            child: Text('Ver Detalhes'),
+            child: const Text('Ver Detalhes'),
           ),
         ],
       ),
@@ -269,8 +269,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               if (v.isEmpty) return 'Informe seu e-mail';
                               final emailRegex =
                                   RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-                              if (!emailRegex.hasMatch(v))
+                              if (!emailRegex.hasMatch(v)) {
                                 return 'E-mail inválido';
+                              }
                               return null;
                             },
                           ),
@@ -281,8 +282,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             validator: (value) {
                               final v = value ?? '';
                               if (v.isEmpty) return 'Informe sua senha';
-                              if (v.length < 6)
+                              if (v.length < 6) {
                                 return 'A senha deve ter ao menos 6 caracteres';
+                              }
                               return null;
                             },
                           ),
@@ -341,7 +343,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           // Diagnóstico e debug options
-                          Column(
+                          const Column(
                             children: [
                               // Botão de diagnóstico
                               SizedBox(height: AppSpacing.xs),

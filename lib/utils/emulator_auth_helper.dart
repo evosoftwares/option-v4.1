@@ -123,7 +123,7 @@ class EmulatorAuthHelper {
     try {
       // Aqui você chamaria o AuthService normal
       // Por enquanto, vou simular uma chamada
-      await Future.delayed(Duration(seconds: 1));
+      await Future.delayed(const Duration(seconds: 1));
 
       // Se chegou aqui sem erro, foi sucesso
       return {
@@ -160,7 +160,7 @@ class EmulatorAuthHelper {
   }) async {
     try {
       // Aqui você chamaria o AuthService normal para login
-      await Future.delayed(Duration(seconds: 1));
+      await Future.delayed(const Duration(seconds: 1));
 
       return {
         'success': true,

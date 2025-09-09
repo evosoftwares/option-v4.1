@@ -30,7 +30,7 @@ Future<void> testBasicSignup(String supabaseUrl, String apiKey) async {
   
   final timestamp = DateTime.now().millisecondsSinceEpoch;
   final testEmail = 'teste_signup_$timestamp@exemplo.com';
-  final testPassword = 'SenhaSegura123!';
+  const testPassword = 'SenhaSegura123!';
   
   print('📧 Testando com email: $testEmail');
   
@@ -60,7 +60,7 @@ Future<void> testBasicSignup(String supabaseUrl, String apiKey) async {
     final responseBody = await response.transform(utf8.decoder).join();
     
     print('📊 Status Code: ${response.statusCode}');
-    print('📄 Response: ${responseBody.length > 200 ? responseBody.substring(0, 200) + '...' : responseBody}');
+    print('📄 Response: ${responseBody.length > 200 ? '${responseBody.substring(0, 200)}...' : responseBody}');
     
     if (response.statusCode == 500) {
       throw Exception('❌ ERRO 500 AINDA PRESENTE!\nResponse: $responseBody');
@@ -106,7 +106,7 @@ Future<void> testMultipleSignups(String supabaseUrl, String apiKey) async {
   // Criar 3 signups simultâneos
   for (int i = 0; i < 3; i++) {
     final email = 'teste_simultaneo_${timestamp}_$i@exemplo.com';
-    final password = 'SenhaSegura123!';
+    const password = 'SenhaSegura123!';
     
     futures.add(
       _performHttpSignup(supabaseUrl, apiKey, email, password, i)

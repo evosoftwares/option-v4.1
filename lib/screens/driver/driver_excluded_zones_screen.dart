@@ -45,7 +45,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
   @override
   void initState() {
     super.initState();
-    _service = SecureDriverExcludedZonesService();
+    _service = SecureDriverExcludedZonesService(Supabase.instance.client);
     _loadDriverData();
   }
 
@@ -240,7 +240,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
                     ),
                     onTap: () => Navigator.of(context).pop(option),
                   ),
-                )).toList(),
+                )),
               ],
             ),
           ),
@@ -499,7 +499,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: StandardAppBar(
+      appBar: const StandardAppBar(
         title: 'Zonas Excluídas',
         showMenuIcon: true,
         showBackButton: true,
@@ -703,7 +703,7 @@ class _DriverExcludedZonesScreenState extends State<DriverExcludedZonesScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceVariant.withOpacity(0.5),
+              color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
               shape: BoxShape.circle,
             ),
             child: Icon(

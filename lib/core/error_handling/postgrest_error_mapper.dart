@@ -48,7 +48,7 @@ class PostgrestErrorMapper {
       
       // Erro de sintaxe SQL
       case '42601':
-        return app_exc.DatabaseException('Erro de sintaxe na consulta', 'SQL_SYNTAX_ERROR');
+        return const app_exc.DatabaseException('Erro de sintaxe na consulta', 'SQL_SYNTAX_ERROR');
       
       // Tabela ou coluna não existe
       case '42P01':
@@ -57,15 +57,15 @@ class PostgrestErrorMapper {
       
       // Timeout de conexão
       case 'PGRST001':
-        return app_exc.NetworkException('Timeout de conexão com o banco', 'CONNECTION_TIMEOUT');
+        return const app_exc.NetworkException('Timeout de conexão com o banco', 'CONNECTION_TIMEOUT');
       
       // Erro de autenticação JWT
       case 'PGRST301':
-        return app_exc.AuthenticationException('Token de autenticação inválido', 'INVALID_JWT');
+        return const app_exc.AuthenticationException('Token de autenticação inválido', 'INVALID_JWT');
       
       // Sessão expirada
       case 'PGRST302':
-        return app_exc.AuthenticationException('Sessão expirada', 'SESSION_EXPIRED');
+        return const app_exc.AuthenticationException('Sessão expirada', 'SESSION_EXPIRED');
       
       default:
         return _handleGenericError(error, errorContext);
@@ -87,15 +87,15 @@ class PostgrestErrorMapper {
     }
     
     if (lowerMessage.contains('license_plate') || lowerDetails.contains('placa')) {
-      return app_exc.DatabaseException('Esta placa já está cadastrada por outro motorista', 'DUPLICATE_LICENSE_PLATE');
+      return const app_exc.DatabaseException('Esta placa já está cadastrada por outro motorista', 'DUPLICATE_LICENSE_PLATE');
     }
     
     if (lowerMessage.contains('cpf')) {
-      return app_exc.DatabaseException('Este CPF já está cadastrado', 'DUPLICATE_CPF');
+      return const app_exc.DatabaseException('Este CPF já está cadastrado', 'DUPLICATE_CPF');
     }
     
     if (lowerMessage.contains('cnpj')) {
-      return app_exc.DatabaseException('Este CNPJ já está cadastrado', 'DUPLICATE_CNPJ');
+      return const app_exc.DatabaseException('Este CNPJ já está cadastrado', 'DUPLICATE_CNPJ');
     }
     
     // Duplicação genérica
@@ -107,18 +107,18 @@ class PostgrestErrorMapper {
     final lowerMessage = message.toLowerCase();
     
     if (lowerMessage.contains('user') || lowerMessage.contains('usuario')) {
-      return app_exc.UserNotFoundException();
+      return const app_exc.UserNotFoundException();
     }
     
     if (lowerMessage.contains('trip') || lowerMessage.contains('viagem')) {
-      return app_exc.DatabaseException('Viagem não encontrada', 'TRIP_NOT_FOUND');
+      return const app_exc.DatabaseException('Viagem não encontrada', 'TRIP_NOT_FOUND');
     }
     
     if (lowerMessage.contains('driver') || lowerMessage.contains('motorista')) {
-      return app_exc.DatabaseException('Motorista não encontrado', 'DRIVER_NOT_FOUND');
+      return const app_exc.DatabaseException('Motorista não encontrado', 'DRIVER_NOT_FOUND');
     }
     
-    return app_exc.DatabaseException('Registro não encontrado', 'NOT_FOUND');
+    return const app_exc.DatabaseException('Registro não encontrado', 'NOT_FOUND');
   }
   
   /// Trata erros de permissão/RLS

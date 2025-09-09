@@ -42,15 +42,15 @@ void main() {
       };
       
       final tripOptionsScreen = TripOptionsScreen.fromArgs(tripOptionsArgs);
-      expect(tripOptionsScreen.origin.name, equals('Casa do João'));
-      expect(tripOptionsScreen.destination.name, equals('Shopping Eldorado'));
+      expect(tripOptionsScreen.origin['name'], equals('Casa do João'));
+      expect(tripOptionsScreen.destination['name'], equals('Shopping Eldorado'));
       print('✅ TripOptionsScreen criado com sucesso');
       
       // 3. SIMULAÇÃO DOS ARGUMENTOS DO TripOptionsScreen para DriverSelectionScreen
       print('\n🚗 TESTANDO navegação para DriverSelectionScreen...');
       final driverSelectionArgs = {
-        'origin': tripOptionsScreen.origin.toJson(),
-        'destination': tripOptionsScreen.destination.toJson(),
+        'origin': tripOptionsScreen.origin,
+        'destination': tripOptionsScreen.destination,
         'vehicle_category': 'standard',
         'needsPet': false,
         'needsGrocery': true,

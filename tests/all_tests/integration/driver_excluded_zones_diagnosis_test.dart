@@ -65,7 +65,7 @@ void main() {
         // COMO DEVERIA FUNCIONAR:
         print('');
         print('🎯 COMO DEVERIA FUNCIONAR:');
-        final correctCriteria = MatchingCriteria(
+        const correctCriteria = MatchingCriteria(
           passengerLatitude: -22.9711,
           passengerLongitude: -43.1822,
           originNeighborhood: 'Copacabana',    // ✅ DEVERIA ter esta info
@@ -86,7 +86,7 @@ void main() {
         // COMO ESTÁ FUNCIONANDO ATUALMENTE:
         print('');
         print('❌ COMO ESTÁ FUNCIONANDO ATUALMENTE:');
-        final brokenCriteria = MatchingCriteria(
+        const brokenCriteria = MatchingCriteria(
           passengerLatitude: -22.9711,
           passengerLongitude: -43.1822,
           originNeighborhood: null,    // ❌ SEMPRE null - não populado

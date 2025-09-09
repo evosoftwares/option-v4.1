@@ -31,7 +31,7 @@ class SupabaseHelper {
       // Avoid triggering Supabase.instance assertion in debug/profile when not initialized.
       print('❌ [SUPABASE_HELPER] Supabase não inicializado. Verifique as variáveis de ambiente.');
       print('❌ [SUPABASE_HELPER] SUPABASE_URL: ${AppConfig.supabaseUrl}');
-      print('❌ [SUPABASE_HELPER] SUPABASE_ANON_KEY: ${AppConfig.supabaseAnonKey.isNotEmpty ? AppConfig.supabaseAnonKey.substring(0, 20) + "..." : "VAZIO"}');
+      print('❌ [SUPABASE_HELPER] SUPABASE_ANON_KEY: ${AppConfig.supabaseAnonKey.isNotEmpty ? "${AppConfig.supabaseAnonKey.substring(0, 20)}..." : "VAZIO"}');
       
       // Log adicional para debug
       print('❌ [SUPABASE_HELPER] DIAGNÓSTICO:');

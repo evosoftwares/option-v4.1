@@ -6,7 +6,6 @@ import '../models/driver_status.dart';
 import '../services/driver_service.dart';
 import '../services/user_service.dart';
 import '../services/wallet_service.dart';
-import '../exceptions/app_exceptions.dart';
 
 class DriverStatusController extends ChangeNotifier {
   DriverStatusController() {

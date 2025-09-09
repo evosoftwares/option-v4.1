@@ -128,7 +128,7 @@ class DriverService {
     } on FormatException catch (e) {
       print(
           '❌ [DriverService.getDriver] FormatException ao processar dados: $e');
-      final error = DatabaseException(
+      const error = DatabaseException(
         'Erro ao processar dados do motorista. Por favor, tente novamente mais tarde.',
       );
 
@@ -149,7 +149,7 @@ class DriverService {
       print(
           '❌ [DriverService.getDriver] Exception não tratada: ${e.runtimeType} - $e');
       print('❌ [DriverService.getDriver] StackTrace: ${StackTrace.current}');
-      final error = DatabaseException(
+      const error = DatabaseException(
         'Erro inesperado ao buscar motorista. Por favor, tente novamente mais tarde.',
       );
 
@@ -252,7 +252,7 @@ class DriverService {
 
       throw mappedError;
     } catch (e) {
-      final error = DatabaseException(
+      const error = DatabaseException(
         'Erro inesperado ao buscar motorista. Por favor, tente novamente mais tarde.',
       );
 
@@ -415,15 +415,15 @@ class DriverService {
     } on ValidationException catch (e) {
       print('❌ [DriverService.createDriver] ValidationException: ${e.message}');
       // Re-throw validation exceptions without wrapping
-      throw e;
+      rethrow;
     } on DatabaseException catch (e) {
       print('❌ [DriverService.createDriver] DatabaseException: ${e.message}');
       // Re-throw database exceptions without wrapping
-      throw e;
+      rethrow;
     } on Exception catch (e) {
       print(
           '❌ [DriverService.createDriver] Exception não tratada: ${e.runtimeType} - $e');
-      final error = DatabaseException(
+      const error = DatabaseException(
         'Erro inesperado ao criar perfil de motorista. Por favor, tente novamente mais tarde.',
       );
 
@@ -957,14 +957,17 @@ class DriverService {
             dynamic fb =
                 _supabase.from('drivers').select().eq('is_online', true);
             fb = fb.or('approval_status.eq.approved,approval_status.is.null');
-            if (category != null && category.isNotEmpty)
+            if (category != null && category.isNotEmpty) {
               fb = fb.eq('vehicle_category', category);
+            }
             if (needsPet ?? false) fb = fb.eq('accepts_pet', true);
             if (needsGrocerySpace ?? false) fb = fb.eq('accepts_grocery', true);
-            if ((isCondoOrigin ?? false) || (isCondoDestination ?? false))
+            if ((isCondoOrigin ?? false) || (isCondoDestination ?? false)) {
               fb = fb.eq('accepts_condo', true);
-            if (needsAc ?? false)
+            }
+            if (needsAc ?? false) {
               fb = fb.or('ac_policy.eq.always_on,ac_policy.eq.on_request');
+            }
             fb = fb
                 .gte('current_latitude', latitude - latDelta)
                 .lte('current_latitude', latitude + latDelta)

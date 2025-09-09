@@ -316,6 +316,88 @@ class IndividualPricingService {
     
     return earthRadius * c;
   }
+
+  /// Calcula o preço individual para um motorista específico com breakdown detalhado
+  /// Retorna um PricingBreakdownResult com todos os componentes do preço
+  static Future<PricingBreakdownResult> calculateDriverPriceWithBreakdown({
+    required Driver driver,
+    required double totalDistanceKm,
+    required int totalDurationMinutes,
+    required VehicleCategoryData categoryData,
+    TripPreferences? preferences,
+    int numberOfStops = 0,
+    LatLng? originLocation,
+    LatLng? destinationLocation,
+    DriverOperationZonesService? operationZonesService,
+  }) async {
+    // 1. COMPONENTE DISTÂNCIA: PreçoKM_Aplicado * DistânciaTotal
+    final distanceComponent = calculateComponenteDistancia(
+      driver: driver,
+      totalDistanceKm: totalDistanceKm,
+      categoryData: categoryData,
+    );
+    
+    // 2. COMPONENTE TEMPO: PreçoMin_Aplicado * TempoTotal
+    final timeComponent = calculateComponenteTempo(
+      driver: driver,
+      totalDurationMinutes: totalDurationMinutes,
+      categoryData: categoryData,
+    );
+    
+    // 3. TAXAS ADICIONAIS
+    final additionalFees = _calculateDriverSpecificAdditionalFees(
+      driver: driver,
+      preferences: preferences ?? const TripPreferences(),
+      numberOfStops: numberOfStops,
+    );
+    
+    // 4. PREÇO BASE: ComponenteDistancia + ComponenteTempo + TaxasAdicionais
+    final basePrice = distanceComponent + timeComponent + additionalFees;
+    
+    // 5. MULTIPLICADOR DE ZONA: Verifica se a corrida está em área de atuação do motorista
+    double zoneMultiplier = 1.0;
+    if (operationZonesService != null && (originLocation != null || destinationLocation != null)) {
+      try {
+        // Verificar origem primeiro
+        if (originLocation != null) {
+          final originMultiplier = await operationZonesService.getPriceMultiplierForPoint(
+            driver.id,
+            originLocation,
+          );
+          if (originMultiplier > 1.0) {
+            zoneMultiplier = originMultiplier;
+          }
+        }
+        
+        // Se não achou na origem, verificar destino
+        if (zoneMultiplier == 1.0 && destinationLocation != null) {
+          final destinationMultiplier = await operationZonesService.getPriceMultiplierForPoint(
+            driver.id,
+            destinationLocation,
+          );
+          zoneMultiplier = destinationMultiplier;
+        }
+      } catch (e) {
+        // Em caso de erro, usar multiplicador padrão (1.0)
+        print('⚠️ Erro ao calcular multiplicador de zona para driver ${driver.id}: $e');
+      }
+    }
+    
+    // 6. PREÇO TOTAL: PreçoBase * MultiplicadorZona
+    final totalPrice = basePrice * zoneMultiplier;
+    
+    // Garantir preço mínimo (configurável via platform_settings)
+    final finalPrice = math.max(totalPrice, categoryData.minFare ?? 8.0);
+    
+    return PricingBreakdownResult(
+      totalPrice: finalPrice,
+      distanceComponent: distanceComponent,
+      timeComponent: timeComponent,
+      additionalFees: additionalFees,
+      zoneMultiplier: zoneMultiplier,
+      basePrice: basePrice,
+    );
+  }
 }
 
 /// Classe que combina informações do motorista com seu preço calculado
@@ -402,6 +484,51 @@ class PricingResult {
   double get priceRange => highestPrice - lowestPrice;
   
   /// Motoristas ordenados por preço
-  List<DriverPriceInfo> get sortedByPrice => 
+  List<DriverPriceInfo> get sortedByPrice =>
       IndividualPricingService.sortByPrice(driverPrices);
+}
+
+/// Resultado detalhado do breakdown de preços para transparência
+class PricingBreakdownResult {
+  const PricingBreakdownResult({
+    required this.totalPrice,
+    required this.distanceComponent,
+    required this.timeComponent,
+    required this.additionalFees,
+    required this.zoneMultiplier,
+    required this.basePrice,
+  });
+  
+  /// Preço total final
+  final double totalPrice;
+  
+  /// Componente de distância
+  final double distanceComponent;
+  
+  /// Componente de tempo
+  final double timeComponent;
+  
+  /// Taxas adicionais
+  final double additionalFees;
+  
+  /// Multiplicador de zona aplicado
+  final double zoneMultiplier;
+  
+  /// Preço base antes do multiplicador de zona
+  final double basePrice;
+  
+  /// Preço formatado para exibição
+  String get formattedTotalPrice => 'R\$ ${totalPrice.toStringAsFixed(2)}';
+  
+  /// Componente de distância formatado
+  String get formattedDistanceComponent => 'R\$ ${distanceComponent.toStringAsFixed(2)}';
+  
+  /// Componente de tempo formatado
+  String get formattedTimeComponent => 'R\$ ${timeComponent.toStringAsFixed(2)}';
+  
+  /// Taxas adicionais formatadas
+  String get formattedAdditionalFees => 'R\$ ${additionalFees.toStringAsFixed(2)}';
+  
+  @override
+  String toString() => 'PricingBreakdownResult(total: $formattedTotalPrice, distance: $formattedDistanceComponent, time: $formattedTimeComponent, fees: $formattedAdditionalFees, multiplier: $zoneMultiplier)';
 }

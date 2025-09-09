@@ -118,6 +118,6 @@ void main() {
   print('6. Teste a funcionalidade de marcar como lida');
   print('7. Teste o botão de voltar');
   
-  print('\n' + '=' * 60);
+  print('\n${'=' * 60}');
   print('🏁 TESTE CONCLUÍDO!');
 }

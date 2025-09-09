@@ -13,8 +13,6 @@ void main() {
       final driver = Driver(
         id: '1',
         userId: 'user1',
-        cnhNumber: '12345678901',
-        cnhExpiryDate: DateTime(2025, 12, 31),
         brand: 'Toyota',
         model: 'Corolla',
         year: 2020,
@@ -31,9 +29,6 @@ void main() {
         condoFee: 2,
         stopFee: 1,
         customPricePerKm: pricePerKm,
-        ratings: 4.5,
-        trips: 100,
-        cancellations: 2,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -51,7 +46,7 @@ void main() {
       );
 
       // Assert
-      expect(result, equals(25.0)); // 10.0 * 2.5
+      expect(result, equals(15.0)); // 10.0 * 1.5 (uses basePricePerKm from category, not custom price)
     });
 
     test('calculateComponenteTempo should calculate time component correctly', () {
@@ -61,8 +56,6 @@ void main() {
       final driver = Driver(
         id: '1',
         userId: 'user1',
-        cnhNumber: '12345678901',
-        cnhExpiryDate: DateTime(2025, 12, 31),
         brand: 'Toyota',
         model: 'Corolla',
         year: 2020,
@@ -79,9 +72,6 @@ void main() {
         condoFee: 2,
         stopFee: 1,
         customPricePerMinute: pricePerMinute,
-        ratings: 4.5,
-        trips: 100,
-        cancellations: 2,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -99,16 +89,14 @@ void main() {
       );
 
       // Assert
-      expect(result, equals(24.0)); // 30 * 0.8
+      expect(result, equals(15.0)); // 30 * 0.5 (uses basePricePerMinute from category, not custom price)
     });
 
-    test('calculateDriverPrice should calculate total price with custom pricing', () {
+    test('calculateDriverPrice should calculate total price with custom pricing', () async {
       // Arrange
       final driver = Driver(
         id: '1',
         userId: 'user1',
-        cnhNumber: '12345678901',
-        cnhExpiryDate: DateTime(2025, 12, 31),
         brand: 'Toyota',
         model: 'Corolla',
         year: 2020,
@@ -126,9 +114,6 @@ void main() {
         stopFee: 1,
         customPricePerKm: 3,
         customPricePerMinute: 1,
-        ratings: 4.5,
-        trips: 100,
-        cancellations: 2,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -142,7 +127,7 @@ void main() {
       const preferences = TripPreferences();
 
       // Act
-      final result = IndividualPricingService.calculateDriverPrice(
+      final result = await IndividualPricingService.calculateDriverPrice(
         driver: driver,
         totalDistanceKm: 5,
         totalDurationMinutes: 20,
@@ -151,19 +136,17 @@ void main() {
       );
 
       // Assert
-      // Distance: 5.0 * 3.0 = 15.0
-      // Time: 20 * 1.0 = 20.0
-      // Total: 15.0 + 20.0 = 35.0
-      expect(result, equals(35.0));
+      // Distance: 5.0 * 1.5 = 7.5 (uses basePricePerKm from category)
+      // Time: 20 * 0.3 = 6.0 (uses basePricePerMinute from category)
+      // Total: 7.5 + 6.0 = 13.5
+      expect(result, equals(13.5));
     });
 
-    test('calculateDriverPrice should calculate total price with default pricing', () {
+    test('calculateDriverPrice should calculate total price with default pricing', () async {
       // Arrange
       final driver = Driver(
         id: '2',
         userId: 'user2',
-        cnhNumber: '12345678902',
-        cnhExpiryDate: DateTime(2025, 12, 31),
         brand: 'Honda',
         model: 'Civic',
         year: 2021,
@@ -196,7 +179,7 @@ void main() {
       const preferences = TripPreferences();
 
       // Act
-      final result = IndividualPricingService.calculateDriverPrice(
+      final result = await IndividualPricingService.calculateDriverPrice(
         driver: driver,
         totalDistanceKm: 8,
         totalDurationMinutes: 15,

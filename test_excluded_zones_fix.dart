@@ -1,8 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'lib/models/supabase/driver_excluded_zone.dart';
-import 'lib/services/secure_driver_excluded_zones_service.dart';
-import 'lib/screens/driver/driver_excluded_zones_screen.dart';
 
 void main() {
   group('Excluded Zones Fix Tests', () {

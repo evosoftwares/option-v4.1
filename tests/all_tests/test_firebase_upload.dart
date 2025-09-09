@@ -29,12 +29,14 @@ void main() async {
 }
 
 class TestApp extends StatelessWidget {
+  const TestApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(title: Text('Firebase Test')),
-        body: Center(
+        appBar: AppBar(title: const Text('Firebase Test')),
+        body: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

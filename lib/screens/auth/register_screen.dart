@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../theme/app_spacing.dart';
 import '../../utils/supabase_helper.dart';
@@ -9,6 +10,7 @@ import '../../validators/database_constraints_validator.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/logo_branding.dart';
+import '../../services/user_preferences_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -26,6 +28,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final bool _isObscure = true;
   final bool _isConfirmObscure = true;
   bool _isSubmitting = false;
+  bool _hasAgreedToTerms = false;
+  bool _hasAgreedToAnalytics = false;
 
   @override
   void dispose() {
@@ -37,6 +41,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _onSubmit() async {
+    // Check if user has agreed to terms
+    if (!_hasAgreedToTerms) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Você precisa aceitar os Termos de Uso e Política de Privacidade para continuar.'),
+        ),
+      );
+      return;
+    }
+
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) {
       // Force rebuild to show validation errors
@@ -77,6 +92,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
         // Sucesso - usuário criado com token JWT válido
         print('🚀 [REGISTER] Registro bem-sucedido!');
         print('🚀 [REGISTER] User ID: ${response.user!.id}');
+
+        // Save user consent preferences
+        await UserPreferencesService().setPrivacyPolicyAccepted(true);
+        await UserPreferencesService().setAnalyticsConsent(_hasAgreedToAnalytics);
+        await UserPreferencesService().setMarketingConsent(false); // Default to false
+
+        // Also track the consent decision in analytics if they agreed
+        if (_hasAgreedToAnalytics) {
+          // We can't track this event because they just gave consent
+          // In a real implementation, we would send this to an analytics service
+          print('📊 [ANALYTICS] Novo usuário registrou consentimento para analytics: ${response.user!.id}');
+        } else {
+          print('⏭️  Usuário não deu consentimento para analytics');
+        }
 
         if (!mounted) return;
 
@@ -154,8 +183,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             validator: (value) {
                               final v = value?.trim() ?? '';
                               if (v.isEmpty) return 'Informe seu nome';
-                              if (v.length < 3)
+                              if (v.length < 3) {
                                 return 'O nome deve ter ao menos 3 caracteres';
+                              }
 
                               // Verificar se o usuário digitou um email no campo de nome
                               final emailRegex =
@@ -221,8 +251,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             validator: (value) {
                               final v = value ?? '';
                               if (v.isEmpty) return 'Informe sua senha';
-                              if (v.length < 6)
+                              if (v.length < 6) {
                                 return 'A senha deve ter ao menos 6 caracteres';
+                              }
                               return null;
                             },
                           ),
@@ -234,8 +265,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             validator: (value) {
                               final v = value ?? '';
                               if (v.isEmpty) return 'Confirme sua senha';
-                              if (v != _passwordController.text)
+                              if (v != _passwordController.text) {
                                 return 'As senhas não coincidem';
+                              }
                               return null;
                             },
                           ),
@@ -246,6 +278,77 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               color: colorScheme.onSurfaceVariant,
                             ),
                             textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Center(
+                            child: TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pushNamed('/privacy-policy');
+                              },
+                              child: Text(
+                                'Ler Política de Privacidade',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.primary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: _hasAgreedToTerms,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _hasAgreedToTerms = value ?? false;
+                                  });
+                                },
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _hasAgreedToTerms = !_hasAgreedToTerms;
+                                    });
+                                  },
+                                  child: Text(
+                                    'Li e aceito os Termos de Uso e Política de Privacidade',
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: _hasAgreedToAnalytics,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _hasAgreedToAnalytics = value ?? false;
+                                  });
+                                },
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _hasAgreedToAnalytics = !_hasAgreedToAnalytics;
+                                    });
+                                  },
+                                  child: Text(
+                                    'Aceito o uso de dados anônimos para melhorar a experiência do app',
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
                           SizedBox(

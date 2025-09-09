@@ -22,7 +22,7 @@ void main() async {
       'origin': 'Shopping Center',
       'destination': 'Aeroporto Internacional',
       'estimated_fare': '25.00',
-      'expires_at': DateTime.now().add(Duration(minutes: 5)).toIso8601String(),
+      'expires_at': DateTime.now().add(const Duration(minutes: 5)).toIso8601String(),
     },
   );
   

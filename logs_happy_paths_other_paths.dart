@@ -1,5 +1,6 @@
 /// LOGS PARA HAPPY PATHS E OTHER PATHS
 /// Sistema completo de logging para fluxos de sucesso e alternativos na aplicação OPTION
+library;
 
 import 'package:flutter/material.dart';
 import 'lib/services/app_logger.dart';
@@ -36,7 +37,7 @@ class HappyPathLogs {
     // Step 3: Upload de foto realizado
     AppLogger.stepper('📷 Foto de perfil enviada com sucesso', step: 3);
     AppLogger.upload('Foto de perfil processada', filename: 'profile_photo.jpg');
-    AppLogger.performance('photo_upload', Duration(seconds: 2), tag: 'HAPPY_PATH', metrics: {
+    AppLogger.performance('photo_upload', const Duration(seconds: 2), tag: 'HAPPY_PATH', metrics: {
       'file_size_kb': 245,
       'compression_applied': true,
       'quality_score': 0.85
@@ -102,20 +103,20 @@ class HappyPathLogs {
     );
     
     // Step 2: Matching rápido
-    await Future.delayed(Duration(seconds: 8));
+    await Future.delayed(const Duration(seconds: 8));
     AppLogger.trip('driver_matched', 'trip_123', driverId: 'driver_789', data: {
       'match_time_seconds': 8,
       'driver_rating': 4.9,
       'estimated_arrival_min': 3
     });
-    AppLogger.performance('driver_matching', Duration(seconds: 8), tag: 'HAPPY_PATH', metrics: {
+    AppLogger.performance('driver_matching', const Duration(seconds: 8), tag: 'HAPPY_PATH', metrics: {
       'nearby_drivers': 12,
       'match_accuracy': 0.95,
       'user_preferences_matched': 100
     });
     
     // Step 3: Motorista chegou
-    await Future.delayed(Duration(minutes: 3));
+    await Future.delayed(const Duration(minutes: 3));
     AppLogger.trip('driver_arrived', 'trip_123', data: {
       'arrival_punctuality': 'on_time',
       'wait_time_seconds': 0
@@ -135,7 +136,7 @@ class HappyPathLogs {
     AppLogger.gps('route_tracking_started', tag: 'HAPPY_PATH');
     
     // Step 5: Viagem finalizada
-    await Future.delayed(Duration(minutes: 42));
+    await Future.delayed(const Duration(minutes: 42));
     AppLogger.trip('trip_completed', 'trip_123', data: {
       'duration_minutes': 42,
       'distance_km': 35.2,
@@ -183,7 +184,7 @@ class HappyPathLogs {
     AppLogger.network('Payment Gateway Request', 'https://api.asaas.com/v3/payments',
       method: 'POST',
       statusCode: 200,
-      duration: Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 800),
       tag: 'HAPPY_PATH'
     );
     
@@ -245,7 +246,7 @@ class OtherPathLogs {
     // Processamento automático de melhoria
     AppLogger.background('photo_enhancement', 'started', tag: 'OTHER_PATH');
     AppLogger.background('photo_enhancement', 'completed', 
-      duration: Duration(seconds: 5),
+      duration: const Duration(seconds: 5),
       result: 'Enhanced quality to 85%',
       tag: 'OTHER_PATH'
     );
@@ -429,7 +430,7 @@ class EdgeCaseLogs {
     AppLogger.rateLimit('trip_requests', 'high_volume_detected',
       limit: 1000,
       remaining: 15,
-      resetTime: Duration(minutes: 1),
+      resetTime: const Duration(minutes: 1),
       tag: 'EDGE_CASE'
     );
     
@@ -525,7 +526,7 @@ class RecoveryPathLogs {
     
     // Tentar reconexão
     AppLogger.retry('network_reconnection', 1, maxAttempts: 5, 
-      delay: Duration(seconds: 5), 
+      delay: const Duration(seconds: 5), 
       reason: 'Network connectivity lost',
       tag: 'RECOVERY'
     );
@@ -545,7 +546,7 @@ class RecoveryPathLogs {
     AppLogger.crash('App restarted after crash', 
       context: {
         'last_screen': 'trip_tracking',
-        'crash_timestamp': DateTime.now().subtract(Duration(minutes: 2)).toIso8601String(),
+        'crash_timestamp': DateTime.now().subtract(const Duration(minutes: 2)).toIso8601String(),
         'recovery_mode': true
       },
       tag: 'RECOVERY'
@@ -626,22 +627,24 @@ class PathMapping {
 
 /// DEMONSTRAÇÃO INTERATIVA DOS PATHS
 class PathDemonstrationWidget extends StatelessWidget {
+  const PathDemonstrationWidget({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('🛤️ Happy Paths & Other Paths - OPTION'),
+        title: const Text('🛤️ Happy Paths & Other Paths - OPTION'),
         backgroundColor: Colors.indigo,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSummaryCard(),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildPathTestButtons(),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildPathStatistics(),
           ],
         ),
@@ -653,19 +656,19 @@ class PathDemonstrationWidget extends StatelessWidget {
     return Card(
       color: Colors.indigo[50],
       child: Padding(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.route, color: Colors.indigo, size: 28),
-                SizedBox(width: 12),
+                const Icon(Icons.route, color: Colors.indigo, size: 28),
+                const SizedBox(width: 12),
                 Text('Sistema Completo de Path Logging', 
                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.indigo[800])),
               ],
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text('Cobertura total de fluxos: Happy Paths, Other Paths, Edge Cases e Recovery Paths',
                  style: TextStyle(fontSize: 16, color: Colors.indigo[700])),
           ],
@@ -677,13 +680,13 @@ class PathDemonstrationWidget extends StatelessWidget {
   Widget _buildPathTestButtons() {
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('🧪 TESTAR PATHS EM AÇÃO', 
+            const Text('🧪 TESTAR PATHS EM AÇÃO', 
                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -709,40 +712,40 @@ class PathDemonstrationWidget extends StatelessWidget {
   Widget _buildPathButton(String title, Color color, Function action) {
     return ElevatedButton(
       onPressed: () => action(),
-      child: Text(title, style: TextStyle(fontSize: 12)),
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         foregroundColor: Colors.white,
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
+      child: Text(title, style: TextStyle(fontSize: 12)),
     );
   }
   
   Widget _buildPathStatistics() {
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('📊 ESTATÍSTICAS DE COBERTURA', 
+            const Text('📊 ESTATÍSTICAS DE COBERTURA', 
                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildStatRow('🎉 Happy Paths', '15+ fluxos', Colors.green),
             _buildStatRow('🔄 Other Paths', '20+ cenários', Colors.orange),
             _buildStatRow('⚡ Edge Cases', '10+ situações', Colors.red),
             _buildStatRow('🔧 Recovery Paths', '12+ recuperações', Colors.blue),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Container(
-              padding: EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.green[50],
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green),
-                  SizedBox(width: 8),
+                  const Icon(Icons.check_circle, color: Colors.green),
+                  const SizedBox(width: 8),
                   Text('✅ 100% de cobertura de logs implementada!',
                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[800])),
                 ],
@@ -756,7 +759,7 @@ class PathDemonstrationWidget extends StatelessWidget {
   
   Widget _buildStatRow(String label, String value, Color color) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Container(
@@ -767,9 +770,9 @@ class PathDemonstrationWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
             ),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(child: Text(label)),
-          Text(value, style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );

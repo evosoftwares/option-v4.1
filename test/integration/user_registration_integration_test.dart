@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../lib/config/app_config.dart';
-import '../../lib/exceptions/app_exceptions.dart';
-import '../../lib/services/user_service.dart';
-import '../../lib/utils/supabase_helper.dart';
+import 'package:option/config/app_config.dart';
+import 'package:option/exceptions/app_exceptions.dart';
+import 'package:option/services/user_service.dart';
+import 'package:option/utils/supabase_helper.dart';
 
 void main() {
   group('User Registration Integration Tests', () {

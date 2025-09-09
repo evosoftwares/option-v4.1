@@ -35,7 +35,7 @@ class _NotificationOnboardingScreenState extends State<NotificationOnboardingScr
   final PageController _pageController = PageController();
   
   final List<OnboardingStep> _steps = [
-    OnboardingStep(
+    const OnboardingStep(
       title: 'Receba Notificações Importantes',
       subtitle: 'Nunca perca uma viagem ou mensagem importante',
       icon: Icons.notifications_active,
@@ -47,7 +47,7 @@ class _NotificationOnboardingScreenState extends State<NotificationOnboardingScr
         'Confirmações de pagamento',
       ],
     ),
-    OnboardingStep(
+    const OnboardingStep(
       title: 'Som Personalizado',
       subtitle: 'Identifique facilmente notificações do Option',
       icon: Icons.volume_up,
@@ -59,7 +59,7 @@ class _NotificationOnboardingScreenState extends State<NotificationOnboardingScr
         'Funciona mesmo em modo silencioso',
       ],
     ),
-    OnboardingStep(
+    const OnboardingStep(
       title: 'Segurança e Privacidade',
       subtitle: 'Seus dados estão protegidos conosco',
       icon: Icons.security,

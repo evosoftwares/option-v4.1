@@ -48,7 +48,7 @@ class WalletDashboard extends StatelessWidget {
             onWithdraw: onWithdraw,
           ),
           const SizedBox(height: AppSpacing.sectionSpacing),
-          TransactionListHeader(
+          const TransactionListHeader(
             title: 'Transações Recentes',
             subtitle: 'Últimas movimentações da sua carteira',
           ),

@@ -229,10 +229,10 @@ class _StepperDemoScreenState extends State<StepperDemoScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
+          const Row(
             children: [
               Expanded(
-                child: const TextField(
+                child: TextField(
                   decoration: InputDecoration(
                     labelText: 'Ano',
                     border: OutlineInputBorder(),
@@ -240,9 +240,9 @@ class _StepperDemoScreenState extends State<StepperDemoScreen> {
                   keyboardType: TextInputType.number,
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               Expanded(
-                child: const TextField(
+                child: TextField(
                   decoration: InputDecoration(
                     labelText: 'Cor',
                     border: OutlineInputBorder(),
@@ -277,25 +277,25 @@ class _StepperDemoScreenState extends State<StepperDemoScreen> {
   }
 
   Widget _buildCompletionStep() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+    return const Padding(
+      padding: EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Finalizar Cadastro',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 10),
-          const Text(
+          SizedBox(height: 10),
+          Text(
             'Revise suas informações antes de finalizar',
             style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
-          const SizedBox(height: 30),
-          const Card(
+          SizedBox(height: 30),
+          Card(
             child: Padding(
               padding: EdgeInsets.all(16.0),
               child: Column(
@@ -320,8 +320,8 @@ class _StepperDemoScreenState extends State<StepperDemoScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          const Card(
+          SizedBox(height: 16),
+          Card(
             child: Padding(
               padding: EdgeInsets.all(16.0),
               child: Column(
@@ -344,8 +344,8 @@ class _StepperDemoScreenState extends State<StepperDemoScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          const Card(
+          SizedBox(height: 16),
+          Card(
             child: Padding(
               padding: EdgeInsets.all(16.0),
               child: Column(

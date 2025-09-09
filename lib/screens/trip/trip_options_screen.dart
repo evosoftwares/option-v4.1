@@ -1,16 +1,18 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../config/app_config.dart';
-import '../../models/favorite_location.dart';
 import '../../models/vehicle_category.dart';
 import '../../services/driver_service.dart';
+import '../../services/individual_pricing_service.dart';
 import '../../services/location_service.dart';
 import '../../services/passenger_promo_service.dart';
 import '../../services/promo_code_service.dart';
 import '../../services/search_status_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/price_breakdown_widget.dart';
 import '../../widgets/logo_branding.dart';
 import '../../widgets/search_feedback_widget.dart';
 import 'driver_selection_screen.dart';
@@ -34,24 +36,35 @@ class TripOptionsScreen extends StatefulWidget {
     print('🎯 Destination JSON: $destinationJson');
     
     try {
-      final origin = FavoriteLocation.fromJson(originJson);
-      final destination = FavoriteLocation.fromJson(destinationJson);
+      final origin = _parseLocationFromJson(originJson);
+      final destination = _parseLocationFromJson(destinationJson);
       
-      print('✅ FavoriteLocation criados com sucesso');
+      print('✅ Localizações criadas com sucesso');
       
       return TripOptionsScreen(
         origin: origin,
         destination: destination,
       );
     } catch (e) {
-      print('❌ Erro ao criar FavoriteLocation: $e');
+      print('❌ Erro ao criar localizações: $e');
       rethrow;
     }
   }
   static const String routeName = '/trip_options';
 
-  final FavoriteLocation origin;
-  final FavoriteLocation destination;
+  final Map<String, dynamic> origin;
+  final Map<String, dynamic> destination;
+
+  static Map<String, dynamic> _parseLocationFromJson(Map<String, dynamic> json) {
+    return {
+      'id': json['id'],
+      'name': json['name'],
+      'address': json['address'],
+      'latitude': json['latitude'],
+      'longitude': json['longitude'],
+      'placeId': json['placeId'],
+    };
+  }
 
   @override
   State<TripOptionsScreen> createState() => _TripOptionsScreenState();
@@ -73,6 +86,13 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
   late final SearchStatusService _searchStatusService;
   late final AnimationController _buttonController;
   late final Animation<double> _buttonScaleAnimation;
+  
+  // Pricing state
+  double? _estimatedPrice;
+  double? _distanceComponent;
+  double? _timeComponent;
+  double? _additionalFees;
+  bool _isCalculatingPrice = false;
   
   // Promo code state
   final TextEditingController _promoController = TextEditingController();
@@ -104,6 +124,7 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
     ),);
     
     _loadCategoryData();
+    _calculatePrice(); // Calculate initial price
   }
 
   @override
@@ -118,11 +139,11 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
       setState(() => _isLoading = true);
       
       // Garante coordenadas válidas para a origem
-      var lat = widget.origin.latitude;
-      var lng = widget.origin.longitude;
+      var lat = (widget.origin['latitude'] as num?)?.toDouble();
+      var lng = (widget.origin['longitude'] as num?)?.toDouble();
 
-      if ((lat == null || lng == null) && widget.origin.placeId != null) {
-        final details = await _locationService.getPlaceDetails(widget.origin.placeId!);
+      if ((lat == null || lng == null) && widget.origin['placeId'] != null) {
+        final details = await _locationService.getPlaceDetails(widget.origin['placeId'] as String);
         lat = (details?['lat'] as num?)?.toDouble() ?? lat;
         lng = (details?['lng'] as num?)?.toDouble() ?? lng;
       }
@@ -236,6 +257,30 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
               const _SectionTitle(title: 'Código promocional'),
               const SizedBox(height: 8),
               _promoCodeSection(),
+              const SizedBox(height: 16),
+              
+              // Price breakdown section
+              if (_estimatedPrice != null) ...[
+                const _SectionTitle(title: 'Preço estimado'),
+                const SizedBox(height: 8),
+                PriceBreakdownWidget(
+                  totalPrice: _estimatedPrice!,
+                  distanceComponent: _distanceComponent!,
+                  timeComponent: _timeComponent!,
+                  additionalFees: _additionalFees!,
+                  compact: true,
+                ),
+                const SizedBox(height: 16),
+              ] else if (_isCalculatingPrice) ...[
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              
               const Spacer(),
               // Widget de feedback visual para busca
               const SearchFeedbackWidget(
@@ -351,7 +396,10 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
       title: Text(title),
       value: value,
-      onChanged: onChanged,
+      onChanged: (v) {
+        onChanged(v);
+        _calculatePrice(); // Recalculate price when preference changes
+      },
       activeThumbColor: colorScheme.primary,
     );
   }
@@ -556,6 +604,118 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
     );
   }
 
+  Future<void> _calculatePrice() async {
+    if (_isCalculatingPrice) return;
+    
+    setState(() => _isCalculatingPrice = true);
+    
+    try {
+      // Get coordinates from origin and destination
+      final originLat = (widget.origin['latitude'] as num?)?.toDouble();
+      final originLng = (widget.origin['longitude'] as num?)?.toDouble();
+      final destLat = (widget.destination['latitude'] as num?)?.toDouble();
+      final destLng = (widget.destination['longitude'] as num?)?.toDouble();
+      
+      if (originLat == null || originLng == null || destLat == null || destLng == null) {
+        // Cannot calculate price without coordinates
+        _resetPriceState();
+        return;
+      }
+      
+      // Calculate distance and duration using Google Maps API
+      final distanceKm = await _calculateDistance(originLat, originLng, destLat, destLng);
+      final durationMinutes = await _calculateDuration(originLat, originLng, destLat, destLng);
+      
+      if (distanceKm == null || durationMinutes == null) {
+        _resetPriceState();
+        return;
+      }
+      
+      // Calculate price components using generic pricing formula
+      final categoryData = _categoryData.firstWhere(
+        (data) => data.category == _selectedCategory,
+        orElse: () => VehicleCategoryData.defaultForCategory(_selectedCategory),
+      );
+      
+      // Calculate components using platform base prices
+      final distanceComponent = categoryData.basePricePerKm * distanceKm;
+      final timeComponent = categoryData.basePricePerMinute * durationMinutes;
+      final additionalFees = IndividualPricingService.calculateGenericAdditionalFees(
+        needsPet: _needsPet,
+        needsGrocerySpace: _needsGrocerySpace,
+        isCondoOrigin: _isCondoOrigin,
+        isCondoDestination: _isCondoDestination,
+      );
+      
+      // Total price
+      final totalPrice = distanceComponent + timeComponent + additionalFees;
+      
+      if (mounted) {
+        setState(() {
+          _estimatedPrice = totalPrice;
+          _distanceComponent = distanceComponent;
+          _timeComponent = timeComponent;
+          _additionalFees = additionalFees;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error calculating price: $e');
+      _resetPriceState();
+    } finally {
+      if (mounted) {
+        setState(() => _isCalculatingPrice = false);
+      }
+    }
+  }
+  
+  void _resetPriceState() {
+    if (mounted) {
+      setState(() {
+        _estimatedPrice = null;
+        _distanceComponent = null;
+        _timeComponent = null;
+        _additionalFees = null;
+      });
+    }
+  }
+  
+  Future<double?> _calculateDistance(double originLat, double originLng, double destLat, double destLng) async {
+    try {
+      // Simple distance calculation using Haversine formula
+      const double earthRadius = 6371; // Earth radius in km
+      
+      final dLat = (destLat - originLat) * 3.141592653589793 / 180;
+      final dLon = (destLng - originLng) * 3.141592653589793 / 180;
+      
+      final a = sin(dLat / 2) * sin(dLat / 2) +
+          cos(originLat * pi / 180) *
+          cos(destLat * pi / 180) *
+          sin(dLon / 2) * sin(dLon / 2);
+      
+      final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+      
+      return earthRadius * c;
+    } catch (e) {
+      debugPrint('❌ Error calculating distance: $e');
+      return null;
+    }
+  }
+  
+  Future<int?> _calculateDuration(double originLat, double originLng, double destLat, double destLng) async {
+    try {
+      // Estimate duration based on distance (average speed of 30 km/h)
+      final distance = await _calculateDistance(originLat, originLng, destLat, destLng);
+      if (distance == null) return null;
+      
+      // Average speed: 30 km/h = 0.5 km/min
+      final minutes = (distance / 0.5).ceil();
+      return minutes.clamp(1, 180); // Cap at 3 hours
+    } catch (e) {
+      debugPrint('❌ Error calculating duration: $e');
+      return null;
+    }
+  }
+
   Future<void> _continue() async {
     if (_isNavigating) return;
     
@@ -579,14 +739,14 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
     
     try {
       print('🚀 NAVEGANDO para DriverSelectionScreen');
-      print('🚀 Argumentos: ${widget.origin.toJson()}');
+      print('🚀 Argumentos: ${widget.origin}');
       
       await Navigator.pushNamed(
         context,
         DriverSelectionScreen.routeName,
         arguments: {
-          'origin': widget.origin.toJson(),
-          'destination': widget.destination.toJson(),
+          'origin': widget.origin,
+          'destination': widget.destination,
           'vehicle_category': _selectedCategory.id,
           'needsPet': _needsPet,
         'needsGrocerySpace': _needsGrocerySpace,

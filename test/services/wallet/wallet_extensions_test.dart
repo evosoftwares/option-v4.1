@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../lib/models/passenger_wallet.dart';
-import '../../../lib/models/driver_wallet.dart';
-import '../../../lib/models/wallet_transaction.dart';
-import '../../../lib/services/wallet_logger.dart';
+import 'package:option/models/passenger_wallet.dart';
+import 'package:option/models/driver_wallet.dart';
+import 'package:option/models/wallet_transaction.dart';
+import 'package:option/services/wallet_logger.dart';
 
 void main() {
   group('Wallet Extensions', () {

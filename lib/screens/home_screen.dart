@@ -6,11 +6,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../config/app_config.dart';
-import '../models/favorite_location.dart';
 import '../models/user.dart' as app_user;
 import '../services/location_service.dart';
 import '../services/map_style_service.dart';
-import '../services/recent_destinations_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/app_card.dart';
@@ -38,9 +36,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late final LocationService _locationService;
   Future<app_user.User?>? _userFuture;
 
-  FavoriteLocation? _origin;
-  FavoriteLocation? _destination;
-  List<FavoriteLocation> _recentDestinations = [];
+  Map<String, dynamic>? _origin;
+  Map<String, dynamic>? _destination;
+  List<Map<String, dynamic>> _recentDestinations = [];
   
   final DraggableScrollableController _bottomSheetController = DraggableScrollableController();
   final bool _isBottomSheetExpanded = false;
@@ -91,10 +89,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _loadRecentDestinations() async {
-    final recent = await RecentDestinationsService.instance.getRecentDestinations();
+    // Serviço de destinos recentes removido - usando lista vazia
     if (mounted) {
       setState(() {
-        _recentDestinations = recent;
+        _recentDestinations = [];
       });
     }
   }
@@ -113,9 +111,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(builder: (_) => const PlacePickerScreen(title: 'Escolher origem')),
     );
-    if (result is FavoriteLocation) {
+    if (result is Map<String, dynamic>) {
       setState(() => _origin = result);
-      _setMarker('origin', result.latitude, result.longitude, 0);
+      _setMarker('origin', result['latitude'], result['longitude'], 0);
       await _fitBounds();
       await _tryBuildRoute();
     }
@@ -126,20 +124,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(builder: (_) => const PlacePickerScreen(title: 'Escolher destino')),
     );
-    if (result is FavoriteLocation) {
+    if (result is Map<String, dynamic>) {
       setState(() => _destination = result);
-      _setMarker('destination', result.latitude, result.longitude, 0);
-      await RecentDestinationsService.instance.addRecentDestination(result);
+      _setMarker('destination', result['latitude'], result['longitude'], 0);
       await _loadRecentDestinations();
       await _fitBounds();
       await _tryBuildRoute();
     }
   }
 
-  Future<void> _selectRecentDestination(FavoriteLocation destination) async {
+  Future<void> _selectRecentDestination(Map<String, dynamic> destination) async {
     setState(() => _destination = destination);
-    _setMarker('destination', destination.latitude, destination.longitude, 0);
-    await RecentDestinationsService.instance.addRecentDestination(destination);
+    _setMarker('destination', destination['latitude'], destination['longitude'], 0);
     await _loadRecentDestinations();
     await _fitBounds();
     await _tryBuildRoute();
@@ -160,11 +156,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _fitBounds() async {
     if (_origin == null || _destination == null) return;
-    final oLat = _origin!.latitude;
-    final oLng = _origin!.longitude;
-    final dLat = _destination!.latitude;
-    final dLng = _destination!.longitude;
-    if (oLat == null || oLng == null || dLat == null || dLng == null) return;
+    final oLat = _origin!['latitude'];
+    final oLng = _origin!['longitude'];
+    final dLat = _destination!['latitude'];
+    final dLng = _destination!['longitude'];
+    if (oLng == null) return;
 
     final controller = await _ensureController();
     final sw = LatLng(
@@ -212,11 +208,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _tryBuildRoute() async {
     if (_origin == null || _destination == null) return;
-    final oLat = _origin!.latitude;
-    final oLng = _origin!.longitude;
-    final dLat = _destination!.latitude;
-    final dLng = _destination!.longitude;
-    if (oLat == null || oLng == null || dLat == null || dLng == null) return;
+    final oLat = _origin!['latitude'];
+    final oLng = _origin!['longitude'];
+    final dLat = _destination!['latitude'];
+    final dLng = _destination!['longitude'];
+    if (oLng == null) return;
 
     _clearRoute();
 
@@ -497,7 +493,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     placeholder: 'Sua localização atual',
                                     icon: Icons.my_location_outlined,
                                     onTap: _pickOrigin,
-                                    value: _origin?.name ?? _origin?.address,
+                                    value: _origin?['name'] ?? _origin?['address'],
                                   ),
                                   
                                   const SizedBox(height: 16),
@@ -507,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     placeholder: 'Para onde você quer ir?',
                                     icon: Icons.location_on_outlined,
                                     onTap: _pickDestination,
-                                    value: _destination?.name ?? _destination?.address,
+                                    value: _destination?['name'] ?? _destination?['address'],
                                   ),
                                   
                                   const SizedBox(height: 32),
@@ -539,13 +535,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                                 shape: BoxShape.circle,
                                               ),
                                               child: Icon(
-                                                destination.type.icon,
+                                                Icons.location_on,
                                                 color: colorScheme.onPrimaryContainer,
                                                 size: 20,
                                               ),
                                             ),
                                             title: Text(
-                                              destination.name,
+                                              destination['name'] ?? 'Destino',
                                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                                 color: colorScheme.onSurface,
                                                 fontWeight: FontWeight.w500,
@@ -554,7 +550,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                             subtitle: Text(
-                                              destination.address,
+                                              destination['address'] ?? '',
                                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                                 color: colorScheme.onSurfaceVariant,
                                               ),
@@ -588,22 +584,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     '/trip_options',
                                     arguments: {
                                       'origin': {
-                                        'id': o.id,
-                                        'name': o.name,
-                                        'address': o.address,
-                                        'type': o.type.toString(),
-                                        'latitude': o.latitude,
-                                        'longitude': o.longitude,
-                                        'placeId': o.placeId,
+                                        'id': o['id'],
+                                        'name': o['name'],
+                                        'address': o['address'],
+                                        'type': o['type']?.toString(),
+                                        'latitude': o['latitude'],
+                                        'longitude': o['longitude'],
+                                        'placeId': o['placeId'],
                                       },
                                       'destination': {
-                                        'id': d.id,
-                                        'name': d.name,
-                                        'address': d.address,
-                                        'type': d.type.toString(),
-                                        'latitude': d.latitude,
-                                        'longitude': d.longitude,
-                                        'placeId': d.placeId,
+                                        'id': d['id'],
+                                        'name': d['name'],
+                                        'address': d['address'],
+                                        'type': d['type']?.toString(),
+                                        'latitude': d['latitude'],
+                                        'longitude': d['longitude'],
+                                        'placeId': d['placeId'],
                                       },
                                     },
                                   );

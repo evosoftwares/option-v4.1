@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'passenger_driver_matching_simulation_test.dart';
 import 'passenger_driver_chat_test.dart';
+import 'package:option/models/supabase/driver.dart';
 
 /// Script principal para executar toda a simulação de passageiro-motorista
 /// 
@@ -47,7 +48,7 @@ void main() {
       test('🎯 Criar solicitação de viagem', () async {
         dev.log('🧪 Teste: Criação de solicitação pelo passageiro', name: 'Phase1');
         
-        final tripData = simulation._createTestTripRequestData();
+        final tripData = simulation.createTestTripRequestData();
         
         expect(tripData.originAddress, contains('Av. Paulista'));
         expect(tripData.destinationAddress, contains('Aeroporto'));
@@ -64,18 +65,17 @@ void main() {
       test('🚗 Encontrar motoristas disponíveis', () async {
         dev.log('🧪 Teste: Busca de motoristas disponíveis', name: 'Phase1');
         
-        final drivers = simulation._createTestDriverList();
+        final drivers = simulation.createTestDriverList();
         
         expect(drivers, isNotEmpty);
         expect(drivers.length, greaterThanOrEqualTo(2));
         
         for (final driver in drivers) {
           expect(driver.isOnline, isTrue);
-          expect(driver.isAvailable, isTrue);
           expect(driver.approvalStatus, equals('approved'));
           expect(driver.ratings, greaterThanOrEqualTo(4.0));
           
-          dev.log('👤 Motorista encontrado: ${driver.fullName}', name: 'Phase1');
+          dev.log('👤 Motorista encontrado: ${driver.brand} ${driver.model}', name: 'Phase1');
           dev.log('   🚗 Veículo: ${driver.brand} ${driver.model} ${driver.color}', name: 'Phase1');
           dev.log('   ⭐ Avaliação: ${driver.ratings}', name: 'Phase1');
           dev.log('   🛣️ Viagens: ${driver.trips}', name: 'Phase1');
@@ -92,7 +92,7 @@ void main() {
       test('🎯 Matching e priorização de motoristas', () async {
         dev.log('🧪 Teste: Algoritmo de matching e priorização', name: 'Phase1');
         
-        final drivers = simulation._createTestDriverList();
+        final drivers = simulation.createTestDriverList();
         final primaryDriver = drivers.first;
         
         // Validar critérios de priorização
@@ -105,8 +105,8 @@ void main() {
         expect(primaryDriver.currentLongitude, isNotNull);
         
         // Calcular distância aproximada (deve estar próximo)
-        final passengerLat = -23.5631;
-        final passengerLng = -46.6565;
+        const passengerLat = -23.5631;
+        const passengerLng = -46.6565;
         final driverLat = primaryDriver.currentLatitude!;
         final driverLng = primaryDriver.currentLongitude!;
         
@@ -117,7 +117,7 @@ void main() {
         
         expect(distance, lessThanOrEqualTo(2.0)); // Dentro de 2km
         
-        dev.log('✅ Motorista priorizado: ${primaryDriver.fullName}', name: 'Phase1');
+        dev.log('✅ Motorista priorizado: ${primaryDriver.brand} ${primaryDriver.model}', name: 'Phase1');
         dev.log('📍 Distância do passageiro: ${distance.toStringAsFixed(2)} km', name: 'Phase1');
         dev.log('⭐ Score de qualidade: ${primaryDriver.ratings}/5.0', name: 'Phase1');
       });
@@ -191,7 +191,7 @@ void main() {
       test('📊 Validação de dados da viagem', () async {
         dev.log('🧪 Teste: Validação dos dados da viagem', name: 'Phase3');
         
-        final tripData = simulation._createTestTripRequestData();
+        final tripData = simulation.createTestTripRequestData();
         
         // Validar dados essenciais
         expect(tripData.originLatitude, inInclusiveRange(-90.0, 90.0));
@@ -239,14 +239,14 @@ void main() {
         final simulation = PassengerDriverMatchingSimulationTest();
         simulation.setup();
         
-        final drivers = simulation._createTestDriverList();
+        final drivers = simulation.createTestDriverList();
         expect(drivers.length, greaterThanOrEqualTo(2)); // Deve ter motorista de backup
         
         final backupDriver = drivers[1];
-        expect(backupDriver.isAvailable, isTrue);
+        expect(backupDriver.isOnline, isTrue);
         
         dev.log('✅ Sistema tem motorista de backup disponível', name: 'Phase4');
-        dev.log('🔄 Fallback: ${backupDriver.fullName}', name: 'Phase4');
+        dev.log('🔄 Fallback: ${backupDriver.brand} ${backupDriver.model}', name: 'Phase4');
       });
       
       test('💬 Cenário: Chat durante diferentes fases da viagem', () async {
@@ -278,8 +278,8 @@ void main() {
         final simulation = PassengerDriverMatchingSimulationTest();
         simulation.setup();
         
-        final tripData = simulation._createTestTripRequestData();
-        final drivers = simulation._createTestDriverList();
+        final tripData = simulation.createTestTripRequestData();
+        final drivers = simulation.createTestDriverList();
         
         final endTime = DateTime.now();
         final duration = endTime.difference(startTime);

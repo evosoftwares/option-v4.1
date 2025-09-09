@@ -191,11 +191,11 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
+            content: const Row(
               children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 8),
-                const Expanded(
+                Icon(Icons.error_outline, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
                   child: Text('Erro ao tentar ficar online. Tente novamente.'),
                 ),
               ],

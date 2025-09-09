@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../controllers/stepper_controller.dart';
-import '../../../models/favorite_location.dart';
 
 class AddLocationModal extends StatefulWidget {
 
@@ -11,7 +10,7 @@ class AddLocationModal extends StatefulWidget {
     this.location,
     this.index,
   });
-  final FavoriteLocation? location;
+  final Map<String, dynamic>? location;
   final int? index;
 
   @override
@@ -24,7 +23,7 @@ class _AddLocationModalState extends State<AddLocationModal> {
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
   
-  LocationType _selectedType = LocationType.other;
+  String _selectedType = 'other';
   bool _isSearching = false;
   List<Map<String, dynamic>> _searchResults = [];
   Map<String, dynamic>? _selectedPlace;
@@ -33,9 +32,9 @@ class _AddLocationModalState extends State<AddLocationModal> {
   void initState() {
     super.initState();
     if (widget.location != null) {
-      _nameController.text = widget.location!.name;
-      _addressController.text = widget.location!.address;
-      _selectedType = widget.location!.type;
+      _nameController.text = widget.location!['name'] ?? '';
+      _addressController.text = widget.location!['address'] ?? '';
+      _selectedType = widget.location!['type'] ?? 'other';
     }
   }
 
@@ -86,26 +85,26 @@ class _AddLocationModalState extends State<AddLocationModal> {
 
   void _saveLocation() {
     if (_formKey.currentState!.validate()) {
-      final location = FavoriteLocation(
-        id: widget.location?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        userId: widget.location?.userId ?? 'temp-user', // Fallback seguro
-        name: _nameController.text,
-        address: _addressController.text,
-        type: _selectedType,
-        latitude: _selectedPlace?['lat'] ?? 0.0,
-        longitude: _selectedPlace?['lng'] ?? 0.0,
-      );
+      final location = {
+        'id': widget.location?['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        'userId': widget.location?['userId'] ?? 'temp-user', // Fallback seguro
+        'name': _nameController.text,
+        'address': _addressController.text,
+        'type': _selectedType,
+        'latitude': _selectedPlace?['lat'] ?? 0.0,
+        'longitude': _selectedPlace?['lng'] ?? 0.0,
+      };
 
       final controller = context.read<StepperController>();
       
       if (widget.index != null) {
         // Editar local existente
-        final updatedLocations = List<FavoriteLocation>.from(controller.locations);
+        final updatedLocations = List<Map<String, dynamic>>.from(controller.locations);
         updatedLocations[widget.index!] = location;
         controller.updateLocations(updatedLocations);
       } else {
         // Adicionar novo local
-        final updatedLocations = List<FavoriteLocation>.from(controller.locations);
+        final updatedLocations = List<Map<String, dynamic>>.from(controller.locations);
         updatedLocations.add(location);
         controller.updateLocations(updatedLocations);
       }
@@ -229,22 +228,54 @@ class _AddLocationModalState extends State<AddLocationModal> {
                 const SizedBox(height: 16),
                 
                 // Tipo de local
-                DropdownButtonFormField<LocationType>(
+                DropdownButtonFormField<String>(
                   initialValue: _selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Tipo de local',
                     border: OutlineInputBorder(),
                   ),
-                  items: LocationType.values.map((type) => DropdownMenuItem(
-                      value: type,
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'home',
                       child: Row(
                         children: [
-                          Icon(type.icon, size: 20),
-                          const SizedBox(width: 8),
-                          Text(type.label),
+                          Icon(Icons.home, size: 20),
+                          SizedBox(width: 8),
+                          Text('Casa'),
                         ],
                       ),
-                    ),).toList(),
+                    ),
+                    DropdownMenuItem(
+                      value: 'work',
+                      child: Row(
+                        children: [
+                          Icon(Icons.work, size: 20),
+                          SizedBox(width: 8),
+                          Text('Trabalho'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'favorite',
+                      child: Row(
+                        children: [
+                          Icon(Icons.favorite, size: 20),
+                          SizedBox(width: 8),
+                          Text('Favorito'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'other',
+                      child: Row(
+                        children: [
+                          Icon(Icons.place, size: 20),
+                          SizedBox(width: 8),
+                          Text('Outro'),
+                        ],
+                      ),
+                    ),
+                  ],
                   onChanged: (value) {
                     if (value != null) {
                       setState(() => _selectedType = value);

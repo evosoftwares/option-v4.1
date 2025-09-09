@@ -2,10 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../lib/exceptions/app_exceptions.dart';
-import '../../lib/models/user.dart';
-import '../../lib/services/user_service.dart';
-import '../../lib/utils/supabase_helper.dart';
+import 'package:option/exceptions/app_exceptions.dart';
+import 'package:option/models/user.dart' as app_user;
+import 'package:option/services/user_service.dart';
+import 'package:option/utils/supabase_helper.dart';
 
 // Mocks
 class MockSupabaseClient extends Mock implements SupabaseClient {}
@@ -141,7 +141,7 @@ void main() {
             userType: 'passenger',
           ),
           throwsA(isA<UserAlreadyExistsException>()
-              .having((e) => e.email, 'email', equals(email))),
+              .having((e) => e.message, 'message', contains(email))),
         );
       });
 
@@ -313,5 +313,5 @@ void main() {
 }
 
 // Additional mocks for auth
-class MockUser extends Mock implements supabase.User {}
+class MockUser extends Mock implements User {}
 class MockGoTrueClient extends Mock implements GoTrueClient {}

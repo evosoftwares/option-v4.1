@@ -13,7 +13,7 @@ class ZoneErrorReportExample {
     // Exemplo 1: Adicionando um erro de banco de dados
     try {
       // Simula uma operação que falha
-      throw DatabaseException('Erro de conexão com o banco de dados', 'DB_CONNECTION_ERROR');
+      throw const DatabaseException('Erro de conexão com o banco de dados', 'DB_CONNECTION_ERROR');
     } catch (e, stackTrace) {
       errorReport.addError(
         operation: 'fetch_excluded_zones',
@@ -32,7 +32,7 @@ class ZoneErrorReportExample {
     errorReport.addValidationException(
       operation: 'validate_zone_coordinates',
       driverId: 'driver_456',
-      exception: ValidationException('Coordenadas inválidas fornecidas', 'INVALID_COORDINATES'),
+      exception: const ValidationException('Coordenadas inválidas fornecidas', 'INVALID_COORDINATES'),
       zoneData: {
         'latitude': -23.5505,
         'longitude': -46.6333,

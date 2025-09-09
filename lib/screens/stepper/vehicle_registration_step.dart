@@ -46,13 +46,13 @@ class VehicleRegistrationStep extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.directions_car,
                                   color: AppColors.lightPrimary,
                                   size: 24,
                                 ),
                                 const SizedBox(width: AppSpacing.sm),
-                                Expanded(
+                                const Expanded(
                                   child: Text(
                                     'Marca do Veículo',
                                     style: AppTypography.titleMedium,
@@ -159,13 +159,13 @@ class VehicleRegistrationStep extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.car_rental,
                                   color: AppColors.lightPrimary,
                                   size: 24,
                                 ),
                                 const SizedBox(width: AppSpacing.sm),
-                                Expanded(
+                                const Expanded(
                                   child: Text(
                                     'Modelo do Veículo',
                                     style: AppTypography.titleMedium,
@@ -280,14 +280,14 @@ class VehicleRegistrationStep extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
+                                  const Row(
                                     children: [
                                       Icon(
                                         Icons.calendar_today,
                                         color: AppColors.lightPrimary,
                                         size: 20,
                                       ),
-                                      const SizedBox(width: AppSpacing.xs),
+                                      SizedBox(width: AppSpacing.xs),
                                       Text(
                                         'Ano',
                                         style: AppTypography.titleSmall,
@@ -344,14 +344,14 @@ class VehicleRegistrationStep extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
+                                  const Row(
                                     children: [
                                       Icon(
                                         Icons.palette,
                                         color: AppColors.lightPrimary,
                                         size: 20,
                                       ),
-                                      const SizedBox(width: AppSpacing.xs),
+                                      SizedBox(width: AppSpacing.xs),
                                       Text(
                                         'Cor',
                                         style: AppTypography.titleSmall,
@@ -408,14 +408,14 @@ class VehicleRegistrationStep extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            const Row(
                               children: [
                                 Icon(
                                   Icons.confirmation_number,
                                   color: AppColors.lightPrimary,
                                   size: 24,
                                 ),
-                                const SizedBox(width: AppSpacing.sm),
+                                SizedBox(width: AppSpacing.sm),
                                 Expanded(
                                   child: Text(
                                     'Placa do Veículo',
@@ -489,13 +489,13 @@ class VehicleRegistrationStep extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.category,
                                   color: AppColors.lightPrimary,
                                   size: 24,
                                 ),
                                 const SizedBox(width: AppSpacing.sm),
-                                Expanded(
+                                const Expanded(
                                   child: Text(
                                     'Categoria do Veículo',
                                     style: AppTypography.titleMedium,
@@ -633,7 +633,7 @@ class VehicleRegistrationStep extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.warning_amber_outlined,
                         color: Colors.orange,
                         size: 20,
@@ -660,13 +660,13 @@ class VehicleRegistrationStep extends StatelessWidget {
                       onPressed: () => controller.previousStep(),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.lightPrimary,
-                        side: BorderSide(color: AppColors.lightPrimary),
+                        side: const BorderSide(color: AppColors.lightPrimary),
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: Text(
+                      child: const Text(
                         'Voltar',
                         style: AppTypography.labelLarge,
                       ),
@@ -701,7 +701,7 @@ class VehicleRegistrationStep extends StatelessWidget {
                                 ),
                               ),
                             )
-                          : Text(
+                          : const Text(
                               'Continuar',
                               style: AppTypography.labelLarge,
                             ),

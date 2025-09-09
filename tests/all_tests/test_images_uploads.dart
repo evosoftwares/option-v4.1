@@ -22,7 +22,7 @@ void main() async {
   await testSupabaseIntegration();
   await testImagePermissions();
   
-  print('\n' + '=' * 60);
+  print('\n${'=' * 60}');
   print('📊 RELATÓRIO FINAL - IMAGENS E UPLOADS');
   print('=' * 60);
   

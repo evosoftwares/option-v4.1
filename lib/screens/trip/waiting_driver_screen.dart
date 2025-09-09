@@ -6,14 +6,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../models/supabase/driver.dart';
 import '../../models/supabase/trip_request.dart';
+import '../../models/vehicle_category.dart';
 import '../../services/cancellation_fee_service.dart';
 import '../../services/driver_service.dart';
+import '../../services/individual_pricing_service.dart';
 import '../../services/trip_request_manager.dart';
 import '../../services/trip_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/logo_branding.dart';
+import '../../widgets/price_breakdown_widget.dart';
 import '../passenger/passenger_trip_screen.dart';
 
 class WaitingDriverScreen extends StatefulWidget {
@@ -52,6 +55,11 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
   String? _error;
   StreamSubscription<List<TripRequest>>? _tripRequestSubscription;
   Timer? _statusTimer;
+  
+  // Estado para componentes de preço
+  double _distanceComponent = 0.0;
+  double _timeComponent = 0.0;
+  double _additionalFees = 0.0;
   
   // Estados de busca
   String _currentStatus = 'searching';
@@ -270,6 +278,7 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
           _isLoading = false;
         });
         _subscribeToTripRequestUpdates();
+        _calculatePriceBreakdown(); // Calcular breakdown após carregar a solicitação
       }
     } catch (e) {
       if (mounted) {
@@ -296,6 +305,9 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
         setState(() {
           _tripRequest = updatedRequest;
         });
+        
+        // Recalcular breakdown quando a solicitação for atualizada
+        _calculatePriceBreakdown();
         
         // Navegar para PassengerTripScreen quando motorista aceitar
         if (updatedRequest.isAccepted && updatedRequest.acceptedByDriverId != null) {
@@ -472,6 +484,52 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
     await cancellationService.processCancellation(cancellationContext);
   }
 
+  /// Calcula o breakdown do preço para transparência
+  Future<void> _calculatePriceBreakdown() async {
+    if (_tripRequest == null) return;
+
+    try {
+      // Obter a categoria do veículo a partir da string
+      final vehicleCategory = VehicleCategory.fromId(_tripRequest!.vehicleCategory);
+      if (vehicleCategory == null) {
+        developer.log(
+          'Categoria de veículo não encontrada: ${_tripRequest!.vehicleCategory}',
+          name: 'WaitingDriverScreen',
+          level: 800,
+        );
+        return;
+      }
+
+      // Obter dados da categoria
+      final categoryData = VehicleCategoryData.defaultForCategory(vehicleCategory);
+      
+      // Calcular componentes do preço
+      final distanceComponent = categoryData.basePricePerKm * _tripRequest!.estimatedDistanceKm;
+      final timeComponent = categoryData.basePricePerMinute * _tripRequest!.estimatedDurationMinutes;
+      final additionalFees = IndividualPricingService.calculateGenericAdditionalFees(
+        needsPet: _tripRequest!.needsPet,
+        needsGrocerySpace: _tripRequest!.needsGrocerySpace,
+        isCondoOrigin: _tripRequest!.isCondoOrigin,
+        isCondoDestination: _tripRequest!.isCondoDestination,
+        numberOfStops: _tripRequest!.numberOfStops,
+      );
+
+      if (mounted) {
+        setState(() {
+          _distanceComponent = distanceComponent;
+          _timeComponent = timeComponent;
+          _additionalFees = additionalFees;
+        });
+      }
+    } catch (e) {
+      developer.log(
+        'Erro ao calcular breakdown de preço: $e',
+        name: 'WaitingDriverScreen',
+        level: 800,
+      );
+    }
+  }
+
   /// Exibe diálogo quando nenhum motorista é encontrado
   void _handleRequestExpired() {
     if (!mounted) {
@@ -544,6 +602,9 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
                       totalDrivers: _totalDrivers,
                       searchStartTime: _searchStartTime!,
                       onCancel: _cancelTrip,
+                      distanceComponent: _distanceComponent,
+                      timeComponent: _timeComponent,
+                      additionalFees: _additionalFees,
                     )
                   : const Center(child: Text('Solicitação não encontrada')),
     );
@@ -560,6 +621,9 @@ class _WaitingContent extends StatelessWidget {
     required this.totalDrivers,
     required this.searchStartTime,
     required this.onCancel,
+    required this.distanceComponent,
+    required this.timeComponent,
+    required this.additionalFees,
   });
 
   final TripRequest tripRequest;
@@ -570,6 +634,9 @@ class _WaitingContent extends StatelessWidget {
   final int totalDrivers;
   final DateTime searchStartTime;
   final VoidCallback onCancel;
+  final double distanceComponent;
+  final double timeComponent;
+  final double additionalFees;
 
   String get _statusTitle {
     switch (currentStatus) {
@@ -673,7 +740,12 @@ class _WaitingContent extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xl),
                   
                   // Informações da viagem
-                  _TripInfoCard(tripRequest: tripRequest),
+                  _TripInfoCard(
+                    tripRequest: tripRequest,
+                    distanceComponent: distanceComponent,
+                    timeComponent: timeComponent,
+                    additionalFees: additionalFees,
+                  ),
                 ],
               ),
             ),
@@ -936,9 +1008,17 @@ class _ActionSection extends StatelessWidget {
 }
 
 class _TripInfoCard extends StatelessWidget {
-  const _TripInfoCard({required this.tripRequest});
+  const _TripInfoCard({
+    required this.tripRequest,
+    required this.distanceComponent,
+    required this.timeComponent,
+    required this.additionalFees,
+  });
 
   final TripRequest tripRequest;
+  final double distanceComponent;
+  final double timeComponent;
+  final double additionalFees;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1007,6 +1087,15 @@ class _TripInfoCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          
+          // Widget de transparência de preços
+          PriceBreakdownWidget(
+            totalPrice: tripRequest.estimatedFare,
+            distanceComponent: distanceComponent,
+            timeComponent: timeComponent,
+            additionalFees: additionalFees,
           ),
         ],
       ),

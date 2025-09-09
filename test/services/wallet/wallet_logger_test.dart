@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../lib/services/wallet_logger.dart';
+import 'package:option/services/wallet_logger.dart';
 
 void main() {
   group('WalletLogger', () {

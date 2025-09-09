@@ -314,7 +314,7 @@ class SecureDriverExcludedZonesService {
       // Verificação de permissões
       final currentUser = _supabase.auth.currentUser;
       if (currentUser == null) {
-        throw UnauthorizedException('Usuário não autenticado');
+        throw const UnauthorizedException('Usuário não autenticado');
       }
 
       // Log da operação

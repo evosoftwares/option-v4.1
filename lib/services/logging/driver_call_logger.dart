@@ -116,7 +116,7 @@ class DriverCallLogger {
 
   static void _consoleLog(DriverCallLog log) {
     final color = _getColor(log.level);
-    final reset = '\x1B[0m';
+    const reset = '\x1B[0m';
     final logStr = '${color}DriverCall: ${log.level.name.toUpperCase()} - ${log.message}$reset';
     print(logStr);
   }

@@ -137,11 +137,11 @@ class _DriverApprovalPendingScreenState
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Status da Aprovação'),
+          title: const Text('Status da Aprovação'),
           backgroundColor: colorScheme.surface,
           foregroundColor: colorScheme.onSurface,
         ),
-        body: Center(
+        body: const Center(
           child: CircularProgressIndicator(),
         ),
       );
@@ -162,7 +162,7 @@ class _DriverApprovalPendingScreenState
         surfaceTintColor: Colors.transparent,
         actions: [
           Container(
-            margin: EdgeInsets.only(right: AppSpacing.sm),
+            margin: const EdgeInsets.only(right: AppSpacing.sm),
             child: IconButton(
               onPressed: _isRefreshing ? null : _refreshStatus,
               icon: _isRefreshing
@@ -174,7 +174,7 @@ class _DriverApprovalPendingScreenState
                         color: colorScheme.primary,
                       ),
                     )
-                  : Icon(Icons.refresh_rounded),
+                  : const Icon(Icons.refresh_rounded),
               style: IconButton.styleFrom(
                 backgroundColor: colorScheme.surfaceContainerHighest,
                 shape: RoundedRectangleBorder(
@@ -190,36 +190,36 @@ class _DriverApprovalPendingScreenState
         onRefresh: _refreshStatus,
         color: colorScheme.primary,
         child: SingleChildScrollView(
-          physics: AlwaysScrollableScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.lg),
               
               // Status Card Principal
               _buildStatusCard(context),
 
-              SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.xl),
 
               // Processo de Aprovação
               _buildApprovalProcessCard(context),
 
-              SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.xl),
 
               // Documentos Enviados
               _buildDocumentsCard(context),
 
-              SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.xl),
 
               // Próximos Passos
               _buildNextStepsCard(context),
 
-              SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.xl),
 
               // Contato e Suporte
               _buildSupportCard(context),
 
-              SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.xl),
             ],
           ),
         ),
@@ -232,8 +232,8 @@ class _DriverApprovalPendingScreenState
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: EdgeInsets.all(AppSpacing.xl),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -252,7 +252,7 @@ class _DriverApprovalPendingScreenState
           BoxShadow(
             color: Colors.blue.withOpacity(0.08),
             blurRadius: 20,
-            offset: Offset(0, 8),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -276,18 +276,18 @@ class _DriverApprovalPendingScreenState
                 BoxShadow(
                   color: Colors.blue.withOpacity(0.3),
                   blurRadius: 12,
-                  offset: Offset(0, 4),
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: Icon(
+            child: const Icon(
               Icons.hourglass_top_rounded,
               size: 36,
               color: Colors.white,
             ),
           ),
 
-          SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.lg),
 
           Text(
             'Cadastro Realizado! 🎉',
@@ -299,7 +299,7 @@ class _DriverApprovalPendingScreenState
             textAlign: TextAlign.center,
           ),
 
-          SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.sm),
 
           Text(
             'Sua solicitação foi recebida e está sendo\nanalisada por nossa equipe.',
@@ -310,11 +310,11 @@ class _DriverApprovalPendingScreenState
             textAlign: TextAlign.center,
           ),
 
-          SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.lg),
 
           Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(
+            padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,
               vertical: AppSpacing.md,
             ),
@@ -326,7 +326,7 @@ class _DriverApprovalPendingScreenState
                 BoxShadow(
                   color: Colors.black.withOpacity(0.04),
                   blurRadius: 8,
-                  offset: Offset(0, 2),
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -341,7 +341,7 @@ class _DriverApprovalPendingScreenState
                     shape: BoxShape.circle,
                   ),
                 ),
-                SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: AppSpacing.sm),
                 Text(
                   'Aguardando Aprovação',
                   style: textTheme.titleSmall?.copyWith(
@@ -363,8 +363,8 @@ class _DriverApprovalPendingScreenState
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: EdgeInsets.all(AppSpacing.lg),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -373,7 +373,7 @@ class _DriverApprovalPendingScreenState
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
             blurRadius: 12,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -395,7 +395,7 @@ class _DriverApprovalPendingScreenState
                   size: 20,
                 ),
               ),
-              SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.md),
               Text(
                 'Processo de Aprovação',
                 style: textTheme.titleLarge?.copyWith(
@@ -406,7 +406,7 @@ class _DriverApprovalPendingScreenState
               ),
             ],
           ),
-          SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.xl),
           _buildProcessStep(
             context,
             step: 1,
@@ -430,10 +430,10 @@ class _DriverApprovalPendingScreenState
             isCompleted: false,
             isLast: true,
           ),
-          SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.lg),
           Container(
             width: double.infinity,
-            padding: EdgeInsets.all(AppSpacing.lg),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -455,13 +455,13 @@ class _DriverApprovalPendingScreenState
                     color: Colors.blue[500],
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.schedule_rounded,
                     color: Colors.white,
                     size: 18,
                   ),
                 ),
-                SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   'Tempo estimado: 1-3 dias úteis',
                   style: textTheme.titleSmall?.copyWith(
@@ -469,7 +469,7 @@ class _DriverApprovalPendingScreenState
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                SizedBox(height: AppSpacing.xs),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Você será notificado assim que a análise for concluída',
                   style: textTheme.bodyMedium?.copyWith(
@@ -550,7 +550,7 @@ class _DriverApprovalPendingScreenState
                 Container(
                   width: 2,
                   height: 40,
-                  margin: EdgeInsets.symmetric(vertical: 6),
+                  margin: const EdgeInsets.symmetric(vertical: 6),
                   decoration: BoxDecoration(
                     color: isCompleted ? Colors.blue[200] : Colors.grey[300],
                     borderRadius: BorderRadius.circular(1),
@@ -558,12 +558,12 @@ class _DriverApprovalPendingScreenState
                 ),
             ],
           ),
-          SizedBox(width: AppSpacing.lg),
+          const SizedBox(width: AppSpacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   title,
                   style: textTheme.titleMedium?.copyWith(
@@ -573,7 +573,7 @@ class _DriverApprovalPendingScreenState
                         : colorScheme.onSurfaceVariant,
                   ),
                 ),
-                SizedBox(height: AppSpacing.xs),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   description,
                   style: textTheme.bodyMedium?.copyWith(
@@ -594,8 +594,8 @@ class _DriverApprovalPendingScreenState
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: EdgeInsets.all(AppSpacing.lg),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -604,7 +604,7 @@ class _DriverApprovalPendingScreenState
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
             blurRadius: 12,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -633,7 +633,7 @@ class _DriverApprovalPendingScreenState
                   size: 20,
                 ),
               ),
-              SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.md),
               Text(
                 'Documentos Enviados',
                 style: textTheme.titleLarge?.copyWith(
@@ -644,13 +644,13 @@ class _DriverApprovalPendingScreenState
               ),
             ],
           ),
-          SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.lg),
           if (_documents.isNotEmpty) ...[
             ..._buildDocumentItems(context),
           ] else ...[
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(AppSpacing.xl),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
@@ -671,7 +671,7 @@ class _DriverApprovalPendingScreenState
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.md),
                   Text(
                     'Nenhum documento enviado',
                     style: textTheme.titleMedium?.copyWith(
@@ -679,7 +679,7 @@ class _DriverApprovalPendingScreenState
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  SizedBox(height: AppSpacing.xs),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     'Complete o envio dos seus documentos',
                     style: textTheme.bodyMedium?.copyWith(
@@ -690,7 +690,7 @@ class _DriverApprovalPendingScreenState
               ),
             ),
           ],
-          SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.lg),
           SizedBox(
             width: double.infinity,
             child: FilledButton.tonal(
@@ -700,7 +700,7 @@ class _DriverApprovalPendingScreenState
               style: FilledButton.styleFrom(
                 backgroundColor: Colors.blue[600],
                 foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -812,8 +812,8 @@ class _DriverApprovalPendingScreenState
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: EdgeInsets.all(AppSpacing.md),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -836,7 +836,7 @@ class _DriverApprovalPendingScreenState
               color: statusColor.withOpacity(0.8),
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
               title,
@@ -847,7 +847,7 @@ class _DriverApprovalPendingScreenState
             ),
           ),
           Container(
-            padding: EdgeInsets.symmetric(
+            padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.sm,
               vertical: AppSpacing.xs,
             ),
@@ -878,8 +878,8 @@ class _DriverApprovalPendingScreenState
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: EdgeInsets.all(AppSpacing.lg),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -888,7 +888,7 @@ class _DriverApprovalPendingScreenState
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
             blurRadius: 12,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -917,7 +917,7 @@ class _DriverApprovalPendingScreenState
                   size: 20,
                 ),
               ),
-              SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.md),
               Text(
                 'Próximos Passos',
                 style: textTheme.titleLarge?.copyWith(
@@ -928,7 +928,7 @@ class _DriverApprovalPendingScreenState
               ),
             ],
           ),
-          SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.lg),
           _buildNextStep(
             context,
             icon: Icons.notifications_rounded,
@@ -992,12 +992,12 @@ class _DriverApprovalPendingScreenState
               color: iconColor ?? Colors.blue[600],
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   title,
                   style: textTheme.titleMedium?.copyWith(
@@ -1005,7 +1005,7 @@ class _DriverApprovalPendingScreenState
                     color: colorScheme.onSurface,
                   ),
                 ),
-                SizedBox(height: AppSpacing.xs),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   description,
                   style: textTheme.bodyMedium?.copyWith(
@@ -1026,8 +1026,8 @@ class _DriverApprovalPendingScreenState
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: EdgeInsets.all(AppSpacing.lg),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1043,7 +1043,7 @@ class _DriverApprovalPendingScreenState
           BoxShadow(
             color: Colors.blue.withOpacity(0.08),
             blurRadius: 12,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1069,17 +1069,17 @@ class _DriverApprovalPendingScreenState
                     BoxShadow(
                       color: Colors.blue.withOpacity(0.3),
                       blurRadius: 8,
-                      offset: Offset(0, 2),
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.support_agent_rounded,
                   color: Colors.white,
                   size: 20,
                 ),
               ),
-              SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.md),
               Text(
                 'Precisa de Ajuda?',
                 style: textTheme.titleLarge?.copyWith(
@@ -1090,7 +1090,7 @@ class _DriverApprovalPendingScreenState
               ),
             ],
           ),
-          SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.lg),
           Text(
             'Nossa equipe está aqui para ajudar durante todo o processo de aprovação.',
             style: textTheme.bodyLarge?.copyWith(
@@ -1098,12 +1098,12 @@ class _DriverApprovalPendingScreenState
               height: 1.5,
             ),
           ),
-          SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.lg),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
               onPressed: _openWhatsAppSupport,
-              icon: Icon(Icons.support_agent_rounded, size: 18),
+              icon: const Icon(Icons.support_agent_rounded, size: 18),
               label: Text(
                 'Falar conosco',
                 style: textTheme.titleSmall?.copyWith(
@@ -1114,7 +1114,7 @@ class _DriverApprovalPendingScreenState
               style: FilledButton.styleFrom(
                 backgroundColor: Colors.blue[600],
                 foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

@@ -1,5 +1,6 @@
 /// Teste manual simples para verificar se as funcionalidades implementadas estão disponíveis
 /// Execute com: dart run test_implementacao_trip_completion.dart
+library;
 
 void main() {
   print('🧪 Testando implementação do fluxo completo de corrida...\n');

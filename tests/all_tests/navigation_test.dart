@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:option/models/favorite_location.dart';
 import 'package:option/screens/trip/driver_selection_screen.dart';
 import 'package:option/screens/trip/trip_options_screen.dart';
 
@@ -32,8 +31,8 @@ void main() {
       expect(() => TripOptionsScreen.fromArgs(args), returnsNormally);
       
       final screen = TripOptionsScreen.fromArgs(args);
-      expect(screen.origin.name, equals('Minha Casa'));
-      expect(screen.destination.name, equals('Shopping Center'));
+      expect(screen.origin['name'], equals('Minha Casa'));
+      expect(screen.destination['name'], equals('Shopping Center'));
     });
 
     test('DriverSelectionScreen.fromArgs deve funcionar com argumentos do TripOptionsScreen', () {
@@ -79,31 +78,6 @@ void main() {
       expect(screen.tripRequestData.needsGrocery, equals(true));
       
       print('✅ Teste passou com sucesso!');
-    });
-
-    test('FavoriteLocation.fromJson deve funcionar com dados de navegação', () {
-      final json = {
-        'id': 'test-id',
-        'name': 'Local Teste',
-        'address': 'Rua Teste, 123',
-        'type': 'LocationType.other',
-        'latitude': -23.5505,
-        'longitude': -46.6333,
-        'placeId': 'place123',
-      };
-
-      print('🧪 Testando FavoriteLocation.fromJson');
-      print('🧪 JSON: $json');
-
-      expect(() => FavoriteLocation.fromJson(json), returnsNormally);
-      
-      final location = FavoriteLocation.fromJson(json);
-      expect(location.name, equals('Local Teste'));
-      expect(location.address, equals('Rua Teste, 123'));
-      expect(location.latitude, equals(-23.5505));
-      expect(location.longitude, equals(-46.6333));
-      
-      print('✅ FavoriteLocation criado com sucesso!');
     });
 
     test('Teste de argumentos vazios deve funcionar', () {

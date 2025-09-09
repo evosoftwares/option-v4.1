@@ -11,6 +11,8 @@ void main() {
 }
 
 class ConnectivityDiagnosticApp extends StatelessWidget {
+  const ConnectivityDiagnosticApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -25,6 +27,8 @@ class ConnectivityDiagnosticApp extends StatelessWidget {
 }
 
 class ConnectivityDiagnosticScreen extends StatefulWidget {
+  const ConnectivityDiagnosticScreen({super.key});
+
   @override
   _ConnectivityDiagnosticScreenState createState() =>
       _ConnectivityDiagnosticScreenState();
@@ -38,15 +42,15 @@ class _ConnectivityDiagnosticScreenState
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsYndhY21hdm5ndG9uYXV4bnRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDg3MTYzMzIsImV4cCI6MjAyNDI5MjMzMn0.IPFL2f8dslKK-jU2lYGJJwHcL0ZqOVmTIiTQK5QzF2E';
 
   bool _isRunning = false;
-  List<String> _logs = [];
-  Map<String, bool> _testResults = {};
-  List<String> _recommendations = [];
+  final List<String> _logs = [];
+  final Map<String, bool> _testResults = {};
+  final List<String> _recommendations = [];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('🔍 Diagnóstico de Conectividade'),
+        title: const Text('🔍 Diagnóstico de Conectividade'),
         backgroundColor: Colors.blue[700],
         foregroundColor: Colors.white,
       ),
@@ -65,7 +69,7 @@ class _ConnectivityDiagnosticScreenState
                   child: ElevatedButton.icon(
                     onPressed: _isRunning ? null : _runFullDiagnostic,
                     icon: _isRunning
-                        ? SizedBox(
+                        ? const SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
@@ -73,21 +77,21 @@ class _ConnectivityDiagnosticScreenState
                               color: Colors.white,
                             ),
                           )
-                        : Icon(Icons.play_arrow),
+                        : const Icon(Icons.play_arrow),
                     label: Text(
                         _isRunning ? 'Executando...' : 'Executar Diagnóstico'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue[700],
                       foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: _clearLogs,
-                  icon: Icon(Icons.clear),
-                  label: Text('Limpar'),
+                  icon: const Icon(Icons.clear),
+                  label: const Text('Limpar'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[600],
                     foregroundColor: Colors.white,
@@ -96,7 +100,7 @@ class _ConnectivityDiagnosticScreenState
               ],
             ),
 
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
 
             // Recommendations
             if (_recommendations.isNotEmpty) _buildRecommendations(),
@@ -104,7 +108,7 @@ class _ConnectivityDiagnosticScreenState
             // Logs
             Expanded(
               child: Container(
-                padding: EdgeInsets.all(12),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(8),
@@ -115,9 +119,9 @@ class _ConnectivityDiagnosticScreenState
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.info_outline,
+                            const Icon(Icons.info_outline,
                                 size: 48, color: Colors.grey),
-                            SizedBox(height: 16),
+                            const SizedBox(height: 16),
                             Text(
                               'Clique em "Executar Diagnóstico" para verificar a conectividade',
                               style: TextStyle(
@@ -132,7 +136,7 @@ class _ConnectivityDiagnosticScreenState
                         itemBuilder: (context, index) {
                           final log = _logs[index];
                           return Padding(
-                            padding: EdgeInsets.symmetric(vertical: 2),
+                            padding: const EdgeInsets.symmetric(vertical: 2),
                             child: Text(
                               log,
                               style: TextStyle(
@@ -154,7 +158,7 @@ class _ConnectivityDiagnosticScreenState
 
   Widget _buildStatusCards() {
     return Container(
-      margin: EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 16),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
@@ -171,7 +175,7 @@ class _ConnectivityDiagnosticScreenState
 
   Widget _buildStatusCard(String title, bool status) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: status ? Colors.green[100] : Colors.red[100],
         borderRadius: BorderRadius.circular(16),
@@ -188,7 +192,7 @@ class _ConnectivityDiagnosticScreenState
             color: status ? Colors.green[700] : Colors.red[700],
             size: 16,
           ),
-          SizedBox(width: 4),
+          const SizedBox(width: 4),
           Text(
             title,
             style: TextStyle(
@@ -204,8 +208,8 @@ class _ConnectivityDiagnosticScreenState
 
   Widget _buildRecommendations() {
     return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.orange[50],
         borderRadius: BorderRadius.circular(8),
@@ -217,7 +221,7 @@ class _ConnectivityDiagnosticScreenState
           Row(
             children: [
               Icon(Icons.lightbulb, color: Colors.orange[700]),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 'Recomendações:',
                 style: TextStyle(
@@ -227,9 +231,9 @@ class _ConnectivityDiagnosticScreenState
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           ..._recommendations.map((rec) => Padding(
-                padding: EdgeInsets.only(left: 16, bottom: 4),
+                padding: const EdgeInsets.only(left: 16, bottom: 4),
                 child: Text(
                   '• $rec',
                   style: TextStyle(color: Colors.orange[700], fontSize: 12),
@@ -244,8 +248,9 @@ class _ConnectivityDiagnosticScreenState
     if (log.contains('❌')) return Colors.red[700]!;
     if (log.contains('✅')) return Colors.green[700]!;
     if (log.contains('⚠️')) return Colors.orange[700]!;
-    if (log.contains('🔍') || log.contains('🔧') || log.contains('🔄'))
+    if (log.contains('🔍') || log.contains('🔧') || log.contains('🔄')) {
       return Colors.blue[700]!;
+    }
     return Colors.black87;
   }
 
@@ -364,7 +369,7 @@ class _ConnectivityDiagnosticScreenState
       try {
         _addLog('   🔗 Testando: $site');
         final result =
-            await InternetAddress.lookup(site).timeout(Duration(seconds: 5));
+            await InternetAddress.lookup(site).timeout(const Duration(seconds: 5));
         if (result.isNotEmpty) {
           _addLog('   ✅ $site: OK (IP: ${result.first.address})');
           return true;
@@ -382,7 +387,7 @@ class _ConnectivityDiagnosticScreenState
     try {
       _addLog('   🔗 Resolvendo: $_supabaseHost');
       final result = await InternetAddress.lookup(_supabaseHost)
-          .timeout(Duration(seconds: 10));
+          .timeout(const Duration(seconds: 10));
       if (result.isNotEmpty) {
         _addLog('   ✅ DNS OK - IP encontrado: ${result.first.address}');
         return true;
@@ -401,7 +406,7 @@ class _ConnectivityDiagnosticScreenState
       try {
         // Simulate DNS test (in real implementation would need platform-specific code)
         _addLog('   🔗 Testando DNS: $dns');
-        await Future.delayed(Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 500));
         _addLog('   ✅ DNS $dns: Recomendado para configuração manual');
       } catch (e) {
         _addLog('   ❌ DNS $dns: Erro');
@@ -419,7 +424,7 @@ class _ConnectivityDiagnosticScreenState
           'apikey': _supabaseAnonKey,
           'Authorization': 'Bearer $_supabaseAnonKey',
         },
-      ).timeout(Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         _addLog('   ✅ HTTP OK: Status ${response.statusCode}');
@@ -444,7 +449,7 @@ class _ConnectivityDiagnosticScreenState
           'apikey': _supabaseAnonKey,
           'Authorization': 'Bearer $_supabaseAnonKey',
         },
-      ).timeout(Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 401 || response.statusCode == 200) {
         _addLog('   ✅ Serviço de Auth OK: Status ${response.statusCode}');
@@ -471,7 +476,7 @@ class _ConnectivityDiagnosticScreenState
           'Authorization': 'Bearer $_supabaseAnonKey',
           'Content-Type': 'application/json',
         },
-      ).timeout(Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200 || response.statusCode == 206) {
         final data = jsonDecode(response.body);

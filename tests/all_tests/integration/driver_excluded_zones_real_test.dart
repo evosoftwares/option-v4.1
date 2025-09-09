@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:option/models/supabase/driver_excluded_zone.dart';
-import 'package:option/exceptions/app_exceptions.dart';
 
 void main() {
   group('Driver Excluded Zones - Real Business Logic Tests', () {

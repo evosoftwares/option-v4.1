@@ -3,7 +3,6 @@
 library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:option/models/user.dart';
-import 'package:option/models/favorite_location.dart';
 
 void main() {
   group('✅ Functional Tests That Actually Work', () {
@@ -32,56 +31,6 @@ void main() {
       print('✅ User model creation: PASSED');
     });
 
-    test('🧪 FavoriteLocation Model and Types', () {
-      print('Testing FavoriteLocation functionality...');
-      
-      // Test location creation
-      final homeLocation = FavoriteLocation(
-        id: 'home-1',
-        userId: 'user-123',
-        name: 'Minha Casa',
-        address: 'Rua das Flores, 123',
-        type: LocationType.home,
-        latitude: -23.5505,
-        longitude: -46.6333,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      
-      expect(homeLocation.name, equals('Minha Casa'));
-      expect(homeLocation.type, equals(LocationType.home));
-      expect(homeLocation.type.label, equals('Casa'));
-      expect(homeLocation.type.icon.codePoint, isNotNull);
-      
-      // Test JSON conversion
-      final json = homeLocation.toJson();
-      expect(json['label'], equals('Minha Casa'));
-      expect(json['category'], equals('home'));
-      
-      print('✅ FavoriteLocation model: PASSED');
-    });
-
-    test('🧪 Location Type Extensions', () {
-      print('Testing LocationType extensions...');
-      
-      final testCases = [
-        {'type': LocationType.home, 'label': 'Casa', 'desc': 'Sua residência'},
-        {'type': LocationType.work, 'label': 'Trabalho', 'desc': 'Seu local de trabalho'},
-        {'type': LocationType.school, 'label': 'Escola', 'desc': 'Sua escola ou universidade'},
-        {'type': LocationType.gym, 'label': 'Academia', 'desc': 'Sua academia'},
-      ];
-      
-      for (final testCase in testCases) {
-        final type = testCase['type']! as LocationType;
-        expect(type.label, equals(testCase['label']));
-        expect(type.description, contains(testCase['desc']! as String));
-        expect(type.icon.codePoint, isNotNull);
-        print('✅ ${type.label}: Label and description correct');
-      }
-      
-      print('✅ LocationType extensions: PASSED');
-    });
-
     test('🧪 User Data Validation Logic', () {
       print('Testing user data validation...');
       
@@ -95,7 +44,7 @@ void main() {
       expect(UserDataValidator.isValidEmail(''), isFalse);
       expect(UserDataValidator.isValidEmail('@domain.com'), isFalse);
       
-      // Test phone validation  
+      // Test phone validation
       expect(UserDataValidator.isValidPhone('11999999999'), isTrue);
       expect(UserDataValidator.isValidPhone('(11) 99999-9999'), isTrue);
       expect(UserDataValidator.isValidPhone('123'), isFalse);
@@ -171,11 +120,11 @@ void main() {
       expect(UserDataValidator.sanitizeInput('João\nSilva'), equals('João Silva'));
       
       // Test SQL injection prevention
-      expect(UserDataValidator.sanitizeInput("'; DROP TABLE users; --"), 
+      expect(UserDataValidator.sanitizeInput("'; DROP TABLE users; --"),
              isNot(contains('DROP')));
       
       // Test XSS prevention
-      expect(UserDataValidator.sanitizeInput('<script>alert(\"xss\")</script>'), 
+      expect(UserDataValidator.sanitizeInput('<script>alert(\"xss\")</script>'),
              isNot(contains('<script>')));
       */
       
@@ -208,26 +157,6 @@ void main() {
       expect(deserializedUser.userType, equals(originalUser.userType));
       
       print('✅ User serialization: PASSED');
-      
-      // Test location serialization
-      final location = FavoriteLocation(
-        id: 'loc-789',
-        userId: 'user-456',
-        name: 'Test Location',
-        address: 'Test Address, 123',
-        type: LocationType.restaurant,
-        latitude: -23.5505,
-        longitude: -46.6333,
-      );
-      
-      final locationJson = location.toJson();
-      final deserializedLocation = FavoriteLocation.fromJson(locationJson);
-      
-      expect(deserializedLocation.name, equals(location.name));
-      expect(deserializedLocation.type, equals(location.type));
-      expect(deserializedLocation.latitude, equals(location.latitude));
-      
-      print('✅ Location serialization: PASSED');
     });
 
     test('🧪 Performance and Memory Management', () {
@@ -254,7 +183,7 @@ void main() {
       final endTime = DateTime.now();
       final duration = endTime.difference(startTime);
       
-      expect(duration.inMilliseconds, lessThan(1000), 
+      expect(duration.inMilliseconds, lessThan(1000),
              reason: 'Should create 1000 users in under 1 second');
       
       print('✅ Created 1000 users in ${duration.inMilliseconds}ms');

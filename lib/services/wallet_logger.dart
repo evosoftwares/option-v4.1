@@ -4,7 +4,6 @@ library;
 
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/error_handling/error_logger.dart';
 import '../core/error_handling/app_error.dart';

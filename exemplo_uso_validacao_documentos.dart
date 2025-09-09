@@ -1,6 +1,7 @@
 /// EXEMPLO DE USO DA VALIDAÇÃO DE DOCUMENTOS PARA STATUS ONLINE
 /// Este arquivo demonstra como usar a nova funcionalidade de validação
 /// de documentos aprovados antes do motorista poder ficar online.
+library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +10,8 @@ import 'lib/controllers/driver_status_controller.dart';
 import 'lib/services/driver_service.dart';
 
 class DriverHomeScreenExample extends StatefulWidget {
+  const DriverHomeScreenExample({super.key});
+
   @override
   _DriverHomeScreenExampleState createState() =>
       _DriverHomeScreenExampleState();

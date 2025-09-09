@@ -233,7 +233,7 @@ class AppLogger {
       final maskedUserId = _maskSensitiveData(userId);
       final status = success ? '✅' : '❌';
       final titleInfo = title != null ? ' [$title]' : '';
-      print('🔔 [NOTIFICATION] $status $type enviado para ${maskedUserId}$titleInfo');
+      print('🔔 [NOTIFICATION] $status $type enviado para $maskedUserId$titleInfo');
     }
   }
   
@@ -399,8 +399,9 @@ class AppLogger {
       final availInfo = available != null ? (available ? ' [Available]' : ' [Not Available]') : '';
       
       String emoji = '🔐';
-      if (success == true) emoji = '✅';
-      else if (success == false) emoji = '❌';
+      if (success == true) {
+        emoji = '✅';
+      } else if (success == false) emoji = '❌';
       else if (available == false) emoji = '🚫';
       
       print('$emoji $formattedTag $action$typeInfo$availInfo');

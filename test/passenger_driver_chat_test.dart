@@ -6,9 +6,9 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../lib/models/chat_message.dart';
-import '../lib/models/supabase/trip_chat.dart';
-import '../lib/services/chat_service.dart';
+import 'package:option/models/chat_message.dart';
+import 'package:option/models/supabase/trip_chat.dart';
+import 'package:option/services/chat_service.dart';
 
 // Mock classes for Supabase
 @GenerateMocks([SupabaseClient, PostgrestQueryBuilder, PostgrestFilterBuilder])
@@ -55,8 +55,8 @@ class PassengerDriverChatTest {
         'sender_id': testPassengerId,
         'message': 'Olá motorista! Estou esperando no portão principal.',
         'is_read': true,
-        'read_at': now.subtract(Duration(minutes: 8)).toIso8601String(),
-        'created_at': now.subtract(Duration(minutes: 10)).toIso8601String(),
+        'read_at': now.subtract(const Duration(minutes: 8)).toIso8601String(),
+        'created_at': now.subtract(const Duration(minutes: 10)).toIso8601String(),
       },
       {
         'id': 'msg_002',
@@ -64,8 +64,8 @@ class PassengerDriverChatTest {
         'sender_id': testDriverId,
         'message': 'Oi! Estou chegando em 2 minutos. Carro prata placa ABC-1234.',
         'is_read': true,
-        'read_at': now.subtract(Duration(minutes: 6)).toIso8601String(),
-        'created_at': now.subtract(Duration(minutes: 8)).toIso8601String(),
+        'read_at': now.subtract(const Duration(minutes: 6)).toIso8601String(),
+        'created_at': now.subtract(const Duration(minutes: 8)).toIso8601String(),
       },
       {
         'id': 'msg_003',
@@ -73,8 +73,8 @@ class PassengerDriverChatTest {
         'sender_id': testPassengerId,
         'message': 'Perfeito, já estou descendo!',
         'is_read': true,
-        'read_at': now.subtract(Duration(minutes: 4)).toIso8601String(),
-        'created_at': now.subtract(Duration(minutes: 6)).toIso8601String(),
+        'read_at': now.subtract(const Duration(minutes: 4)).toIso8601String(),
+        'created_at': now.subtract(const Duration(minutes: 6)).toIso8601String(),
       },
       {
         'id': 'msg_004',
@@ -83,7 +83,7 @@ class PassengerDriverChatTest {
         'message': 'Chegamos! Muito obrigado pela viagem.',
         'is_read': false,
         'read_at': null,
-        'created_at': now.subtract(Duration(minutes: 2)).toIso8601String(),
+        'created_at': now.subtract(const Duration(minutes: 2)).toIso8601String(),
       },
     ]);
   }
@@ -179,7 +179,7 @@ class PassengerDriverChatTest {
         }
       });
       
-      final messages = await messagesReceived.future.timeout(Duration(seconds: 5));
+      final messages = await messagesReceived.future.timeout(const Duration(seconds: 5));
       
       expect(messages, isNotEmpty);
       
@@ -258,7 +258,7 @@ class PassengerDriverChatTest {
       await _simulateConversation();
       
       // Aguardar um pouco para o stream processar
-      await Future.delayed(Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 2));
       
       // Validar que mensagens foram recebidas
       expect(receivedMessages, isNotEmpty);

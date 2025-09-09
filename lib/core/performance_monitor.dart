@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
+import '../services/user_preferences_service.dart';
 
 class PerformanceMetrics {
 
@@ -338,49 +339,65 @@ class ShellAppMonitor {
 }
 
 class AnalyticsReporter {
-    static String get _endpoint => '${AppConfig.supabaseUrl}/functions/v1/analytics';
-  
-    static Future<void> sendShellAppMetrics(Map<String, dynamic> metrics) async {
-      try {
-        final dio = Dio();
-        
-        await dio.post(
-          _endpoint,
-          data: {
-            'type': 'shell_app_metrics',
-            'data': metrics,
-            'app_version': '4.1.0',
-            'timestamp': DateTime.now().toIso8601String(),
-          },
-          options: Options(
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          ),
-        );
-        
-        dev.log('📤 Métricas enviadas com sucesso', name: 'Analytics');
-      } catch (e) {
-        dev.log('❌ Erro ao enviar métricas: $e', name: 'Analytics');
-      }
+  static String get _endpoint => '${AppConfig.supabaseUrl}/functions/v1/analytics';
+
+  static Future<bool> _hasAnalyticsConsent() async {
+    try {
+      return await UserPreferencesService().getAnalyticsConsent();
+    } catch (e) {
+      dev.log('⚠️ Erro ao verificar consentimento de analytics: $e', name: 'Analytics');
+      return false; // Default to not sending if we can't determine consent
     }
-    
-    static Future<void> reportOptimizationImpact({
-      required double downloadReduction,
-      required double loadTimeImprovement,
-      required int modulesLazyLoaded,
-      required double aiAccuracy,
-    }) async {
-      final impactData = {
-        'optimization_impact': {
-          'download_reduction_percent': downloadReduction,
-          'load_time_improvement_percent': loadTimeImprovement,
-          'modules_lazy_loaded': modulesLazyLoaded,
-          'ai_prediction_accuracy': aiAccuracy,
-          'shell_app_version': '1.0',
-        }
-      };
+  }
+
+  static Future<void> sendShellAppMetrics(Map<String, dynamic> metrics) async {
+    // Check if user has given consent for analytics
+    final hasConsent = await _hasAnalyticsConsent();
+    if (!hasConsent) {
+      dev.log('⏭️  Analytics desativados pelo usuário - métricas não enviadas', name: 'Analytics');
+      return;
+    }
+
+    try {
+      final dio = Dio();
       
-      await sendShellAppMetrics(impactData);
+      await dio.post(
+        _endpoint,
+        data: {
+          'type': 'shell_app_metrics',
+          'data': metrics,
+          'app_version': '4.1.0',
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+      
+      dev.log('📤 Métricas enviadas com sucesso', name: 'Analytics');
+    } catch (e) {
+      dev.log('❌ Erro ao enviar métricas: $e', name: 'Analytics');
     }
+  }
+  
+  static Future<void> reportOptimizationImpact({
+    required double downloadReduction,
+    required double loadTimeImprovement,
+    required int modulesLazyLoaded,
+    required double aiAccuracy,
+  }) async {
+    final impactData = {
+      'optimization_impact': {
+        'download_reduction_percent': downloadReduction,
+        'load_time_improvement_percent': loadTimeImprovement,
+        'modules_lazy_loaded': modulesLazyLoaded,
+        'ai_prediction_accuracy': aiAccuracy,
+        'shell_app_version': '1.0',
+      }
+    };
+    
+    await sendShellAppMetrics(impactData);
+  }
 }

@@ -10,11 +10,11 @@ class DriverDocumentCardFresh extends StatefulWidget {
   final bool showStatus;
 
   const DriverDocumentCardFresh({
-    Key? key,
+    super.key,
     required this.document,
     this.onRefresh,
     this.showStatus = true,
-  }) : super(key: key);
+  });
 
   @override
   State<DriverDocumentCardFresh> createState() => _DriverDocumentCardFreshState();

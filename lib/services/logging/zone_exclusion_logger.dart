@@ -106,7 +106,7 @@ class ZoneExclusionLogger {
 
   static void _consoleLog(ZoneExclusionLog log) {
     final color = _getColor(log.level);
-    final reset = '\x1B[0m';
+    const reset = '\x1B[0m';
     final logStr = '${color}ZoneExclusion: ${log.level.name.toUpperCase()} - ${log.message}$reset';
     print(logStr);
   }

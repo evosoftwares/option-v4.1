@@ -11,9 +11,9 @@ class DriverDocumentIntegrationExample extends StatefulWidget {
   final String driverId;
 
   const DriverDocumentIntegrationExample({
-    Key? key,
+    super.key,
     required this.driverId,
-  }) : super(key: key);
+  });
 
   @override
   State<DriverDocumentIntegrationExample> createState() => _DriverDocumentIntegrationExampleState();
@@ -399,9 +399,9 @@ class DriverDocumentIntegrationPage extends StatelessWidget {
   final String driverId;
 
   const DriverDocumentIntegrationPage({
-    Key? key,
+    super.key,
     required this.driverId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

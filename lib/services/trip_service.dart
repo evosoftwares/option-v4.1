@@ -4,7 +4,6 @@ import '../core/error_handling/postgrest_error_mapper.dart';
 import '../core/error_handling/error_logger.dart';
 import '../core/error_handling/app_error.dart';
 import '../exceptions/app_exceptions.dart';
-import '../models/supabase/location.dart';
 import '../models/supabase/trip.dart';
 import '../models/supabase/trip_request.dart';
 import 'auth_service.dart';
@@ -187,13 +186,8 @@ class TripService {
       dynamic query = _supabase.from('trip_requests').select();
 
       // SEMPRE filtrar por passenger_id para segurança
-      if (filterPassengerId != null) {
-        query = query.eq('passenger_id', filterPassengerId);
-      } else {
-        // Se não encontrou passenger_id, retornar lista vazia
-        return [];
-      }
-
+      query = query.eq('passenger_id', filterPassengerId);
+    
       if (status != null) {
         query = query.eq('status', status);
       }
@@ -813,130 +807,6 @@ class TripService {
     } catch (e) {
       throw const DatabaseException(
           'Erro inesperado ao avaliar viagem. Por favor, tente novamente mais tarde.',);
-    }
-  }
-
-  // Location Methods
-  Future<Location> saveLocation({
-    required String userId,
-    required String name,
-    required String address,
-    required double latitude,
-    required double longitude,
-    String? neighborhood,
-    String? notes,
-    bool isFavorite = false,
-    String? locationType,
-  }) async {
-    try {
-      final response = await _supabase
-          .from('locations')
-          .insert({
-            'user_id': userId,
-            'name': name,
-            'address': address,
-            'latitude': latitude,
-            'longitude': longitude,
-            'neighborhood': neighborhood,
-            'notes': notes,
-            'is_favorite': isFavorite,
-            'location_type': locationType,
-          })
-          .select()
-          .single();
-
-      return Location.fromJson(response);
-    } on PostgrestException catch (e) {
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'saveLocation', 'userId': userId});
-    } catch (e) {
-      throw const DatabaseException(
-          'Erro inesperado ao salvar localização. Por favor, tente novamente mais tarde.',);
-    }
-  }
-
-  Future<List<Location>> getUserLocations(String userId) async {
-    try {
-      final response = await _supabase
-          .from('locations')
-          .select()
-          .eq('user_id', userId)
-          .order('created_at', ascending: false);
-
-      return response.map(Location.fromJson).toList();
-    } on PostgrestException catch (e) {
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getUserLocations', 'userId': userId});
-    } catch (e) {
-      throw const DatabaseException(
-          'Erro inesperado ao buscar localizações. Por favor, tente novamente mais tarde.',);
-    }
-  }
-
-  Future<Location?> getLocation(String id) async {
-    try {
-      final response =
-          await _supabase.from('locations').select().eq('id', id).single();
-
-      return Location.fromJson(response);
-    } on PostgrestException catch (e) {
-      if (e.code == 'PGRST116') {
-        return null;
-      }
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'getLocation', 'id': id});
-    } catch (e) {
-      throw const DatabaseException(
-          'Erro inesperado ao buscar localização. Por favor, tente novamente mais tarde.',);
-    }
-  }
-
-  Future<Location> updateLocation({
-    required String id,
-    String? name,
-    String? address,
-    double? latitude,
-    double? longitude,
-    String? neighborhood,
-    String? notes,
-    bool? isFavorite,
-    String? locationType,
-  }) async {
-    try {
-      final updateData = <String, dynamic>{
-        'updated_at': DateTime.now().toIso8601String(),
-      };
-
-      if (name != null) updateData['name'] = name;
-      if (address != null) updateData['address'] = address;
-      if (latitude != null) updateData['latitude'] = latitude;
-      if (longitude != null) updateData['longitude'] = longitude;
-      if (neighborhood != null) updateData['neighborhood'] = neighborhood;
-      if (notes != null) updateData['notes'] = notes;
-      if (isFavorite != null) updateData['is_favorite'] = isFavorite;
-      if (locationType != null) updateData['location_type'] = locationType;
-
-      final response = await _supabase
-          .from('locations')
-          .update(updateData)
-          .eq('id', id)
-          .select()
-          .single();
-
-      return Location.fromJson(response);
-    } on PostgrestException catch (e) {
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'updateLocation', 'id': id});
-    } catch (e) {
-      throw const DatabaseException(
-          'Erro inesperado ao atualizar localização. Por favor, tente novamente mais tarde.',);
-    }
-  }
-
-  Future<void> deleteLocation(String id) async {
-    try {
-      await _supabase.from('locations').delete().eq('id', id);
-    } on PostgrestException catch (e) {
-      throw PostgrestErrorMapper.mapError(e, context: {'operation': 'deleteLocation', 'id': id});
-    } catch (e) {
-      throw const DatabaseException(
-          'Erro inesperado ao deletar localização. Por favor, tente novamente mais tarde.',);
     }
   }
 

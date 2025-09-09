@@ -1,5 +1,3 @@
-import '../models/favorite_location.dart';
-
 /// Serviço de destinos recentes DESABILITADO para evitar cache
 class RecentDestinationsService {
   
@@ -15,12 +13,12 @@ class RecentDestinationsService {
   }
 
   /// Cache desabilitado - sempre retorna lista vazia
-  Future<List<FavoriteLocation>> getRecentDestinations() async {
+  Future<List<dynamic>> getRecentDestinations() async {
     return [];
   }
 
   /// Cache desabilitado - método no-op
-  Future<void> addRecentDestination(FavoriteLocation destination) async {
+  Future<void> addRecentDestination(dynamic destination) async {
     // Cache desabilitado - não salva destinos recentes
   }
 

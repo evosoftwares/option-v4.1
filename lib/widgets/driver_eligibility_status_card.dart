@@ -5,10 +5,10 @@ class DriverEligibilityStatusCard extends StatelessWidget {
   final VoidCallback? onFixIssues;
 
   const DriverEligibilityStatusCard({
-    Key? key,
+    super.key,
     required this.eligibilityStatus,
     this.onFixIssues,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +254,7 @@ class DriverEligibilityStatusCard extends StatelessWidget {
   }
 
   Widget _buildActionButton() {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: onFixIssues,

@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 
 /// Script para verificar se a correção de validação de documentos está funcionando
 ///

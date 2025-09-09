@@ -10,7 +10,6 @@ import '../models/passenger_wallet_transaction.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
-import '../utils/wallet_constants.dart';
 
 /// Lista de transações com feedback visual aprimorado
 class EnhancedTransactionList extends StatelessWidget {

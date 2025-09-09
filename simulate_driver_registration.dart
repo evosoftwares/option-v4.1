@@ -2,7 +2,6 @@
 // Driver Registration Flow Simulation
 // This script simulates the driver registration flow until the \"IR\" button is pressed
 
-import 'dart:io';
 
 class DriverStepperController {
   // Vehicle data
@@ -112,7 +111,7 @@ class DriverStepperController {
     clearError();
     
     // Simulate network delay
-    await Future.delayed(Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(milliseconds: 1000));
     
     try {
       // Validate required fields
@@ -148,7 +147,7 @@ class DriverStepperController {
       print('   Category: $_vehicleCategory');
       
       // Simulate saving to database
-      await Future.delayed(Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 500));
       print('💾 Driver data saved to database');
       
       // Simulate document upload (optional in this new flow)

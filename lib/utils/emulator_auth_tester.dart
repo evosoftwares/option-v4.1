@@ -101,6 +101,8 @@ class EmulatorAuthTester {
 
 /// Widget para testar na interface
 class EmulatorAuthTestScreen extends StatefulWidget {
+  const EmulatorAuthTestScreen({super.key});
+
   @override
   _EmulatorAuthTestScreenState createState() => _EmulatorAuthTestScreenState();
 }
@@ -114,54 +116,54 @@ class _EmulatorAuthTestScreenState extends State<EmulatorAuthTestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Teste de Auth - Emulador')),
+      appBar: AppBar(title: const Text('Teste de Auth - Emulador')),
       body: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Email',
                 hintText: 'test@example.com',
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Senha',
               ),
               obscureText: true,
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _testing ? null : _testRegistration,
-                    child: Text('Testar Registro'),
+                    child: const Text('Testar Registro'),
                   ),
                 ),
-                SizedBox(width: 16),
+                const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _testing ? null : _testLogin,
-                    child: Text('Testar Login'),
+                    child: const Text('Testar Login'),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _testing ? null : _runDiagnostic,
-              child: Text('Diagnóstico Completo'),
+              child: const Text('Diagnóstico Completo'),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             Expanded(
               child: Container(
                 width: double.infinity,
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
                   border: Border.all(color: Colors.grey[300]!),
@@ -169,7 +171,7 @@ class _EmulatorAuthTestScreenState extends State<EmulatorAuthTestScreen> {
                 child: SingleChildScrollView(
                   child: Text(
                     _result.isEmpty ? 'Resultados aparecerão aqui...' : _result,
-                    style: TextStyle(fontFamily: 'monospace'),
+                    style: const TextStyle(fontFamily: 'monospace'),
                   ),
                 ),
               ),

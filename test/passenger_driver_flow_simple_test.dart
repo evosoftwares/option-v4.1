@@ -2,9 +2,9 @@ import 'dart:developer' as dev;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/models/supabase/driver.dart';
-import '../lib/models/trip_request_data.dart';
-import '../lib/models/chat_message.dart';
+import 'package:option/models/supabase/driver.dart';
+import 'package:option/models/trip_request_data.dart';
+import 'package:option/models/chat_message.dart';
 
 /// Teste simplificado do fluxo passageiro-motorista
 /// Valida a lógica de negócio sem depender de mocks complexos do Supabase

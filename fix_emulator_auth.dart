@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'lib/config/app_config.dart';
 import 'lib/services/bypass_auth_service.dart';
@@ -268,7 +267,7 @@ Future<void> _testSignUp() async {
     print('   - Tipo: ${result['user_type']}');
   } catch (e) {
     print('❌ Teste de registro FALHOU: $e');
-    throw e;
+    rethrow;
   }
 }
 

@@ -8,7 +8,7 @@ import '../widgets/driver_document_card_fresh.dart';
 
 /// Exemplo completo de uso do sistema de URLs frescas para documentos do motorista
 class DriverDocumentExample extends StatefulWidget {
-  const DriverDocumentExample({Key? key}) : super(key: key);
+  const DriverDocumentExample({super.key});
 
   @override
   State<DriverDocumentExample> createState() => _DriverDocumentExampleState();
@@ -136,7 +136,7 @@ class _DriverDocumentExampleState extends State<DriverDocumentExample> {
 
   /// Limpa o cache de URLs
   Future<void> _clearUrlCache() async {
-    await StorageUrlFreshner.clearCache();
+    StorageUrlFreshner.clearCache();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -278,9 +278,9 @@ class DriverDocumentSection extends StatelessWidget {
   final String driverId;
 
   const DriverDocumentSection({
-    Key? key,
+    super.key,
     required this.driverId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -307,7 +307,7 @@ class DriverDocumentSection extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => DriverDocumentExample(),
+                        builder: (context) => const DriverDocumentExample(),
                       ),
                     );
                   },
@@ -432,9 +432,9 @@ class DriverProfilePage extends StatelessWidget {
   final String driverId;
 
   const DriverProfilePage({
-    Key? key,
+    super.key,
     required this.driverId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -447,26 +447,26 @@ class DriverProfilePage extends StatelessWidget {
         child: Column(
           children: [
             // Informações básicas do motorista
-            Card(
+            const Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Informações Pessoais',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    const ListTile(
+                    SizedBox(height: 16),
+                    ListTile(
                       leading: Icon(Icons.person),
                       title: Text('Nome'),
                       subtitle: Text('Nome do Motorista'), // Buscar do banco
                     ),
-                    const ListTile(
+                    ListTile(
                       leading: Icon(Icons.email),
                       title: Text('Email'),
                       subtitle:

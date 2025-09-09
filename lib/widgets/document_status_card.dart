@@ -11,14 +11,14 @@ class DocumentStatusCard extends StatefulWidget {
   final bool isAnimated;
 
   const DocumentStatusCard({
-    Key? key,
+    super.key,
     required this.documentType,
     required this.status,
     this.rejectionReason,
     this.onUpload,
     this.onView,
     this.isAnimated = true,
-  }) : super(key: key);
+  });
 
   @override
   State<DocumentStatusCard> createState() => _DocumentStatusCardState();

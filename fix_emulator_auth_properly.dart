@@ -59,7 +59,7 @@ Future<void> _phase1_diagnostics() async {
   print('📱 Detectando ambiente de execução...');
 
   final isEmulator = EmulatorNetworkHelper.isAndroidEmulator;
-  final isWeb = kIsWeb;
+  const isWeb = kIsWeb;
   final platform = kIsWeb ? 'Web' : Platform.operatingSystem;
 
   print('   🤖 Emulador Android: ${isEmulator ? "SIM" : "NÃO"}');
@@ -186,7 +186,7 @@ Future<void> _configureCertificates() async {
   print('🔒 Configurando certificados SSL para emuladores...');
 
   // Criar network security config se não existir
-  final configContent = '''<?xml version="1.0" encoding="utf-8"?>
+  const configContent = '''<?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">10.0.2.2</domain>
@@ -215,7 +215,7 @@ Future<void> _tryAlternativeInit() async {
   print('🔄 Tentando configurações alternativas...');
 
   // Implementar fallbacks aqui se necessário
-  await Future.delayed(Duration(seconds: 2));
+  await Future.delayed(const Duration(seconds: 2));
 
   print('✅ Configurações alternativas aplicadas');
 }
@@ -248,7 +248,7 @@ Future<void> _testAuthFeatures() async {
 Future<void> _generateAuthService() async {
   print('📝 Gerando EmulatorOptimizedAuthService...');
 
-  final authServiceContent = '''
+  const authServiceContent = '''
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/supabase_emulator_config.dart';
 import '../utils/emulator_network_helper.dart';
@@ -321,7 +321,7 @@ class EmulatorOptimizedAuthService {
 Future<void> _generateMainDartOptimized() async {
   print('📝 Atualizando main.dart...');
 
-  final mainContent = '''
+  const mainContent = '''
 // Adicione esta importação no seu main.dart:
 import 'utils/supabase_emulator_config.dart';
 
@@ -362,7 +362,7 @@ Isso aplicará automaticamente todas as otimizações para emuladores mantendo a
 Future<void> _generateScreenUpdates() async {
   print('📝 Gerando atualizações para telas de auth...');
 
-  final screenUpdates = '''
+  const screenUpdates = '''
 # Atualizações para Telas de Autenticação
 
 ## 1. Para RegisterScreen:

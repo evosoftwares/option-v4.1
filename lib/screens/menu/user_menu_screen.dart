@@ -190,6 +190,14 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
                 onTap: _openWhatsAppSupport,
               ),
               _MenuTile(
+                icon: Icons.privacy_tip_outlined,
+                label: 'Política de Privacidade',
+                onTap: () {
+                  MenuLogger.logScreenNavigation('USER', 'Política de Privacidade');
+                  Navigator.pushNamed(context, '/privacy-policy');
+                },
+              ),
+              _MenuTile(
                 icon: Icons.info_outline,
                 label: 'Sobre o app',
                 onTap: () {

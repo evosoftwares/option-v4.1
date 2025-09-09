@@ -231,9 +231,169 @@ class DriverMatchingService {
       return true;
     }).toList();
 
-  /// Filtra motoristas por zonas de exclusão (sistema flexível com palavras-chave)
-  /// Remove condutores que excluíram a origem OU destino da viagem
-  Future<List<Driver>> _filterByExclusionZones(List<Driver> drivers, MatchingCriteria criteria) async {
+  /// Filtra motoristas baseado nas zonas excluídas (sistema otimizado)
+  /// Verifica origem e destino em uma única chamada SQL
+  Future<List<Driver>> _filterByExclusionZones(
+    List<Driver> drivers,
+    MatchingCriteria criteria,
+  ) async {
+    try {
+      final driverIds = drivers.map((d) => d.id).toList();
+      
+      // Se não há motoristas, retorna lista vazia
+      if (driverIds.isEmpty) {
+        return drivers;
+      }
+
+      // Construir endereços completos para verificação
+      final originAddress = _buildFullAddress(
+        neighborhood: criteria.originNeighborhood,
+        city: criteria.originCity,
+        state: criteria.originState,
+      );
+      
+      final destinationAddress = _buildFullAddress(
+        neighborhood: criteria.destinationNeighborhood,
+        city: criteria.destinationCity,
+        state: criteria.destinationState,
+      );
+
+      // Usar função SQL otimizada que verifica origem e destino em uma única chamada
+      final excludedDriverIds = await _getExcludedDriversForTripOptimized(
+        driverIds,
+        originAddress,
+        destinationAddress,
+      );
+
+      // Filtrar motoristas que não excluíram nem origem nem destino
+      final filteredDrivers = drivers
+          .where((driver) => !excludedDriverIds.contains(driver.id))
+          .toList();
+
+      print('✅ ${filteredDrivers.length}/${drivers.length} motoristas após filtro otimizado de zonas excluídas');
+      return filteredDrivers;
+    } catch (e) {
+      // Em caso de erro, usa fallback para sistema legado
+      print('⚠️ Erro no filtro otimizado, usando fallback: $e');
+      return await _filterByExclusionZonesLegacy(drivers, criteria);
+    }
+  }
+
+  /// Busca motoristas que excluíram origem e/ou destino (função SQL otimizada)
+  Future<Set<String>> _getExcludedDriversForTripOptimized(
+    List<String> driverIds,
+    String originAddress,
+    String destinationAddress,
+  ) async {
+    try {
+      // Usar a nova função SQL otimizada que verifica origem e destino em uma única chamada
+      final response = await _supabase
+          .rpc('get_excluded_drivers_for_trip', params: {
+            'origin_address': originAddress.isNotEmpty ? originAddress : null,
+            'destination_address': destinationAddress.isNotEmpty ? destinationAddress : null,
+            'driver_ids': driverIds,
+          });
+
+      final excludedDrivers = (response as List<dynamic>)
+          .map((row) => row['driver_id'] as String)
+          .toSet();
+
+      // Log detalhado para debugging
+      if (excludedDrivers.isNotEmpty) {
+        final exclusionDetails = (response)
+            .map((row) => '${row['driver_id']}: ${row['exclusion_type']} - ${row['exclusion_reason']}')
+            .join(', ');
+        print('🚫 ${excludedDrivers.length} motoristas excluídos: $exclusionDetails');
+      }
+
+      return excludedDrivers;
+    } catch (e) {
+      print('❌ Erro na função SQL otimizada: $e');
+      // Fallback para função individual se a otimizada falhar
+      return await _getExcludedDriversForAddressLegacy(driverIds, originAddress, destinationAddress);
+    }
+  }
+
+  /// Busca motoristas que excluíram um endereço específico (função SQL otimizada individual)
+  Future<Set<String>> _getExcludedDriversForAddress(
+    List<String> driverIds,
+    String fullAddress,
+  ) async {
+    try {
+      // Usar a função SQL otimizada que aceita lista de driver_ids
+      final response = await _supabase
+          .rpc('get_excluded_drivers_for_address_optimized', params: {
+            'full_address': fullAddress,
+            'driver_ids': driverIds,
+          });
+
+      final excludedDrivers = (response as List<dynamic>)
+          .map((row) => row['driver_id'] as String)
+          .toSet();
+
+      return excludedDrivers;
+    } catch (e) {
+      print('❌ Erro ao buscar motoristas excluídos para endereço "$fullAddress": $e');
+      // Fallback para sistema legado se a função RPC falhar
+      return await _getExcludedZonesForDriversLegacy(driverIds, fullAddress);
+    }
+  }
+
+  /// Fallback para sistema legado usando chamadas individuais
+  Future<Set<String>> _getExcludedDriversForAddressLegacy(
+    List<String> driverIds,
+    String originAddress,
+    String destinationAddress,
+  ) async {
+    final excludedDriverIds = <String>{};
+    
+    try {
+      // Verificar origem se disponível
+      if (originAddress.isNotEmpty) {
+        final originExcluded = await _getExcludedZonesForDriversLegacy(driverIds, originAddress);
+        excludedDriverIds.addAll(originExcluded);
+      }
+      
+      // Verificar destino se disponível
+      if (destinationAddress.isNotEmpty) {
+        final destinationExcluded = await _getExcludedZonesForDriversLegacy(driverIds, destinationAddress);
+        excludedDriverIds.addAll(destinationExcluded);
+      }
+      
+      return excludedDriverIds;
+    } catch (e) {
+      print('❌ Erro no fallback legado: $e');
+      return <String>{};
+    }
+  }
+
+  /// Fallback para sistema legado de exclusão por bairro
+  Future<Set<String>> _getExcludedZonesForDriversLegacy(
+    List<String> driverIds,
+    String fullAddress,
+  ) async {
+    try {
+      // Busca por correspondência simples usando ILIKE
+      final response = await _supabase
+          .from('driver_excluded_zones')
+          .select('driver_id')
+          .inFilter('driver_id', driverIds)
+          .or('neighborhood_name.ilike.%${_extractSearchTerms(fullAddress)}%');
+
+      return (response as List<dynamic>)
+          .map((row) => row['driver_id'] as String)
+          .toSet();
+    } catch (e) {
+      print('❌ Erro no fallback legado: $e');
+      return <String>{};
+    }
+  }
+
+  /// Fallback completo para sistema legado
+  Future<List<Driver>> _filterByExclusionZonesLegacy(
+    List<Driver> drivers,
+    MatchingCriteria criteria,
+  ) async {
     final filteredDrivers = <Driver>[];
     final driverIds = drivers.map((d) => d.id).toList();
     
@@ -281,59 +441,12 @@ class DriverMatchingService {
         }
       }
 
-      print('✅ ${filteredDrivers.length}/${drivers.length} motoristas após filtro de zonas excluídas');
+      print('✅ ${filteredDrivers.length}/${drivers.length} motoristas após filtro legado de zonas excluídas');
       return filteredDrivers;
     } catch (e) {
       // Em caso de erro, retorna todos os motoristas para não impactar a funcionalidade
-      print('⚠️ Erro ao verificar zonas excluídas: $e');
+      print('⚠️ Erro ao verificar zonas excluídas no fallback: $e');
       return drivers;
-    }
-  }
-
-  /// Busca motoristas que excluíram um endereço específico (sistema flexível)
-  Future<Set<String>> _getExcludedDriversForAddress(
-    List<String> driverIds,
-    String fullAddress,
-  ) async {
-    try {
-      // Usar a função SQL get_excluded_drivers_for_address
-      final response = await _supabase
-          .rpc('get_excluded_drivers_for_address', params: {
-            'full_address': fullAddress,
-          });
-
-      final excludedDrivers = (response as List<dynamic>)
-          .map((row) => row['driver_id'] as String)
-          .where((driverId) => driverIds.contains(driverId))
-          .toSet();
-
-      return excludedDrivers;
-    } catch (e) {
-      print('❌ Erro ao buscar motoristas excluídos para endereço "$fullAddress": $e');
-      // Fallback para sistema legado se a função RPC falhar
-      return await _getExcludedZonesForDriversLegacy(driverIds, fullAddress);
-    }
-  }
-
-  /// Fallback para sistema legado de exclusão por bairro
-  Future<Set<String>> _getExcludedZonesForDriversLegacy(
-    List<String> driverIds,
-    String fullAddress,
-  ) async {
-    try {
-      // Busca por correspondência simples usando ILIKE
-      final response = await _supabase
-          .from('driver_excluded_zones')
-          .select('driver_id')
-          .inFilter('driver_id', driverIds)
-          .or('neighborhood_name.ilike.%${_extractSearchTerms(fullAddress)}%');
-
-      return (response as List<dynamic>)
-          .map((row) => row['driver_id'] as String)
-          .toSet();
-    } catch (e) {
-      print('❌ Erro no fallback legado: $e');
-      return <String>{};
     }
   }
 

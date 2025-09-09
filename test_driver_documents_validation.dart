@@ -149,7 +149,7 @@ Future<void> testDirectServiceCall() async {
   final driverService = DriverService(Supabase.instance.client);
 
   // Teste com ID fictício para simular driver com documentos pendentes
-  final testDriverId = 'test_driver_pending';
+  const testDriverId = 'test_driver_pending';
 
   try {
     final eligibilityStatus =

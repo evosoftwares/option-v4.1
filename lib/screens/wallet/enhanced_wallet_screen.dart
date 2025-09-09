@@ -37,7 +37,7 @@ class _EnhancedWalletScreenState extends State<EnhancedWalletScreen> {
   List<PassengerWalletTransaction> _transactions = [];
   
   bool _isLoading = true;
-  bool _isProcessing = false;
+  final bool _isProcessing = false;
   WalletOperationFeedback? _feedbackWidget;
 
   @override
@@ -73,9 +73,7 @@ class _EnhancedWalletScreenState extends State<EnhancedWalletScreen> {
       
       // Obtém ou cria a carteira
       var wallet = await _walletService.getPassengerWallet(passengerId);
-      if (wallet == null) {
-        wallet = await _walletService.createPassengerWallet(passengerId, user.id);
-      }
+      wallet ??= await _walletService.createPassengerWallet(passengerId, user.id);
       
       _wallet = wallet;
       

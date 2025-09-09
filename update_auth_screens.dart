@@ -131,7 +131,7 @@ Future<void> updateLoginScreen() async {
 }
 
 Future<void> createTestScript() async {
-  final testContent = '''
+  const testContent = '''
 import 'package:flutter/material.dart';
 import '../services/emulator_optimized_auth_service.dart';
 import '../utils/emulator_network_helper.dart';

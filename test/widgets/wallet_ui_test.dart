@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 
-import '../../lib/widgets/wallet_feedback_widgets.dart';
-import '../../lib/widgets/enhanced_transaction_list.dart';
-import '../../lib/widgets/wallet_dashboard.dart';
+import 'package:option/widgets/wallet_feedback_widgets.dart';
+import 'package:option/widgets/enhanced_transaction_list.dart';
+import 'package:option/widgets/wallet_dashboard.dart';
 
 void main() {
   group('Wallet UI Components', () {
     testWidgets('WalletOperationFeedback displays correctly', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: WalletOperationFeedback(
               type: WalletOperationType.success,
@@ -27,7 +27,7 @@ void main() {
 
     testWidgets('WalletProgressIndicator displays correctly', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: WalletProgressIndicator(
               message: 'Processing...',
@@ -42,10 +42,10 @@ void main() {
 
     testWidgets('EnhancedTransactionList displays empty state', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: EnhancedTransactionList(
-              transactions: const [],
+              transactions: [],
             ),
           ),
         ),
@@ -56,11 +56,11 @@ void main() {
 
     testWidgets('WalletDashboard displays loading state', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: WalletDashboard(
               wallet: null,
-              recentTransactions: const [],
+              recentTransactions: [],
               isLoading: true,
             ),
           ),

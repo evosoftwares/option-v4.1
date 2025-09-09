@@ -30,7 +30,7 @@ class VehicleCategoryValidator {
     } on DatabaseException catch (e) {
       throw validation.ValidationException('Erro ao validar categoria de veículo: ${e.message}');
     } catch (e) {
-      throw validation.ValidationException('Erro inesperado ao validar categoria de veículo');
+      throw const validation.ValidationException('Erro inesperado ao validar categoria de veículo');
     }
   }
 
@@ -49,7 +49,7 @@ class VehicleCategoryValidator {
     } on DatabaseException catch (e) {
       throw validation.ValidationException('Erro ao buscar categorias de veículo: ${e.message}');
     } catch (e) {
-      throw validation.ValidationException('Erro inesperado ao buscar categorias de veículo');
+      throw const validation.ValidationException('Erro inesperado ao buscar categorias de veículo');
     }
   }
 

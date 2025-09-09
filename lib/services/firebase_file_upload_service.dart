@@ -326,8 +326,8 @@ class FirebaseFileUploadService {
 
       // Validar tamanho do arquivo
       final fileSize = await file.length();
-      print('📊 Tamanho do arquivo: ${fileSize} bytes (${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB)');
-      print('📊 Limite máximo: ${maxFileSizeBytes} bytes (${(maxFileSizeBytes / 1024 / 1024).toStringAsFixed(2)}MB)');
+      print('📊 Tamanho do arquivo: $fileSize bytes (${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB)');
+      print('📊 Limite máximo: $maxFileSizeBytes bytes (${(maxFileSizeBytes / 1024 / 1024).toStringAsFixed(2)}MB)');
       
       if (fileSize > maxFileSizeBytes) {
         print('❌ Arquivo muito grande: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');

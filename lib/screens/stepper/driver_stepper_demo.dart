@@ -256,7 +256,7 @@ class VehicleRegistrationStep extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: controller.vehicleCategory.isEmpty ? null : controller.vehicleCategory,
+                initialValue: controller.vehicleCategory.isEmpty ? null : controller.vehicleCategory,
                 decoration: const InputDecoration(
                   labelText: 'Categoria do Veículo',
                   border: OutlineInputBorder(),
@@ -287,25 +287,25 @@ class CompletionStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<MockDriverStepperController>(
       builder: (context, controller, child) {
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
+        return const Padding(
+          padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Finalizar Cadastro',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 10),
-              const Text(
+              SizedBox(height: 10),
+              Text(
                 'Revise suas informações antes de finalizar',
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
-              const SizedBox(height: 30),
-              const Card(
+              SizedBox(height: 30),
+              Card(
                 child: Padding(
                   padding: EdgeInsets.all(16.0),
                   child: Column(
@@ -330,21 +330,21 @@ class CompletionStep extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Dados do Veículo',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      SizedBox(height: 10),
                       _VehicleInfoRow(label: 'Marca', value: 'Toyota'),
                       _VehicleInfoRow(label: 'Modelo', value: 'Corolla'),
                       _VehicleInfoRow(label: 'Ano', value: '2020'),
@@ -354,8 +354,8 @@ class CompletionStep extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Card(
+              SizedBox(height: 16),
+              Card(
                 child: Padding(
                   padding: EdgeInsets.all(16.0),
                   child: Column(

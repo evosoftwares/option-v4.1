@@ -1,5 +1,6 @@
 /// EXEMPLOS AVANÇADOS DE LOGS PARA TODAS AS SITUAÇÕES
 /// Este arquivo demonstra o uso dos logs expandidos em cenários complexos e edge cases
+library;
 
 import 'package:flutter/material.dart';
 import 'lib/services/app_logger.dart';
@@ -18,7 +19,7 @@ class AdvancedLoggingExamples {
     final startTime = DateTime.now();
     try {
       // Simula delay da rede
-      await Future.delayed(Duration(milliseconds: 1500));
+      await Future.delayed(const Duration(milliseconds: 1500));
       
       final duration = DateTime.now().difference(startTime);
       AppLogger.network('GET Request Concluído', 'https://api.option.com/trips',
@@ -47,7 +48,7 @@ class AdvancedLoggingExamples {
         'retry_attempt': 1
       });
       
-      AppLogger.retry('api_request', 1, maxAttempts: 3, delay: Duration(seconds: 2), 
+      AppLogger.retry('api_request', 1, maxAttempts: 3, delay: const Duration(seconds: 2), 
         reason: 'Network timeout', tag: 'API_CLIENT'
       );
     }
@@ -102,7 +103,7 @@ class AdvancedLoggingExamples {
     // Background location tracking
     AppLogger.background('location_tracking', 'started', tag: 'GPS_SERVICE');
     AppLogger.background('location_tracking', 'running', 
-      duration: Duration(minutes: 30), 
+      duration: const Duration(minutes: 30), 
       progress: 75, 
       tag: 'GPS_SERVICE'
     );
@@ -119,7 +120,7 @@ class AdvancedLoggingExamples {
     
     AppLogger.appState('resumed', 
       previousState: 'background',
-      duration: Duration(minutes: 5),
+      duration: const Duration(minutes: 5),
       reason: 'user_returned',
       tag: 'APP_LIFECYCLE'
     );
@@ -214,14 +215,14 @@ class AdvancedLoggingExamples {
     AppLogger.background('data_sync', 'started', tag: 'BACKGROUND_SYNC');
     
     AppLogger.background('data_sync', 'running',
-      duration: Duration(seconds: 30),
+      duration: const Duration(seconds: 30),
       progress: 45,
       result: '150 trips synchronized',
       tag: 'BACKGROUND_SYNC'
     );
     
     AppLogger.background('data_sync', 'completed',
-      duration: Duration(minutes: 2),
+      duration: const Duration(minutes: 2),
       result: '500 records processed',
       tag: 'BACKGROUND_SYNC'
     );
@@ -230,7 +231,7 @@ class AdvancedLoggingExamples {
     AppLogger.background('cache_cleanup', 'started', tag: 'MAINTENANCE');
     
     AppLogger.background('cache_cleanup', 'completed',
-      duration: Duration(seconds: 15),
+      duration: const Duration(seconds: 15),
       result: '120MB freed',
       tag: 'MAINTENANCE'
     );
@@ -309,7 +310,7 @@ class AdvancedLoggingExamples {
     AppLogger.rateLimit('google_maps_api', 'geocoding_request',
       limit: 1000,
       remaining: 845,
-      resetTime: Duration(hours: 1),
+      resetTime: const Duration(hours: 1),
       tag: 'RATE_LIMIT'
     );
     
@@ -317,7 +318,7 @@ class AdvancedLoggingExamples {
     AppLogger.rateLimit('google_maps_api', 'places_search',
       limit: 1000,
       remaining: 50,
-      resetTime: Duration(minutes: 30),
+      resetTime: const Duration(minutes: 30),
       tag: 'RATE_LIMIT'
     );
     
@@ -325,7 +326,7 @@ class AdvancedLoggingExamples {
     AppLogger.rateLimit('sms_gateway', 'send_verification',
       limit: 100,
       remaining: 0,
-      resetTime: Duration(hours: 24),
+      resetTime: const Duration(hours: 24),
       tag: 'RATE_LIMIT'
     );
   }
@@ -380,7 +381,7 @@ class AdvancedLoggingExamples {
     AppLogger.queue('trip_notifications', 'dequeued',
       size: 14,
       messageId: 'msg_abc123',
-      processingTime: Duration(milliseconds: 150),
+      processingTime: const Duration(milliseconds: 150),
       tag: 'MESSAGE_QUEUE'
     );
     
@@ -388,7 +389,7 @@ class AdvancedLoggingExamples {
     AppLogger.queue('trip_notifications', 'processed',
       size: 14,
       messageId: 'msg_abc123',
-      processingTime: Duration(milliseconds: 850),
+      processingTime: const Duration(milliseconds: 850),
       tag: 'MESSAGE_QUEUE'
     );
     
@@ -430,7 +431,7 @@ class AdvancedLoggingExamples {
   static void exemploLogsHealthChecks() {
     // Componentes saudáveis
     AppLogger.health('database', 'healthy',
-      responseTime: Duration(milliseconds: 45),
+      responseTime: const Duration(milliseconds: 45),
       version: '14.2.0',
       metrics: {
         'active_connections': 12,
@@ -441,13 +442,13 @@ class AdvancedLoggingExamples {
     );
     
     AppLogger.health('payment_gateway', 'healthy',
-      responseTime: Duration(milliseconds: 120),
+      responseTime: const Duration(milliseconds: 120),
       tag: 'HEALTH_CHECK'
     );
     
     // Componente com warning
     AppLogger.health('location_service', 'warning',
-      responseTime: Duration(milliseconds: 2500),
+      responseTime: const Duration(milliseconds: 2500),
       metrics: {
         'accuracy_degraded': true,
         'gps_satellites': 3,
@@ -458,7 +459,7 @@ class AdvancedLoggingExamples {
     
     // Componente down
     AppLogger.health('sms_service', 'down',
-      responseTime: Duration(seconds: 10),
+      responseTime: const Duration(seconds: 10),
       metrics: {
         'last_successful_send': '2024-01-15T10:30:00Z',
         'error_rate_percent': 100
@@ -545,20 +546,20 @@ class AdvancedLoggingDemoScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('🚀 Sistema de Logs Avançado - OPTION'),
+        title: const Text('🚀 Sistema de Logs Avançado - OPTION'),
         backgroundColor: Colors.deepPurple,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeaderCard(),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildNewFeaturesCard(),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildExampleButtons(context),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildLogCategoriesExpanded(),
           ],
         ),
@@ -570,14 +571,14 @@ class AdvancedLoggingDemoScreen extends StatelessWidget {
     return Card(
       color: Colors.deepPurple[50],
       child: Padding(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.rocket_launch, color: Colors.deepPurple, size: 28),
-                SizedBox(width: 12),
+                const Icon(Icons.rocket_launch, color: Colors.deepPurple, size: 28),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Sistema de Logs Ultra Avançado',
@@ -586,7 +587,7 @@ class AdvancedLoggingDemoScreen extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
               'Agora com +15 novos tipos de logs especializados para cobrir TODAS as situações possíveis na aplicação OPTION!',
               style: TextStyle(fontSize: 16, color: Colors.deepPurple[700]),
@@ -601,26 +602,26 @@ class AdvancedLoggingDemoScreen extends StatelessWidget {
     return Card(
       color: Colors.green[50],
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Icon(Icons.new_releases, color: Colors.green[700], size: 24),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text('✨ NOVOS RECURSOS ADICIONADOS', 
                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[800])),
               ],
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             ...NOVAS_FUNCIONALIDADES.map((feature) => Padding(
-              padding: EdgeInsets.symmetric(vertical: 3),
+              padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 16),
-                  SizedBox(width: 8),
-                  Expanded(child: Text(feature, style: TextStyle(fontSize: 14))),
+                  const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(feature, style: const TextStyle(fontSize: 14))),
                 ],
               ),
             )),
@@ -633,13 +634,13 @@ class AdvancedLoggingDemoScreen extends StatelessWidget {
   Widget _buildExampleButtons(BuildContext context) {
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('🎮 TESTE OS LOGS EM AÇÃO', 
+            const Text('🎮 TESTE OS LOGS EM AÇÃO', 
                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -662,16 +663,16 @@ class AdvancedLoggingDemoScreen extends StatelessWidget {
   Widget _buildLogCategoriesExpanded() {
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('📊 TODAS AS CATEGORIAS DE LOGS', 
+            const Text('📊 TODAS AS CATEGORIAS DE LOGS', 
                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             ...EXPANDED_LOG_CATEGORIES.map((category) => ExpansionTile(
               leading: Icon(category['icon'], color: category['color']),
-              title: Text(category['title'], style: TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(category['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text('${category['items'].length} tipos de logs'),
               children: category['items'].map<Widget>((item) => ListTile(
                 dense: true,
@@ -679,12 +680,12 @@ class AdvancedLoggingDemoScreen extends StatelessWidget {
                 title: Text(item['name']),
                 subtitle: Text(item['description']),
                 trailing: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: category['color'].withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(item['emoji'], style: TextStyle(fontSize: 16)),
+                  child: Text(item['emoji'], style: const TextStyle(fontSize: 16)),
                 ),
               )).toList(),
             )),
@@ -846,6 +847,8 @@ class AdvancedLoggingDemoScreen extends StatelessWidget {
       ]
     },
   ];
+
+  const AdvancedLoggingDemoScreen({super.key});
 }
 
 /// MONITORAMENTO DE LOGS EM TEMPO REAL
@@ -854,7 +857,7 @@ class LogMonitor {
     AppLogger.info('🔍 Iniciando monitoramento de logs em tempo real', tag: 'LOG_MONITOR');
     
     // Simula monitoramento contínuo
-    Timer.periodic(Duration(seconds: 30), (timer) {
+    Timer.periodic(const Duration(seconds: 30), (timer) {
       _generateRandomLogs();
     });
   }
@@ -865,7 +868,7 @@ class LogMonitor {
     switch (random) {
       case 0:
         AppLogger.health('api_gateway', 'healthy', 
-          responseTime: Duration(milliseconds: 89),
+          responseTime: const Duration(milliseconds: 89),
           tag: 'MONITORING'
         );
         break;
@@ -882,7 +885,7 @@ class LogMonitor {
         AppLogger.network('Trip Status Check', 'https://api.option.com/trips/status',
           method: 'GET',
           statusCode: 200,
-          duration: Duration(milliseconds: 145),
+          duration: const Duration(milliseconds: 145),
           tag: 'API_CLIENT'
         );
         break;

@@ -1,11 +1,23 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'user_preferences_service.dart';
+
 /// Sistema de analytics para monitorar uploads e identificar problemas em produção
 class UploadAnalytics {
   static const String _keyUploadStats = 'upload_analytics_stats';
   static const String _keyUploadErrors = 'upload_analytics_errors';
   static const int _maxErrorsStored = 50;
+
+  /// Verifica se o usuário deu consentimento para analytics
+  static Future<bool> _hasAnalyticsConsent() async {
+    try {
+      return await UserPreferencesService().getAnalyticsConsent();
+    } catch (e) {
+      print('⚠️ Erro ao verificar consentimento de analytics: $e');
+      return false; // Default to not collecting if we can't determine consent
+    }
+  }
 
   /// Registra início de upload
   static Future<void> recordUploadStart({
@@ -14,6 +26,13 @@ class UploadAnalytics {
     required int fileSizeBytes,
     required String fileName,
   }) async {
+    // Check for user consent before collecting analytics
+    final hasConsent = await _hasAnalyticsConsent();
+    if (!hasConsent) {
+      print('⏭️  Analytics desativados pelo usuário - início de upload não registrado');
+      return;
+    }
+
     final event = UploadEvent(
       uploadId: uploadId,
       type: type,
@@ -33,6 +52,13 @@ class UploadAnalytics {
     required int attemptNumber,
     required String errorMessage,
   }) async {
+    // Check for user consent before collecting analytics
+    final hasConsent = await _hasAnalyticsConsent();
+    if (!hasConsent) {
+      print('⏭️  Analytics desativados pelo usuário - tentativa de retry não registrada');
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final event = await _getEvent(uploadId);
     
@@ -53,6 +79,13 @@ class UploadAnalytics {
     required Duration totalDuration,
     required int finalSizeBytes,
   }) async {
+    // Check for user consent before collecting analytics
+    final hasConsent = await _hasAnalyticsConsent();
+    if (!hasConsent) {
+      print('⏭️  Analytics desativados pelo usuário - sucesso de upload não registrado');
+      return;
+    }
+
     final event = await _getEvent(uploadId);
     
     if (event != null) {
@@ -74,6 +107,13 @@ class UploadAnalytics {
     required String errorMessage,
     required Duration totalDuration,
   }) async {
+    // Check for user consent before collecting analytics
+    final hasConsent = await _hasAnalyticsConsent();
+    if (!hasConsent) {
+      print('⏭️  Analytics desativados pelo usuário - falha de upload não registrada');
+      return;
+    }
+
     final event = await _getEvent(uploadId);
     
     if (event != null) {
@@ -190,6 +230,12 @@ class UploadAnalytics {
 
   /// Gera relatório de diagnóstico
   static Future<String> generateDiagnosticReport() async {
+    // Check for user consent before collecting analytics
+    final hasConsent = await _hasAnalyticsConsent();
+    if (!hasConsent) {
+      return '⏭️  Analytics desativados pelo usuário - relatório não disponível';
+    }
+
     final stats = await getStats();
     final errors = await getRecentErrors(limit: 10);
     
@@ -238,6 +284,90 @@ class UploadAnalytics {
     }
     
     return report.toString();
+  }
+
+  // ===================================================================
+  // USER CONSENT MANAGEMENT METHODS
+  // These methods allow the app to manage user consent for analytics
+  // ===================================================================
+
+  /// Checks if the user has given consent for analytics
+  static Future<bool> hasAnalyticsConsent() async {
+    try {
+      return await UserPreferencesService().getAnalyticsConsent();
+    } catch (e) {
+      print('⚠️ Erro ao verificar consentimento de analytics: $e');
+      return false; // Default to not collecting if we can't determine consent
+    }
+  }
+
+  /// Sets the user's consent for analytics
+  static Future<bool> setAnalyticsConsent(bool consent) async {
+    try {
+      await UserPreferencesService().setAnalyticsConsent(consent);
+      return true;
+    } catch (e) {
+      print('⚠️ Erro ao definir consentimento de analytics: $e');
+      return false;
+    }
+  }
+
+  /// Checks if the user has given consent for marketing communications
+  static Future<bool> hasMarketingConsent() async {
+    try {
+      return await UserPreferencesService().getMarketingConsent();
+    } catch (e) {
+      print('⚠️ Erro ao verificar consentimento de marketing: $e');
+      return false; // Default to not collecting if we can't determine consent
+    }
+  }
+
+  /// Sets the user's consent for marketing communications
+  static Future<bool> setMarketingConsent(bool consent) async {
+    try {
+      await UserPreferencesService().setMarketingConsent(consent);
+      return true;
+    } catch (e) {
+      print('⚠️ Erro ao definir consentimento de marketing: $e');
+      return false;
+    }
+  }
+
+  /// Checks if the user has accepted the privacy policy
+  static Future<bool> hasAcceptedPrivacyPolicy() async {
+    try {
+      return await UserPreferencesService().getPrivacyPolicyAccepted();
+    } catch (e) {
+      print('⚠️ Erro ao verificar aceitação da política de privacidade: $e');
+      return false; // Default to not collecting if we can't determine consent
+    }
+  }
+
+  /// Sets the user's acceptance of the privacy policy
+  static Future<bool> setPrivacyPolicyAccepted(bool accepted) async {
+    try {
+      await UserPreferencesService().setPrivacyPolicyAccepted(accepted);
+      return true;
+    } catch (e) {
+      print('⚠️ Erro ao definir aceitação da política de privacidade: $e');
+      return false;
+    }
+  }
+
+  /// Tracks an analytics event, respecting user consent
+  static Future<void> trackEvent(String eventName, Map<String, dynamic> properties) async {
+    // Check for user consent before tracking
+    final hasConsent = await hasAnalyticsConsent();
+    if (!hasConsent) {
+      print('⏭️  Analytics desativados pelo usuário - evento não registrado');
+      return;
+    }
+
+    // In a real implementation, this would send the event to an analytics service
+    print('📊 [ANALYTICS] Evento rastreado: $eventName');
+    properties.forEach((key, value) {
+      print('   - $key: $value');
+    });
   }
 }
 

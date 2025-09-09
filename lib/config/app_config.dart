@@ -1,4 +1,3 @@
-import 'dart:io';
 
 /// Configuração centralizada da aplicação OPTION
 ///

@@ -222,7 +222,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildStatusCard(),
-                          SizedBox(height: AppSpacing.xl),
+                          const SizedBox(height: AppSpacing.xl),
                           _buildDocumentsList(),
                         ],
                       ),
@@ -531,7 +531,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
             );
 
             return Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.sm),
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: _buildDocumentTile(
                 docType,
                 document,
@@ -559,7 +559,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
           );
 
           return Padding(
-            padding: EdgeInsets.only(bottom: AppSpacing.sm),
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: _buildDocumentTile(
               docType,
               document,
@@ -595,7 +595,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
           );
 
           return Padding(
-            padding: EdgeInsets.only(bottom: AppSpacing.sm),
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: _buildDocumentTile(
               docType,
               document,
@@ -688,7 +688,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
                   ),
                 ),
                 
-                SizedBox(width: AppSpacing.md),
+                const SizedBox(width: AppSpacing.md),
                 
                 // Content
                 Expanded(
@@ -727,7 +727,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
                   ),
                 ),
                 
-                SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: AppSpacing.sm),
                 
                 // Status badge
                 Container(
@@ -747,7 +747,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
                         color: statusColor,
                         size: 14,
                       ),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
                       Text(
                         statusText,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(

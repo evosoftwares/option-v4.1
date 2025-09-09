@@ -7,6 +7,34 @@ import 'logging/zone_exclusion_logger.dart';
 class ZoneValidationService {
   /// Private constructor to prevent instantiation
   ZoneValidationService._();
+  
+  /// Cache para normalização de texto (evita processamento redundante)
+  static final Map<String, String> _normalizationCache = <String, String>{};
+  
+  /// Tamanho máximo do cache (evita vazamento de memória)
+  static const int _maxCacheSize = 1000;
+  
+  /// Regex otimizada para substituição de acentos
+  static final RegExp _accentRegex = RegExp(r'[ãáàâäõóòôöúùûüíìîïéèêëçñ]');
+  
+  /// Regex otimizada para múltiplos espaços
+  static final RegExp _multipleSpacesRegex = RegExp(r'\s+');
+  
+  /// Regex otimizada para números
+  static final RegExp _numbersRegex = RegExp(r'[0-9]');
+  
+  /// Regex otimizada para apenas números
+  static final RegExp _onlyNumbersRegex = RegExp(r'^[0-9]+$');
+  
+  /// Mapa de acentos otimizado para substituição rápida
+  static const Map<String, String> _accentMap = {
+    'ã': 'a', 'á': 'a', 'à': 'a', 'â': 'a', 'ä': 'a',
+    'õ': 'o', 'ó': 'o', 'ò': 'o', 'ô': 'o', 'ö': 'o',
+    'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+    'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+    'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+    'ç': 'c', 'ñ': 'n',
+  };
 
   /// Maximum number of excluded zones allowed per driver
   static const int maxZonesPerDriver = 50;
@@ -49,32 +77,59 @@ class ZoneValidationService {
     'tocantins': 'to',
   };
   
-  /// Normalizes text for consistent comparison and storage
+  /// Normalizes text for consistent comparison and storage (otimizado com cache)
   /// Fixes case sensitivity and accent variations issues
   static String normalizeText(String text) {
     if (text.isEmpty) return text;
     
-    // Convert to lowercase and trim
-    var normalized = text.toLowerCase().trim();
-    
-    // Replace multiple spaces with single space
-    normalized = normalized.replaceAll(RegExp(r'\s+'), ' ');
-    
-    // Remove accents and special characters
-    const accentMap = {
-      'ã': 'a', 'á': 'a', 'à': 'a', 'â': 'a', 'ä': 'a',
-      'õ': 'o', 'ó': 'o', 'ò': 'o', 'ô': 'o', 'ö': 'o',
-      'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
-      'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
-      'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
-      'ç': 'c', 'ñ': 'n',
-    };
-    
-    for (final entry in accentMap.entries) {
-      normalized = normalized.replaceAll(entry.key, entry.value);
+    // Verificar cache primeiro
+    final cached = _normalizationCache[text];
+    if (cached != null) {
+      return cached;
     }
     
+    // Processar normalização
+    var normalized = text.toLowerCase().trim();
+    
+    // Replace multiple spaces with single space (regex otimizada)
+    normalized = normalized.replaceAll(_multipleSpacesRegex, ' ');
+    
+    // Remove accents using optimized regex replacement
+    if (_accentRegex.hasMatch(normalized)) {
+      normalized = normalized.replaceAllMapped(_accentRegex, (match) {
+        return _accentMap[match.group(0)] ?? match.group(0)!;
+      });
+    }
+    
+    // Adicionar ao cache (com limite de tamanho)
+    if (_normalizationCache.length >= _maxCacheSize) {
+      _clearOldestCacheEntries();
+    }
+    _normalizationCache[text] = normalized;
+    
     return normalized;
+  }
+  
+  /// Limpa entradas mais antigas do cache para evitar vazamento de memória
+  static void _clearOldestCacheEntries() {
+    final keysToRemove = _normalizationCache.keys.take(_maxCacheSize ~/ 2).toList();
+    for (final key in keysToRemove) {
+      _normalizationCache.remove(key);
+    }
+  }
+  
+  /// Limpa o cache de normalização (útil para testes)
+  static void clearNormalizationCache() {
+    _normalizationCache.clear();
+  }
+  
+  /// Retorna estatísticas do cache
+  static Map<String, dynamic> getCacheStats() {
+    return {
+      'cache_size': _normalizationCache.length,
+      'max_cache_size': _maxCacheSize,
+      'cache_usage_percent': (_normalizationCache.length / _maxCacheSize * 100).toStringAsFixed(1),
+    };
   }
   
   /// Validates and normalizes a Brazilian state code or name
@@ -101,7 +156,7 @@ class ZoneValidationService {
       throw const ValidationException('Nome do estado muito longo');
     }
     
-    if (RegExp('[0-9]').hasMatch(normalized)) {
+    if (_numbersRegex.hasMatch(normalized)) {
       throw const ValidationException('Estado não pode conter números');
     }
     
@@ -129,8 +184,8 @@ class ZoneValidationService {
       throw const ValidationException('Nome do bairro muito curto (mínimo 2 caracteres)');
     }
     
-    // Check for suspicious patterns
-    if (RegExp(r'^[0-9]+$').hasMatch(normalized)) {
+    // Check for suspicious patterns (regex otimizada)
+    if (_onlyNumbersRegex.hasMatch(normalized)) {
       throw const ValidationException('Nome do bairro não pode ser apenas números');
     }
     
@@ -158,8 +213,8 @@ class ZoneValidationService {
       throw const ValidationException('Nome da cidade muito curto (mínimo 2 caracteres)');
     }
     
-    // Check for suspicious patterns
-    if (RegExp(r'^[0-9]+$').hasMatch(normalized)) {
+    // Check for suspicious patterns (regex otimizada)
+    if (_onlyNumbersRegex.hasMatch(normalized)) {
       throw const ValidationException('Nome da cidade não pode ser apenas números');
     }
     
@@ -241,7 +296,7 @@ class ZoneValidationService {
           );
           return true;
         }
-        throw e;
+        rethrow;
       }
     } catch (e) {
       ZoneExclusionLogger.logValidationError(
@@ -297,7 +352,7 @@ class ZoneValidationService {
       );
       
       if (!isValidLocation) {
-        throw ValidationException(
+        throw const ValidationException(
           'Erro inesperado: Dados do Google Places rejeitados',
         );
       }

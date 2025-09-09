@@ -41,14 +41,14 @@ class DriverCompletionStep extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            const Row(
                               children: [
                                 Icon(
                                   Icons.policy,
                                   color: AppColors.lightPrimary,
                                   size: 24,
                                 ),
-                                const SizedBox(width: AppSpacing.sm),
+                                SizedBox(width: AppSpacing.sm),
                                 Text(
                                   'Código de Conduta',
                                   style: AppTypography.titleLarge,
@@ -59,7 +59,7 @@ class DriverCompletionStep extends StatelessWidget {
                             
                             Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.check_circle,
                                   color: Colors.green,
                                   size: 20,
@@ -86,14 +86,14 @@ class DriverCompletionStep extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            const Row(
                               children: [
                                 Icon(
                                   Icons.directions_car,
                                   color: AppColors.lightPrimary,
                                   size: 24,
                                 ),
-                                const SizedBox(width: AppSpacing.sm),
+                                SizedBox(width: AppSpacing.sm),
                                 Text(
                                   'Dados do Veículo',
                                   style: AppTypography.titleLarge,
@@ -118,14 +118,14 @@ class DriverCompletionStep extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            const Row(
                               children: [
                                 Icon(
                                   Icons.info_outline,
                                   color: Colors.blue,
                                   size: 24,
                                 ),
-                                const SizedBox(width: AppSpacing.sm),
+                                SizedBox(width: AppSpacing.sm),
                                 Text(
                                   'Próximos Passos',
                                   style: AppTypography.titleLarge,
@@ -236,13 +236,13 @@ class DriverCompletionStep extends StatelessWidget {
                           : () => controller.previousStep(),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.lightPrimary,
-                        side: BorderSide(color: AppColors.lightPrimary),
+                        side: const BorderSide(color: AppColors.lightPrimary),
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: Text(
+                      child: const Text(
                         'Voltar',
                         style: AppTypography.labelLarge,
                       ),

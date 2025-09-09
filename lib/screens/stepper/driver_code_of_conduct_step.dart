@@ -40,14 +40,14 @@ class DriverCodeOfConductStep extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        const Row(
                           children: [
                             Icon(
                               Icons.policy,
                               color: AppColors.lightPrimary,
                               size: 24,
                             ),
-                            const SizedBox(width: AppSpacing.sm),
+                            SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
                                 'Diretrizes para Motoristas',
@@ -147,7 +147,7 @@ class DriverCodeOfConductStep extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Continuar',
                     style: AppTypography.labelLarge,
                   ),

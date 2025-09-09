@@ -2,8 +2,8 @@ import 'dart:developer' as dev;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/models/chat_message.dart';
-import '../lib/models/supabase/trip_chat.dart';
+import 'package:option/models/chat_message.dart';
+import 'package:option/models/supabase/trip_chat.dart';
 
 /// Teste específico para funcionalidade de chat entre passageiro e motorista
 class ChatFunctionalityTest {
@@ -79,7 +79,7 @@ class ChatFunctionalityTest {
       senderId: testDriverId,
       message: 'Oi! Estou chegando em 2 minutos.',
       senderType: MessageSender.driver,
-      timestamp: DateTime.now().add(Duration(minutes: 1)),
+      timestamp: DateTime.now().add(const Duration(minutes: 1)),
       status: MessageStatus.delivered,
       isFromCurrentUser: false,
     );
@@ -138,7 +138,7 @@ class ChatFunctionalityTest {
       senderId: testDriverId,
       message: 'Oi! Estou chegando em 3 minutos. Carro prata placa ABC-1234.',
       senderType: MessageSender.driver,
-      timestamp: now.add(Duration(minutes: 1)),
+      timestamp: now.add(const Duration(minutes: 1)),
       status: MessageStatus.delivered,
       isFromCurrentUser: false,
     ));
@@ -150,7 +150,7 @@ class ChatFunctionalityTest {
       senderId: testPassengerId,
       message: 'Perfeito! Já estou descendo.',
       senderType: MessageSender.passenger,
-      timestamp: now.add(Duration(minutes: 2)),
+      timestamp: now.add(const Duration(minutes: 2)),
       status: MessageStatus.read,
       isFromCurrentUser: true,
     ));
@@ -162,7 +162,7 @@ class ChatFunctionalityTest {
       senderId: testDriverId,
       message: 'Chegando agora! Estou na esquina.',
       senderType: MessageSender.driver,
-      timestamp: now.add(Duration(minutes: 4)),
+      timestamp: now.add(const Duration(minutes: 4)),
       status: MessageStatus.sent,
       isFromCurrentUser: false,
     ));
@@ -174,7 +174,7 @@ class ChatFunctionalityTest {
       senderId: testPassengerId,
       message: 'Motorista, pode alterar o destino para o shopping?',
       senderType: MessageSender.passenger,
-      timestamp: now.add(Duration(minutes: 10)),
+      timestamp: now.add(const Duration(minutes: 10)),
       status: MessageStatus.delivered,
       isFromCurrentUser: true,
     ));
@@ -186,7 +186,7 @@ class ChatFunctionalityTest {
       senderId: testDriverId,
       message: 'Claro! Shopping Iguatemi, correto?',
       senderType: MessageSender.driver,
-      timestamp: now.add(Duration(minutes: 11)),
+      timestamp: now.add(const Duration(minutes: 11)),
       status: MessageStatus.read,
       isFromCurrentUser: false,
     ));
@@ -198,7 +198,7 @@ class ChatFunctionalityTest {
       senderId: testPassengerId,
       message: 'Isso mesmo! Obrigado!',
       senderType: MessageSender.passenger,
-      timestamp: now.add(Duration(minutes: 12)),
+      timestamp: now.add(const Duration(minutes: 12)),
       status: MessageStatus.sent,
       isFromCurrentUser: true,
     ));
@@ -275,10 +275,10 @@ class ChatFunctionalityTest {
     final messages = <ChatMessage>[];
     
     // Criar mensagens fora de ordem cronológica
-    messages.add(_createTestMessage('msg_3', baseTime.add(Duration(minutes: 10))));
+    messages.add(_createTestMessage('msg_3', baseTime.add(const Duration(minutes: 10))));
     messages.add(_createTestMessage('msg_1', baseTime));
-    messages.add(_createTestMessage('msg_4', baseTime.add(Duration(minutes: 15))));
-    messages.add(_createTestMessage('msg_2', baseTime.add(Duration(minutes: 5))));
+    messages.add(_createTestMessage('msg_4', baseTime.add(const Duration(minutes: 15))));
+    messages.add(_createTestMessage('msg_2', baseTime.add(const Duration(minutes: 5))));
     
     // Validar que estão fora de ordem
     if (messages[0].timestamp.isBefore(messages[1].timestamp)) {
@@ -428,7 +428,7 @@ class ChatFunctionalityTest {
     // Testar copyWith
     final updatedTripChat = tripChat.copyWith(
       isRead: true,
-      readAt: now.add(Duration(minutes: 5)),
+      readAt: now.add(const Duration(minutes: 5)),
     );
     
     if (!updatedTripChat.isRead) {
@@ -551,7 +551,7 @@ void main() {
           senderId: 'sender_sort',
           message: 'Terceira mensagem',
           senderType: MessageSender.passenger,
-          timestamp: baseTime.add(Duration(minutes: 10)),
+          timestamp: baseTime.add(const Duration(minutes: 10)),
           status: MessageStatus.sent,
           isFromCurrentUser: true,
         ),
@@ -571,7 +571,7 @@ void main() {
           senderId: 'sender_sort',
           message: 'Segunda mensagem',
           senderType: MessageSender.passenger,
-          timestamp: baseTime.add(Duration(minutes: 5)),
+          timestamp: baseTime.add(const Duration(minutes: 5)),
           status: MessageStatus.sent,
           isFromCurrentUser: true,
         ),

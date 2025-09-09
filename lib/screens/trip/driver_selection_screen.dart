@@ -16,6 +16,7 @@ import '../../services/driver_service.dart';
 import '../../services/individual_pricing_service.dart';
 import '../../services/trip_request_manager.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/price_breakdown_widget.dart';
 import 'waiting_driver_screen.dart';
 
 class DriverWithUserData {
@@ -27,6 +28,7 @@ class DriverWithUserData {
     required this.distanceKm,
     required this.etaMinutes,
     this.estimatedFare,
+    this.pricingBreakdown,
   });
   final Driver driver;
   final String driverName;
@@ -34,6 +36,7 @@ class DriverWithUserData {
   final double distanceKm;
   final int etaMinutes;
   final double? estimatedFare;
+  final PricingBreakdownResult? pricingBreakdown;
 }
 
 class DriverSelectionScreen extends StatefulWidget {
@@ -222,7 +225,7 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
           
           if (driverWithUser != null) {
             // Calcular preço individual para este motorista COM multiplicadores de zona
-            final estimatedFare = await IndividualPricingService.calculateDriverPrice(
+            final pricingResult = await IndividualPricingService.calculateDriverPriceWithBreakdown(
               driver: driverWithDistance.driver,
               totalDistanceKm: driverWithDistance.distanceKm + widget.tripRequestData.estimatedDistanceKm,
               totalDurationMinutes: driverWithDistance.estimatedArrivalMinutes + widget.tripRequestData.estimatedDurationMinutes,
@@ -236,7 +239,6 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
                 isCondoDestination: widget.tripRequestData.isCondoDestination,
               ),
               numberOfStops: widget.tripRequestData.numberOfStops,
-              // NOVO: Incluir localizações para cálculo de multiplicador de zona
               originLocation: LatLng(
                 widget.tripRequestData.originLatitude,
                 widget.tripRequestData.originLongitude,
@@ -254,7 +256,8 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
               driverPhotoUrl: driverWithUser['user_photo_url'],
               distanceKm: driverWithDistance.distanceKm,
               etaMinutes: driverWithDistance.estimatedArrivalMinutes,
-              estimatedFare: estimatedFare,
+              estimatedFare: pricingResult.totalPrice,
+              pricingBreakdown: pricingResult,
             ));
           }
         } catch (e) {
@@ -289,17 +292,36 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirmar seleção'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Motorista: ${driverWithUserData.driverName}'),
-            Text('Veículo: ${driverWithUserData.driver.brand} ${driverWithUserData.driver.model}'),
-            Text('Placa: ${driverWithUserData.driver.plate}'),
-            Text('Distância: ${driverWithUserData.distanceKm.toStringAsFixed(1)} km'),
-            Text('Tempo estimado: ~${driverWithUserData.etaMinutes} min'),
-            Text('Preço: R\$ ${driverWithUserData.estimatedFare?.toStringAsFixed(2) ?? "0.00"}'),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Motorista: ${driverWithUserData.driverName}'),
+              Text('Veículo: ${driverWithUserData.driver.brand} ${driverWithUserData.driver.model}'),
+              Text('Placa: ${driverWithUserData.driver.plate}'),
+              Text('Distância: ${driverWithUserData.distanceKm.toStringAsFixed(1)} km'),
+              Text('Tempo estimado: ~${driverWithUserData.etaMinutes} min'),
+              const SizedBox(height: 12),
+              Text(
+                'Preço total: R\$ ${driverWithUserData.estimatedFare?.toStringAsFixed(2) ?? "0.00"}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              if (driverWithUserData.pricingBreakdown != null) ...[
+                PriceBreakdownWidget(
+                  totalPrice: driverWithUserData.pricingBreakdown!.totalPrice,
+                  distanceComponent: driverWithUserData.pricingBreakdown!.distanceComponent,
+                  timeComponent: driverWithUserData.pricingBreakdown!.timeComponent,
+                  additionalFees: driverWithUserData.pricingBreakdown!.additionalFees,
+                  zoneMultiplier: driverWithUserData.pricingBreakdown!.zoneMultiplier,
+                  baseFare: driverWithUserData.pricingBreakdown!.basePrice,
+                  compact: true,
+                ),
+                const SizedBox(height: 12),
+              ],
+            ],
+          ),
         ),
         actions: [
           TextButton(

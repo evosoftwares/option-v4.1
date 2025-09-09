@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 // Import the driver stepper controller
 import 'lib/controllers/driver_stepper_controller.dart';

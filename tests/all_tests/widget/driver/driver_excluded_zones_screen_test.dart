@@ -56,7 +56,7 @@ void main() {
             .thenAnswer((_) async => mockUser);
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: DriverExcludedZonesScreen(),
           ),
         );
@@ -87,7 +87,7 @@ void main() {
             .thenAnswer((_) async => []);
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: DriverExcludedZonesScreen(),
           ),
         );
@@ -142,7 +142,7 @@ void main() {
             .thenAnswer((_) async => zones);
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: DriverExcludedZonesScreen(),
           ),
         );
@@ -166,7 +166,7 @@ void main() {
             .thenAnswer((_) async => null);
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: DriverExcludedZonesScreen(),
             ),
@@ -220,7 +220,7 @@ void main() {
         )).thenAnswer((_) async => zone);
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: DriverExcludedZonesScreen(),
             ),
@@ -272,7 +272,7 @@ void main() {
             });
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: DriverExcludedZonesScreen(),
             ),
@@ -328,7 +328,7 @@ void main() {
             });
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: DriverExcludedZonesScreen(),
             ),
@@ -379,7 +379,7 @@ void main() {
             .thenThrow(Exception('Failed to load zones'));
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: DriverExcludedZonesScreen(),
             ),
@@ -422,7 +422,7 @@ void main() {
         )).thenThrow(Exception('Failed to add zone'));
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: DriverExcludedZonesScreen(),
             ),
@@ -468,7 +468,7 @@ void main() {
             .thenAnswer((_) async => []);
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: DriverExcludedZonesScreen(),
             ),

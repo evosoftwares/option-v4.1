@@ -780,14 +780,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                     width: 1,
                   ),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.upload_file_rounded,
                   size: AppSpacing.iconLg,
                   color: AppColors.warning,
                 ),
               ),
               
-              SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.lg),
               
               Text(
                 'Documentos Pendentes',
@@ -798,7 +798,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                 textAlign: TextAlign.center,
               ),
               
-              SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.md),
               
               Container(
                 width: double.infinity,
@@ -814,12 +814,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.info_outline_rounded,
                       color: AppColors.warning,
                       size: 18,
                     ),
-                    SizedBox(width: AppSpacing.sm),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         message,
@@ -834,7 +834,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                 ),
               ),
               
-              SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.lg),
               
               Row(
                 children: [
@@ -846,13 +846,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                         ),
-                        side: BorderSide(color: AppColors.gray300),
+                        side: const BorderSide(color: AppColors.gray300),
                       ),
                       child: const Text('Entendi'),
                     ),
                   ),
                   
-                  SizedBox(width: AppSpacing.md),
+                  const SizedBox(width: AppSpacing.md),
                   
                   Expanded(
                     flex: 2,
@@ -923,7 +923,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                 ),
               ),
               
-              SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.lg),
               
               Text(
                 title ?? 'Não é Possível Ficar Online',
@@ -934,7 +934,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                 textAlign: TextAlign.center,
               ),
               
-              SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.md),
               
               Container(
                 width: double.infinity,
@@ -950,12 +950,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.info_outline_rounded,
                       color: AppColors.error,
                       size: 18,
                     ),
-                    SizedBox(width: AppSpacing.sm),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         message,
@@ -970,7 +970,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                 ),
               ),
               
-              SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.lg),
               
               SizedBox(
                 width: double.infinity,

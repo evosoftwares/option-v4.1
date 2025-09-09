@@ -49,9 +49,15 @@ class UserDataValidator {
       throw ValidationException('Email contém dados corrompidos: $sanitized');
     }
 
-    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+    // Validação mais rigorosa de email
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     if (!emailRegex.hasMatch(sanitized)) {
       throw ValidationException('Email inválido: $sanitized');
+    }
+    
+    // Validação adicional - não pode conter espaços
+    if (sanitized.contains(' ')) {
+      throw ValidationException('Email não pode conter espaços: $sanitized');
     }
 
     return sanitized;

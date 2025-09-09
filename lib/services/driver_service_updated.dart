@@ -37,16 +37,16 @@ class DriverError extends AppError {
 /// PostgrestException mapper específico para drivers
 class DriverPostgrestErrorMapper extends PostgrestErrorMapper {
   static AppError mapError(PostgrestException e) {
-    if (e.code == '23505' && (e.message?.contains('drivers_user_id_key') ?? false)) {
+    if (e.code == '23505' && (e.message.contains('drivers_user_id_key') ?? false)) {
       return const DriverError('Já existe um cadastro de motorista para este usuário.', 'DRIVER_EXISTS');
     }
-    if (e.code == '23503' && (e.message?.contains('drivers_user_id_fkey') ?? false)) {
+    if (e.code == '23503' && (e.message.contains('drivers_user_id_fkey') ?? false)) {
       return const DriverError('Usuário não encontrado.', 'USER_NOT_FOUND');
     }
-    if (e.code == '23505' && (e.message?.contains('drivers_cnh_number_key') ?? false)) {
+    if (e.code == '23505' && (e.message.contains('drivers_cnh_number_key') ?? false)) {
       return const DriverError('Número da CNH já cadastrado.', 'CNH_EXISTS');
     }
-    if (e.code == '23505' && (e.message?.contains('drivers_vehicle_plate_key') ?? false)) {
+    if (e.code == '23505' && (e.message.contains('drivers_vehicle_plate_key') ?? false)) {
       return const DriverError('Placa do veículo já cadastrada.', 'PLATE_EXISTS');
     }
     return PostgrestErrorMapper.mapError(e);

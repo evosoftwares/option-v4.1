@@ -34,7 +34,7 @@ void main() {
     group('getDriverExcludedZones', () {
       test('should return list of excluded zones for a driver', () async {
         // Arrange
-        final driverId = 'driver-123';
+        const driverId = 'driver-123';
         final zonesData = [
           {
             'id': 'zone-1',
@@ -73,8 +73,8 @@ void main() {
 
       test('should throw DatabaseException when API call fails', () async {
         // Arrange
-        final driverId = 'driver-123';
-        final errorMessage = 'Database error';
+        const driverId = 'driver-123';
+        const errorMessage = 'Database error';
 
         when(mockPostgrest.select()).thenReturn(mockFilterBuilder);
         when(mockFilterBuilder.eq('driver_id', driverId)).thenReturn(mockFilterBuilder);
@@ -92,7 +92,7 @@ void main() {
     group('addExcludedZone', () {
       test('should add a new excluded zone successfully', () async {
         // Arrange
-        final driverId = 'driver-123';
+        const driverId = 'driver-123';
         final zoneData = {
           'id': 'new-zone-123',
           'driver_id': driverId,
@@ -135,7 +135,7 @@ void main() {
 
       test('should throw ValidationException when driver does not exist', () async {
         // Arrange
-        final driverId = 'non-existent-driver';
+        const driverId = 'non-existent-driver';
 
         // Mock driver exists check - return null
         when(mockPostgrest.select()).thenReturn(mockFilterBuilder);
@@ -162,7 +162,7 @@ void main() {
 
       test('should throw ValidationException when zone already exists', () async {
         // Arrange
-        final driverId = 'driver-123';
+        const driverId = 'driver-123';
 
         // Mock driver exists check
         final driverExistsData = {
@@ -212,8 +212,8 @@ void main() {
 
       test('should throw DatabaseException when database insert fails', () async {
         // Arrange
-        final driverId = 'driver-123';
-        final errorMessage = 'Insert failed';
+        const driverId = 'driver-123';
+        const errorMessage = 'Insert failed';
 
         // Mock driver exists check
         final driverExistsData = {
@@ -252,9 +252,9 @@ void main() {
 
       test('should handle foreign key constraint violation', () async {
         // Arrange
-        final driverId = 'invalid-driver-id';
-        final errorMessage = 'Foreign key constraint violation';
-        final errorCode = '23503';
+        const driverId = 'invalid-driver-id';
+        const errorMessage = 'Foreign key constraint violation';
+        const errorCode = '23503';
 
         // Mock driver exists check - return null
         when(mockPostgrest.select()).thenReturn(mockFilterBuilder);
@@ -283,7 +283,7 @@ void main() {
     group('removeExcludedZone', () {
       test('should remove an excluded zone successfully', () async {
         // Arrange
-        final zoneId = 'zone-123';
+        const zoneId = 'zone-123';
 
         when(mockPostgrest.delete()).thenReturn(mockFilterBuilder);
         when(mockFilterBuilder.eq('id', zoneId)).thenReturn(mockTransformBuilder);
@@ -299,8 +299,8 @@ void main() {
 
       test('should throw DatabaseException when delete fails', () async {
         // Arrange
-        final zoneId = 'zone-123';
-        final errorMessage = 'Delete failed';
+        const zoneId = 'zone-123';
+        const errorMessage = 'Delete failed';
 
         when(mockPostgrest.delete()).thenReturn(mockFilterBuilder);
         when(mockFilterBuilder.eq('id', zoneId)).thenReturn(mockTransformBuilder);
@@ -317,10 +317,10 @@ void main() {
     group('isZoneExcluded', () {
       test('should return true when zone is excluded', () async {
         // Arrange
-        final driverId = 'driver-123';
-        final neighborhood = 'Moema';
-        final city = 'São Paulo';
-        final state = 'SP';
+        const driverId = 'driver-123';
+        const neighborhood = 'Moema';
+        const city = 'São Paulo';
+        const state = 'SP';
 
         final zoneData = {
           'id': 'zone-123',
@@ -351,10 +351,10 @@ void main() {
 
       test('should return false when zone is not excluded', () async {
         // Arrange
-        final driverId = 'driver-123';
-        final neighborhood = 'Moema';
-        final city = 'São Paulo';
-        final state = 'SP';
+        const driverId = 'driver-123';
+        const neighborhood = 'Moema';
+        const city = 'São Paulo';
+        const state = 'SP';
 
         when(mockPostgrest.select(any)).thenReturn(mockFilterBuilder);
         when(mockFilterBuilder.eq('driver_id', driverId)).thenReturn(mockFilterBuilder);
@@ -379,7 +379,7 @@ void main() {
     group('getExcludedZonesCount', () {
       test('should return correct count of excluded zones', () async {
         // Arrange
-        final driverId = 'driver-123';
+        const driverId = 'driver-123';
         final zonesData = [
           {'id': 'zone-1'},
           {'id': 'zone-2'},
@@ -399,7 +399,7 @@ void main() {
 
       test('should return zero when no zones exist', () async {
         // Arrange
-        final driverId = 'driver-123';
+        const driverId = 'driver-123';
         final zonesData = [];
 
         when(mockPostgrest.select(any)).thenReturn(mockFilterBuilder);

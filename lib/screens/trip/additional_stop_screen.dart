@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../models/favorite_location.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/logo_branding.dart';
 
@@ -16,24 +15,12 @@ class AdditionalStopScreen extends StatefulWidget {
 
     // Fallbacks para pré-visualização direta via URL sem argumentos
     final origin = originJson.isNotEmpty
-        ? FavoriteLocation.fromJson(originJson)
-        : FavoriteLocation(
-            id: 'origin-preview',
-            name: 'Origem',
-            address: 'Selecione a origem',
-            type: LocationType.other,
-            userId: '',
-          );
+        ? originJson
+        : _createDefaultLocation('origin-preview', 'Origem', 'Selecione a origem');
 
     final destination = destinationJson.isNotEmpty
-        ? FavoriteLocation.fromJson(destinationJson)
-        : FavoriteLocation(
-            id: 'destination-preview',
-            name: 'Destino',
-            address: 'Selecione o destino',
-            type: LocationType.other,
-            userId: '',
-          );
+        ? destinationJson
+        : _createDefaultLocation('destination-preview', 'Destino', 'Selecione o destino');
 
     return AdditionalStopScreen(
       origin: origin,
@@ -43,11 +30,22 @@ class AdditionalStopScreen extends StatefulWidget {
 
   static const String routeName = '/additional_stop';
 
-  final FavoriteLocation origin;
-  final FavoriteLocation destination;
+  final Map<String, dynamic> origin;
+  final Map<String, dynamic> destination;
 
   @override
   State<AdditionalStopScreen> createState() => _AdditionalStopScreenState();
+}
+
+Map<String, dynamic> _createDefaultLocation(String id, String name, String address) {
+  return {
+    'id': id,
+    'name': name,
+    'address': address,
+    'latitude': null,
+    'longitude': null,
+    'placeId': null,
+  };
 }
 
 class _AdditionalStopScreenState extends State<AdditionalStopScreen> {
@@ -64,12 +62,12 @@ class _AdditionalStopScreenState extends State<AdditionalStopScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final origem = widget.origin.name.isNotEmpty
-        ? widget.origin.name
-        : (widget.origin.address.isNotEmpty ? widget.origin.address : 'origem');
-    final destino = widget.destination.name.isNotEmpty
-        ? widget.destination.name
-        : (widget.destination.address.isNotEmpty ? widget.destination.address : 'destino');
+    final origem = (widget.origin['name'] as String?)?.isNotEmpty == true
+        ? widget.origin['name'] as String
+        : ((widget.origin['address'] as String?)?.isNotEmpty == true ? widget.origin['address'] as String : 'origem');
+    final destino = (widget.destination['name'] as String?)?.isNotEmpty == true
+        ? widget.destination['name'] as String
+        : ((widget.destination['address'] as String?)?.isNotEmpty == true ? widget.destination['address'] as String : 'destino');
 
     return Scaffold(
       backgroundColor: colorScheme.surface,

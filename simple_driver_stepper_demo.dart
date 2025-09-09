@@ -200,38 +200,38 @@ class _DriverRegistrationStepperState extends State<DriverRegistrationStepper> {
   }
 
   Widget _buildCodeOfConductStep() {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
+    return const Padding(
+      padding: EdgeInsets.all(24.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
+          Icon(
             Icons.policy,
             size: 80,
             color: Colors.blue,
           ),
-          const SizedBox(height: 20),
-          const Text(
+          SizedBox(height: 20),
+          Text(
             'Código de Conduta',
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 30),
-          const Text(
+          SizedBox(height: 30),
+          Text(
             'Como motorista da plataforma, você concorda em:',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 18),
           ),
-          const SizedBox(height: 20),
-          const Text(
+          SizedBox(height: 20),
+          Text(
             '- Manter um comportamento profissional e respeitoso\n- Dirigir com seguranca e responsabilidade\n- Manter o veiculo limpo e em boas condicoes\n- Respeitar as regras de transito\n- Proteger os dados dos passageiros',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16, height: 1.5),
           ),
-          const SizedBox(height: 30),
-          const Text(
+          SizedBox(height: 30),
+          Text(
             'Ao continuar, você declara que leu e concorda com todos os termos.',
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -445,14 +445,14 @@ class _DriverRegistrationStepperState extends State<DriverRegistrationStepper> {
               ),
             ),
             const SizedBox(height: 16),
-            Card(
+            const Card(
               elevation: 2,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
                         Icon(Icons.info_outline, color: Colors.blue),
                         SizedBox(width: 10),
@@ -465,8 +465,8 @@ class _DriverRegistrationStepperState extends State<DriverRegistrationStepper> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 15),
-                    const Text(
+                    SizedBox(height: 15),
+                    Text(
                       '- Seu veiculo sera registrado em nosso sistema\n- Voce recebera uma notificacao quando o cadastro for concluido\n- O processo pode levar ate 24 horas\n- Apos aprovacao, voce podera comecar a aceitar corridas',
                       style: TextStyle(
                         fontSize: 16,

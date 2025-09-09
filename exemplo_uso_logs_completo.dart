@@ -1,5 +1,6 @@
 /// EXEMPLO DE USO DOS LOGS IMPLEMENTADOS
 /// Este arquivo demonstra como os logs estruturados funcionam em todos os CRUDs principais
+library;
 
 import 'package:flutter/material.dart';
 import 'lib/services/app_logger.dart';
@@ -12,22 +13,24 @@ import 'lib/services/wallet_service.dart';
 import 'lib/services/driver_document_service.dart';
 
 class LoggingExamplesDemo extends StatelessWidget {
+  const LoggingExamplesDemo({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Logging System Demo - OPTION App'),
+        title: const Text('Logging System Demo - OPTION App'),
         backgroundColor: Colors.blue[600],
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSectionTitle('🔐 Sistema de Logs Abrangente'),
             _buildDescription('Implementação completa de logs em todos os CRUDs principais da aplicação OPTION.'),
             
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _buildSectionTitle('📊 Categorias de Logs Implementadas'),
             
             _buildLogCategory('CRUD Operations', [
@@ -54,7 +57,7 @@ class LoggingExamplesDemo extends StatelessWidget {
               '🔄 SYNC - Logs de sincronização'
             ]),
             
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _buildSectionTitle('🏗️ Serviços com Logs Implementados'),
             
             _buildServiceCard('AuthService', '🔐', [
@@ -113,15 +116,15 @@ class LoggingExamplesDemo extends StatelessWidget {
               'Histórico de alterações'
             ]),
             
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _buildSectionTitle('🎯 Exemplos Práticos de Logs'),
             
             _buildCodeExample(),
             
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _buildSectionTitle('🔧 Configurações do Sistema'),
             
-            Card(
+            const Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Column(
@@ -140,12 +143,12 @@ class LoggingExamplesDemo extends StatelessWidget {
               ),
             ),
             
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _buildSectionTitle('🎨 Como Usar'),
             
             Card(
               color: Colors.green[50],
-              child: Padding(
+              child: const Padding(
                 padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,7 +172,7 @@ class LoggingExamplesDemo extends StatelessWidget {
   
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(
         title,
         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue[700]),
@@ -181,21 +184,21 @@ class LoggingExamplesDemo extends StatelessWidget {
     return Card(
       color: Colors.blue[50],
       child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Text(description, style: TextStyle(fontSize: 16)),
+        padding: const EdgeInsets.all(16),
+        child: Text(description, style: const TextStyle(fontSize: 16)),
       ),
     );
   }
   
   Widget _buildLogCategory(String title, List<String> items) {
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: ExpansionTile(
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         children: items.map((item) => ListTile(
           dense: true,
           title: Text(item),
-          leading: Icon(Icons.circle, size: 8),
+          leading: const Icon(Icons.circle, size: 8),
         )).toList(),
       ),
     );
@@ -203,19 +206,19 @@ class LoggingExamplesDemo extends StatelessWidget {
   
   Widget _buildServiceCard(String service, String emoji, List<String> features) {
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: ExpansionTile(
         title: Row(
           children: [
-            Text(emoji, style: TextStyle(fontSize: 24)),
-            SizedBox(width: 8),
-            Text(service, style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Text(service, style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         children: features.map((feature) => ListTile(
           dense: true,
           title: Text(feature),
-          leading: Icon(Icons.check_circle, color: Colors.green, size: 16),
+          leading: const Icon(Icons.check_circle, color: Colors.green, size: 16),
         )).toList(),
       ),
     );
@@ -225,14 +228,14 @@ class LoggingExamplesDemo extends StatelessWidget {
     return Card(
       color: Colors.grey[100],
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Exemplo de Logs Gerados:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            SizedBox(height: 12),
+            const Text('Exemplo de Logs Gerados:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 12),
             Container(
-              padding: EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.black,
                 borderRadius: BorderRadius.circular(8),
@@ -246,11 +249,11 @@ class LoggingExamplesDemo extends StatelessWidget {
                   _logLine('👁️', '[AUTH] AppUser consultado [ID: abc1***]'),
                   _logLine('🚀', '[PERFORMANCE] user_login executado em 245ms'),
                   _logLine('🔐', '[SECURITY] login_success [User: abc1***]'),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   _logLine('➕', '[USER_SERVICE] User criado [ID: def2***]'),
                   _logLine('💾', '[CREATE] Dados: {full_name: true, email: true, phone: true}'),
                   _logLine('⚡', '[PERFORMANCE] user_creation executado em 156ms'),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   _logLine('🚗', '[TRIP] solicitation_created - Viagem: abc3*** [Passageiro: def4***]'),
                   _logLine('💰', '[TRANSACTION] fare_calculation - R\$ 15.50 [User: def4***]'),
                   _logLine('🔔', '[NOTIFICATION] ✅ trip_request enviado para abc1***'),
@@ -265,12 +268,12 @@ class LoggingExamplesDemo extends StatelessWidget {
   
   Widget _logLine(String emoji, String text) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: RichText(
         text: TextSpan(
-          style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+          style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
           children: [
-            TextSpan(text: emoji, style: TextStyle(color: Colors.white)),
+            TextSpan(text: emoji, style: const TextStyle(color: Colors.white)),
             TextSpan(text: ' $text', style: TextStyle(color: Colors.green[300])),
           ],
         ),

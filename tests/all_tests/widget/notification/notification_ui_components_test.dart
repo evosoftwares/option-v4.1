@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../../../../lib/widgets/notification_status_card.dart';
-import '../../../../lib/widgets/notification_permission_dialog.dart';
-import '../../../../lib/widgets/notification_status_indicator.dart';
-import '../../../../lib/examples/notification_ui_integration_example.dart';
+import 'package:option/widgets/notification_status_card.dart';
+import 'package:option/widgets/notification_permission_dialog.dart';
+import 'package:option/widgets/notification_status_indicator.dart';
+import 'package:option/examples/notification_ui_integration_example.dart';
 
 void main() {
   group('Notification UI Components Tests', () {
     testWidgets('NotificationStatusCard displays correctly with granted permission', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: NotificationStatusCard(
               permissionStatus: NotificationPermissionStatus.granted,
@@ -39,7 +39,7 @@ void main() {
       const errorMessage = 'Erro de conexão com servidor';
       
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: NotificationStatusCard(
               permissionStatus: NotificationPermissionStatus.error,
@@ -130,7 +130,7 @@ void main() {
 
     testWidgets('NotificationStatusIndicator compact size works', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: NotificationStatusIndicator(
               size: NotificationIndicatorSize.compact,
@@ -149,7 +149,7 @@ void main() {
 
     testWidgets('NotificationStatusIndicator small size shows status text', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: NotificationStatusIndicator(
               size: NotificationIndicatorSize.small,
@@ -225,7 +225,7 @@ void main() {
       testWidgets('Shows different icons for different permission states', (WidgetTester tester) async {
         // Teste para permissão concedida
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: NotificationStatusCard(
               permissionStatus: NotificationPermissionStatus.granted,
               connectionStatus: OneSignalConnectionStatus.connected,
@@ -237,7 +237,7 @@ void main() {
         
         // Teste para permissão negada
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: NotificationStatusCard(
               permissionStatus: NotificationPermissionStatus.denied,
               connectionStatus: OneSignalConnectionStatus.connected,
@@ -250,7 +250,7 @@ void main() {
 
       testWidgets('Shows loading state correctly', (WidgetTester tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: NotificationStatusCard(
               permissionStatus: NotificationPermissionStatus.requesting,
               connectionStatus: OneSignalConnectionStatus.connecting,
@@ -266,7 +266,7 @@ void main() {
     group('Error Handling', () {
       testWidgets('Displays error messages clearly', (WidgetTester tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: NotificationStatusCard(
               permissionStatus: NotificationPermissionStatus.error,
               connectionStatus: OneSignalConnectionStatus.error,
@@ -305,7 +305,7 @@ void main() {
   group('Accessibility Tests', () {
     testWidgets('Components have proper semantic labels', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: NotificationStatusCard(
             permissionStatus: NotificationPermissionStatus.granted,
             connectionStatus: OneSignalConnectionStatus.connected,

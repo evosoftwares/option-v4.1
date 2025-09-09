@@ -14,6 +14,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../main.dart';
 import 'local_notification_service.dart';
 import 'app_logger.dart';
+import 'user_preferences_service.dart';
 
 /// Serviço completo para gerenciamento de OneSignal
 /// Inclui registro de tokens, envio de notificações, segmentação e histórico
@@ -102,7 +103,7 @@ class OneSignalService {
       
       _isInitialized = true;
       _logger.i('🎉 [ONESIGNAL] OneSignalService inicializado com SUCESSO!');
-      _logger.i('📊 [ONESIGNAL] Status: Inicializado=${_isInitialized}, Platform=${kIsWeb ? 'Web' : Platform.operatingSystem}');
+      _logger.i('📊 [ONESIGNAL] Status: Inicializado=$_isInitialized, Platform=${kIsWeb ? 'Web' : Platform.operatingSystem}');
       
     } catch (e, stackTrace) {
       _logger.e('💥 [ONESIGNAL] ERRO CRÍTICO ao inicializar OneSignalService', error: e, stackTrace: stackTrace);
@@ -567,6 +568,27 @@ class OneSignalService {
     } catch (e) {
       _logger.e('Erro ao verificar se usuário é motorista', error: e);
       return false;
+    }
+  }
+
+  /// Verifica se o usuário deu consentimento para analytics
+  Future<bool> _hasAnalyticsConsent() async {
+    try {
+      return await UserPreferencesService().getAnalyticsConsent();
+    } catch (e) {
+      _logger.e('Erro ao verificar consentimento de analytics', error: e);
+      return false; // Default to no consent if we can't determine
+    }
+  }
+
+  /// Loga informação respeitando consentimento do usuário
+  Future<void> _logInfoWithConsent(String message, {String tag = 'ONESIGNAL'}) async {
+    final hasConsent = await _hasAnalyticsConsent();
+    if (hasConsent) {
+      _logger.i('$tag $message');
+    } else {
+      // Log only essential information without user data
+      _logger.i('$tag [SEM CONSENTIMENTO] $message');
     }
   }
 

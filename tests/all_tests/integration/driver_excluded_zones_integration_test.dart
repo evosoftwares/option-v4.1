@@ -24,7 +24,7 @@ void main() {
         ];
 
         // 2. SIMULAÇÃO: Passageiro solicita corrida COM ORIGEM em Copacabana
-        final matchingCriteriaOriginExcluded = MatchingCriteria(
+        const matchingCriteriaOriginExcluded = MatchingCriteria(
           passengerLatitude: -22.9711, // Copacabana
           passengerLongitude: -43.1822,
           originNeighborhood: 'Copacabana',
@@ -47,7 +47,7 @@ void main() {
           reason: 'Motorista deve ser excluído quando origem da corrida está em zona excluída');
 
         // 4. SIMULAÇÃO: Passageiro solicita corrida COM DESTINO em Copacabana
-        final matchingCriteriaDestinationExcluded = MatchingCriteria(
+        const matchingCriteriaDestinationExcluded = MatchingCriteria(
           passengerLatitude: -22.9068, // Centro do Rio
           passengerLongitude: -43.1729,
           originNeighborhood: 'Centro',
@@ -70,7 +70,7 @@ void main() {
           reason: 'Motorista deve ser excluído quando destino da corrida está em zona excluída');
 
         // 6. SIMULAÇÃO: Passageiro solicita corrida SEM zona excluída
-        final matchingCriteriaNonExcluded = MatchingCriteria(
+        const matchingCriteriaNonExcluded = MatchingCriteria(
           passengerLatitude: -22.9068, // Centro do Rio
           passengerLongitude: -43.1729,
           originNeighborhood: 'Centro',
@@ -119,7 +119,7 @@ void main() {
         final testScenarios = [
           {
             'description': 'Corrida para o Centro - deve excluir motorista',
-            'criteria': MatchingCriteria(
+            'criteria': const MatchingCriteria(
               passengerLatitude: -23.5329,
               passengerLongitude: -46.6395,
               originNeighborhood: 'Vila Madalena',
@@ -135,7 +135,7 @@ void main() {
           },
           {
             'description': 'Corrida da Cidade Tiradentes - deve excluir motorista',
-            'criteria': MatchingCriteria(
+            'criteria': const MatchingCriteria(
               passengerLatitude: -23.5891,
               passengerLongitude: -46.4023,
               originNeighborhood: 'Cidade Tiradentes',
@@ -151,7 +151,7 @@ void main() {
           },
           {
             'description': 'Corrida zona oeste permitida - deve incluir motorista',
-            'criteria': MatchingCriteria(
+            'criteria': const MatchingCriteria(
               passengerLatitude: -23.5329,
               passengerLongitude: -46.6395,
               originNeighborhood: 'Vila Madalena',
@@ -275,7 +275,7 @@ void main() {
         ];
 
         // CASO 1: Faltam dados de origem
-        final criteriaIncompleteOrigin = MatchingCriteria(
+        const criteriaIncompleteOrigin = MatchingCriteria(
           passengerLatitude: -22.9068,
           passengerLongitude: -43.1729,
           // originNeighborhood: null, // Faltando
@@ -290,7 +290,7 @@ void main() {
         expect(_simulateExclusionFilter(excludedZones, criteriaIncompleteOrigin), true);
 
         // CASO 2: Faltam dados de destino
-        final criteriaIncompleteDestination = MatchingCriteria(
+        const criteriaIncompleteDestination = MatchingCriteria(
           passengerLatitude: -22.9068,
           passengerLongitude: -43.1729,
           originNeighborhood: 'Copacabana',
@@ -305,7 +305,7 @@ void main() {
         expect(_simulateExclusionFilter(excludedZones, criteriaIncompleteDestination), true);
 
         // CASO 3: Não há dados de origem nem destino
-        final criteriaNoLocationData = MatchingCriteria(
+        const criteriaNoLocationData = MatchingCriteria(
           passengerLatitude: -22.9068,
           passengerLongitude: -43.1729,
         );
@@ -413,7 +413,7 @@ void main() {
           createdAt: DateTime.now(),
         ));
 
-        final criteria = MatchingCriteria(
+        const criteria = MatchingCriteria(
           passengerLatitude: -23.5329,
           passengerLongitude: -46.6395,
           originNeighborhood: 'Vila Madalena',

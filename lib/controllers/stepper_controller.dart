@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../exceptions/user_registration_exception.dart';
-import '../models/favorite_location.dart';
 import '../models/user.dart';
 import '../services/app_logger.dart';
 import '../services/firebase_file_upload_service.dart';
@@ -36,32 +35,6 @@ class StepperController extends ChangeNotifier {
   String? get uploadedPhotoUrl => _uploadedPhotoUrl;
   bool get isUploadingPhoto => _isUploadingPhoto;
   
-  // DEPRECATED: Locais salvos foram removidos - métodos mantidos para compatibilidade
-  @Deprecated('Locais salvos foram removidos do projeto')
-  List<FavoriteLocation> get favoriteLocations => [];
-  
-  @Deprecated('Locais salvos foram removidos do projeto')  
-  List<FavoriteLocation> get locations => [];
-  
-  @Deprecated('Locais salvos foram removidos do projeto')
-  void addLocation(FavoriteLocation location) {
-    // Método vazio - locais salvos foram removidos
-  }
-  
-  @Deprecated('Locais salvos foram removidos do projeto')
-  void removeLocation(int index) {
-    // Método vazio - locais salvos foram removidos
-  }
-  
-  @Deprecated('Locais salvos foram removidos do projeto')
-  void updateLocations(List<FavoriteLocation> locations) {
-    // Método vazio - locais salvos foram removidos
-  }
-  
-  @Deprecated('Locais salvos foram removidos do projeto')
-  Future<void> saveFavoriteLocations(List<FavoriteLocation> locations) async {
-    // Método vazio - locais salvos foram removidos
-  }
 
   // Alias para compatibilidade com add_location_modal
 

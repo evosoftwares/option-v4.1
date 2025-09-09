@@ -150,7 +150,7 @@ class ChatService {
       dev.log('✅ Subscription configurada com sucesso', name: 'ChatService');
       
       // Testar se o stream está ativo após 3 segundos
-      await Future.delayed(Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 3));
       dev.log('⏱️ Stream configurado há 3 segundos - verificando status...', name: 'ChatService');
       dev.log('🔍 DIAGNÓSTICO: Se não houver dados no stream após 3s, pode haver problema de RLS ou ausência de dados', name: 'ChatService');
       
@@ -203,7 +203,7 @@ class ChatService {
               return TripChat.fromJson(json);
             } catch (e) {
               dev.log('❌ Erro ao converter mensagem: $e, JSON: $json', name: 'ChatService');
-              throw e;
+              rethrow;
             }
           })
           .toList()
@@ -227,7 +227,7 @@ class ChatService {
         } catch (e, stackTrace) {
           dev.log('❌ Erro ao converter TripChat para ChatMessage: $e\nStackTrace: $stackTrace', name: 'ChatService');
           dev.log('📄 Dados do TripChat que falhou: id=${tripChat.id}, senderId=${tripChat.senderId}, message=${tripChat.message}', name: 'ChatService');
-          throw e;
+          rethrow;
         }
       }).toList();
 
@@ -469,7 +469,7 @@ class ChatService {
         if (e.toString().contains('permission denied')) {
           dev.log('🔒 Possível erro de RLS - verifique as permissões', name: 'ChatService');
         }
-        throw e;
+        rethrow;
       }
       
       final tripChat = TripChat(

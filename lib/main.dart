@@ -32,6 +32,7 @@ import 'screens/notifications/notifications_screen.dart';
 import 'screens/passenger/passenger_home_screen.dart';
 import 'screens/passenger/passenger_trip_screen.dart';
 import 'screens/payments/payments_screen.dart';
+import 'screens/privacy/privacy_policy_screen.dart';
 import 'screens/profile/profile_edit_screen.dart';
 import 'screens/rating/trip_rating_screen.dart';
 import 'screens/stepper/driver_stepper.dart';
@@ -172,7 +173,7 @@ Future<NetworkConnectivityResult> _testNetworkConnectivity() async {
 
     // Teste DNS com timeout maior para emuladores
     final addresses = await InternetAddress.lookup(projectInfo.host)
-        .timeout(Duration(seconds: 10));
+        .timeout(const Duration(seconds: 10));
 
     if (addresses.isEmpty) {
       print('❌ [CONNECTIVITY] DNS não resolveu: ${projectInfo.host}');
@@ -189,7 +190,7 @@ Future<NetworkConnectivityResult> _testNetworkConnectivity() async {
     final socket = await Socket.connect(
       projectInfo.host,
       443,
-      timeout: Duration(seconds: 5),
+      timeout: const Duration(seconds: 5),
     );
     await socket.close();
 
@@ -455,6 +456,7 @@ class MyApp extends StatelessWidget {
             '/payments': (context) => const PaymentsScreen(),
             '/emergency': (context) => const EmergencyScreen(),
             '/emergency_contacts': (context) => const EmergencyContactsScreen(),
+            '/privacy-policy': (context) => const PrivacyPolicyScreen(),
           },
           onGenerateRoute: (settings) {
             print('🎯 onGenerateRoute chamado para: ${settings.name}');

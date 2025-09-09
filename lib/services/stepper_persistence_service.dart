@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/favorite_location.dart';
 import 'app_logger.dart';
 
 /// Serviço de persistência SELETIVO - apenas para dados de cadastro
@@ -24,7 +22,6 @@ class StepperPersistenceService {
     String? fullName,
     String? email,
     int? currentStep,
-    List<FavoriteLocation>? favoriteLocations, // IGNORADO - não mais persistido
     String? uploadedPhotoUrl,
   }) async {
     try {
@@ -81,7 +78,7 @@ class StepperPersistenceService {
         'fullName': fullName,
         'email': email,
         'currentStep': currentStep,
-        'favoriteLocations': <FavoriteLocation>[], // Sempre vazio - não mais persistido
+        'favoriteLocations': [], // Sempre vazio - não mais persistido
         'uploadedPhotoUrl': uploadedPhotoUrl,
       };
     } catch (e) {
@@ -92,7 +89,7 @@ class StepperPersistenceService {
         'fullName': null,
         'email': null,
         'currentStep': 0,
-        'favoriteLocations': <FavoriteLocation>[],
+        'favoriteLocations': [],
         'uploadedPhotoUrl': null,
       };
     }

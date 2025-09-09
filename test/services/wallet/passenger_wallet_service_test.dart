@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../../lib/exceptions/app_exceptions.dart';
-import '../../../lib/services/wallet_service.dart';
+import 'package:option/exceptions/app_exceptions.dart';
+import 'package:option/services/wallet_service.dart';
 
 void main() {
   group('PassengerWalletService', () {

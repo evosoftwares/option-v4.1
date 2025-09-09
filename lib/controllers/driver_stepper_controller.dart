@@ -40,9 +40,9 @@ class DriverStepperController extends ChangeNotifier {
   
   // Estados de retry para feedback visual (mantidos para compatibilidade)
   int _cnhRetryAttempt = 0;
-  int _crlvRetryAttempt = 0;
+  final int _crlvRetryAttempt = 0;
   bool _cnhIsRetrying = false;
-  bool _crlvIsRetrying = false;
+  final bool _crlvIsRetrying = false;
   
   // Dados do veículo
   String _vehicleBrand = '';
@@ -552,7 +552,7 @@ class DriverStepperController extends ChangeNotifier {
         if (e.code == 'PGRST116') {
           _setError('❌ Registro de motorista não encontrado.\n\nTente fazer login novamente.');
         } else if ((e.code ?? '').startsWith('23505')) { // Duplicate key
-          _setError('❌ Esta placa já está cadastrada!\n\nA placa ${_vehiclePlate} já está sendo usada por outro motorista. Verifique se digitou corretamente.');
+          _setError('❌ Esta placa já está cadastrada!\n\nA placa $_vehiclePlate já está sendo usada por outro motorista. Verifique se digitou corretamente.');
         } else if ((e.code ?? '').startsWith('23')) { // Other constraint violations
           _setError('❌ Dados inválidos detectados.\n\nVerifique se todas as informações do veículo estão corretas e tente novamente.');
         } else {
