@@ -140,7 +140,7 @@ void main() {
         when(mockSupabase.from('trip_requests')).thenReturn(mockQueryBuilder);
         when(mockQueryBuilder.update(any)).thenReturn(mockQueryBuilder);
         when(mockQueryBuilder.eq('id', requestId))
-            .thenThrow(PostgrestException(message: 'Database error', code: '500'));
+            .thenThrow(const PostgrestException(message: 'Database error', code: '500'));
 
         // Act & Assert
         expect(
@@ -168,7 +168,7 @@ void main() {
         when(mockQueryBuilder.select()).thenReturn(mockQueryBuilder);
         when(mockQueryBuilder.eq('id', requestId)).thenReturn(mockQueryBuilder);
         when(mockQueryBuilder.single())
-            .thenThrow(PostgrestException(message: 'No rows found', code: 'PGRST116'));
+            .thenThrow(const PostgrestException(message: 'No rows found', code: 'PGRST116'));
 
         // Act & Assert
         expect(

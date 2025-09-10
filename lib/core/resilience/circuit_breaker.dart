@@ -231,7 +231,7 @@ class CircuitBreaker {
     _successCount = 0;
     _stateChangeTime = DateTime.now();
     
-    _log('Transição: $previousState -> open (${_failureCount} falhas)');
+    _log('Transição: $previousState -> open ($_failureCount falhas)');
   }
   
   /// Transição para estado meio-aberto (teste)

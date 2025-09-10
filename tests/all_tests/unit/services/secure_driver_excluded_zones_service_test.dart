@@ -79,7 +79,7 @@ void main() {
         when(mockPostgrest.select()).thenReturn(mockFilterBuilder);
         when(mockFilterBuilder.eq('driver_id', driverId)).thenReturn(mockFilterBuilder);
         when(mockFilterBuilder.order('created_at', ascending: false)).thenReturn(mockTransformBuilder);
-        when(mockTransformBuilder.execute()).thenThrow(PostgrestException(message: errorMessage));
+        when(mockTransformBuilder.execute()).thenThrow(const PostgrestException(message: errorMessage));
 
         // Act & Assert
         expect(
@@ -236,7 +236,7 @@ void main() {
         // Mock the insert operation to fail
         when(mockPostgrest.insert(any)).thenReturn(mockTransformBuilder);
         when(mockTransformBuilder.select()).thenReturn(mockTransformBuilder);
-        when(mockTransformBuilder.single()).thenThrow(PostgrestException(message: errorMessage));
+        when(mockTransformBuilder.single()).thenThrow(const PostgrestException(message: errorMessage));
 
         // Act & Assert
         expect(
@@ -304,7 +304,7 @@ void main() {
 
         when(mockPostgrest.delete()).thenReturn(mockFilterBuilder);
         when(mockFilterBuilder.eq('id', zoneId)).thenReturn(mockTransformBuilder);
-        when(mockTransformBuilder.execute()).thenThrow(PostgrestException(message: errorMessage));
+        when(mockTransformBuilder.execute()).thenThrow(const PostgrestException(message: errorMessage));
 
         // Act & Assert
         expect(

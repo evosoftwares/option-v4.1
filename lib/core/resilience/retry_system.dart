@@ -101,7 +101,7 @@ class RetrySystem {
         }
 
         return RetryResult.success(result, attempts);
-      } catch (error, stackTrace) {
+      } catch (error) {
         lastError = error;
 
         if (kDebugMode) {

@@ -1,15 +1,18 @@
 import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config/app_config.dart';
 import 'utils/supabase_emulator_config.dart';
 import 'controllers/stepper_controller.dart';
+import 'presentation/screens/auth/login_screen.dart';
+import 'presentation/blocs/login_bloc.dart';
+import 'core/service_locator.dart';
 import 'screens/about/about_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
-import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/user_type_screen.dart';
 
@@ -47,7 +50,6 @@ import 'screens/wallet/wallet_screen.dart';
 import 'services/onesignal_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/supabase_helper.dart';
-import 'utils/emulator_network_helper.dart';
 
 // Global navigator key for navigation from services
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -67,6 +69,9 @@ Future<void> main() async {
   print('🔧 [MAIN] Inicializando Supabase com diagnóstico...');
 
   await _initializeSupabaseWithDiagnostics();
+
+  // Initialize service locator
+  ServiceLocator().init(Supabase.instance.client);
 
   // Inicializando OneSignal para notificações push
   print('🚀 [MAIN] Inicializando OneSignal Service...');
@@ -425,7 +430,10 @@ class MyApp extends StatelessWidget {
           initialRoute: '/login',
           routes: {
             '/select_user_type': (context) => const UserTypeScreen(),
-            '/login': (context) => const LoginScreen(),
+            '/login': (context) => BlocProvider(
+                  create: (context) => LoginBloc(ServiceLocator().loginUseCase),
+                  child: LoginScreen(),
+                ),
             '/register': (context) => const RegisterScreen(),
             '/forgot-password': (context) => const ForgotPasswordScreen(),
             '/home': (context) => const PassengerHomeScreen(),

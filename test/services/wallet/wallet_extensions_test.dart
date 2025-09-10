@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
 
 import 'package:option/models/passenger_wallet.dart';
 import 'package:option/models/driver_wallet.dart';

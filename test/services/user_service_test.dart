@@ -3,7 +3,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:option/exceptions/app_exceptions.dart';
-import 'package:option/models/user.dart' as app_user;
 import 'package:option/services/user_service.dart';
 import 'package:option/utils/supabase_helper.dart';
 

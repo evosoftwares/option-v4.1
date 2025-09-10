@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/driver_document_service.dart';
 import '../services/driver_document_refresh_service.dart';
-import '../utils/storage_url_freshner.dart';
+import '../../core/utils/storage_url_freshner.dart';
 import '../widgets/driver_document_card_fresh.dart';
 
 /// Exemplo de integração entre DriverDocumentService e o sistema de URLs frescas

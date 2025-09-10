@@ -25,7 +25,7 @@ void main() async {
   }
   
   // Executar app simples
-  runApp(TestApp());
+  runApp(const TestApp());
 }
 
 class TestApp extends StatelessWidget {

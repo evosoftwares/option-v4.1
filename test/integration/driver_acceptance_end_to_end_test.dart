@@ -2,11 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../lib/services/trip_request_manager.dart';
-import '../../lib/models/supabase/driver.dart';
-import '../../lib/models/trip_request_data.dart';
-import '../../lib/services/trip_service.dart';
-import '../../lib/exceptions/app_exceptions.dart';
+import 'package:option/services/trip_request_manager.dart';
+import 'package:option/models/supabase/driver.dart';
+import 'package:option/models/trip_request_data.dart';
+import 'package:option/services/trip_service.dart';
+import 'package:option/exceptions/app_exceptions.dart';
 import '../helpers/test_helpers.dart';
 
 class MockSupabaseClient extends Mock implements SupabaseClient {}

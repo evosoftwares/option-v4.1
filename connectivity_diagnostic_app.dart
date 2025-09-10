@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 /// App standalone para diagnóstico de conectividade Supabase
 /// Execute com: flutter run connectivity_diagnostic_app.dart
 void main() {
-  runApp(ConnectivityDiagnosticApp());
+  runApp(const ConnectivityDiagnosticApp());
 }
 
 class ConnectivityDiagnosticApp extends StatelessWidget {
@@ -21,7 +21,7 @@ class ConnectivityDiagnosticApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: ConnectivityDiagnosticScreen(),
+      home: const ConnectivityDiagnosticScreen(),
     );
   }
 }

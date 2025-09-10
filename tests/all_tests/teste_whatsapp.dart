@@ -6,7 +6,7 @@ import 'dart:io';
 void main() async {
   print('=== TESTE DE VALIDAÇÃO DO WHATSAPP ===\n');
   
-  const phoneNumber = '556592577217';
+  const phoneNumber = '556599776524';
   const message = 'Olá! Preciso de ajuda com o app Option - Teste de conectividade.';
   final encodedMessage = Uri.encodeComponent(message);
   final whatsappUrl = 'https://wa.me/$phoneNumber?text=$encodedMessage';

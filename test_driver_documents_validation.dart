@@ -3,9 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'lib/config/app_config.dart';
 import 'lib/services/driver_service.dart';
-import 'lib/services/driver_status_service.dart';
 import 'lib/controllers/driver_status_controller.dart';
-import 'lib/exceptions/app_exceptions.dart';
 
 /// Script de teste para validação de documentos do motorista
 ///

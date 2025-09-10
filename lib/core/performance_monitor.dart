@@ -6,8 +6,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../config/app_config.dart';
-import '../services/user_preferences_service.dart';
+import 'config/app_config.dart';
+import '../domain/services/user_preferences_service.dart';
 
 class PerformanceMetrics {
 

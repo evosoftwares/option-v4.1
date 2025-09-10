@@ -3,8 +3,8 @@ import '../widgets/notification_status_card.dart';
 import '../widgets/notification_permission_dialog.dart';
 import '../widgets/notification_onboarding_screen.dart';
 import '../widgets/notification_status_indicator.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_typography.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_typography.dart';
 
 /// Exemplo de integração dos componentes de UI para notificações OneSignal
 /// Este arquivo demonstra como usar os widgets criados para garantir

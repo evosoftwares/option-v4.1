@@ -3,8 +3,8 @@
 library;
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../exceptions/app_exceptions.dart' as app_exc;
-import '../../exceptions/user_registration_exception.dart';
+import '../../domain/exceptions/app_exceptions.dart' as app_exc;
+import '../../domain/exceptions/user_registration_exception.dart';
 import 'app_error.dart';
 
 /// Mapeador central para erros do Postgrest/Supabase

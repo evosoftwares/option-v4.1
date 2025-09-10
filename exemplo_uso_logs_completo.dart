@@ -6,11 +6,8 @@ import 'package:flutter/material.dart';
 import 'lib/services/app_logger.dart';
 import 'lib/services/auth_service.dart';
 import 'lib/services/user_service.dart';
-import 'lib/services/driver_service.dart';
 import 'lib/services/trip_service.dart';
 import 'lib/services/payment_service.dart';
-import 'lib/services/wallet_service.dart';
-import 'lib/services/driver_document_service.dart';
 
 class LoggingExamplesDemo extends StatelessWidget {
   const LoggingExamplesDemo({super.key});

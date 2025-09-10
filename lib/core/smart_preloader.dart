@@ -3,8 +3,8 @@ import 'dart:developer' as dev;
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/supabase/app_user.dart';
-import '../services/user_service.dart';
+import '../../data/models/supabase/app_user.dart';
+import '../domain/services/user_service.dart';
 import 'module_loader.dart';
 
 class UserProfile {

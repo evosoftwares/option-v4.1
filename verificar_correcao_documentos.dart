@@ -11,6 +11,7 @@
 /// - Handler _handleEligibilityError criado na DriverHomeScreen
 /// - Dialogs específicos para diferentes tipos de erro
 /// - Redirecionamento para tela de documentos
+library;
 
 void main() {
   print('🔍 VERIFICAÇÃO DA CORREÇÃO DE DOCUMENTOS DO MOTORISTA');

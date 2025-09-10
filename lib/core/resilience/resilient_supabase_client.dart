@@ -153,7 +153,17 @@ class ResilientSupabaseClient {
         if (kDebugMode) {
           debugPrint('📦 Usando cache expirado (modo offline): $table');
         }
-        return List<Map<String, dynamic>>.from(expiredCache['data']);
+        return (expiredCache['data'] as List<dynamic>)
+            .map((item) {
+              if (item is Map<String, dynamic>) {
+                return item;
+              } else if (item is Map) {
+                return Map<String, dynamic>.from(item);
+              } else {
+                throw Exception('Tipo de item inesperado no cache: ${item.runtimeType}');
+              }
+            })
+            .toList();
       }
     }
 
@@ -198,7 +208,17 @@ class ResilientSupabaseClient {
         operationName: operationName ?? 'select_$table',
       );
 
-      final data = List<Map<String, dynamic>>.from(result);
+      final data = (result as List<dynamic>)
+          .map((item) {
+            if (item is Map<String, dynamic>) {
+              return item;
+            } else if (item is Map) {
+              return Map<String, dynamic>.from(item);
+            } else {
+              throw Exception('Tipo de item inesperado: ${item.runtimeType}');
+            }
+          })
+          .toList();
 
       // Salva no cache local se habilitado
       if (_config.enableCache) {
@@ -233,7 +253,17 @@ class ResilientSupabaseClient {
           if (kDebugMode) {
             debugPrint('🔄 Usando fallback para $table');
           }
-          return List<Map<String, dynamic>>.from(fallbackData['data']);
+          return (fallbackData['data'] as List<dynamic>)
+              .map((item) {
+                if (item is Map<String, dynamic>) {
+                  return item;
+                } else if (item is Map) {
+                  return Map<String, dynamic>.from(item);
+                } else {
+                  throw Exception('Tipo de item inesperado no fallback: ${item.runtimeType}');
+                }
+              })
+              .toList();
         }
       }
 
@@ -294,7 +324,17 @@ class ResilientSupabaseClient {
         // Invalida cache relacionado
         _invalidateTableCache(table);
         
-        return List<Map<String, dynamic>>.from(result);
+        return (result as List<dynamic>)
+            .map((item) {
+              if (item is Map<String, dynamic>) {
+                return item;
+              } else if (item is Map) {
+                return Map<String, dynamic>.from(item);
+              } else {
+                throw Exception('Tipo de item inesperado no update: ${item.runtimeType}');
+              }
+            })
+            .toList();
       },
       config: _config.retryConfig,
       operationName: operationName ?? 'update_$table',
@@ -473,7 +513,7 @@ class ResilientSupabaseClient {
       'total_items': _cache.length,
       'valid_items': validItems,
       'expired_items': expiredItems,
-      'cache_hit_ratio': validItems / (_cache.length > 0 ? _cache.length : 1),
+      'cache_hit_ratio': validItems / (_cache.isNotEmpty ? _cache.length : 1),
       'is_online': _isOnline,
     };
   }

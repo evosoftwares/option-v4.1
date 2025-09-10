@@ -717,7 +717,7 @@ class PathDemonstrationWidget extends StatelessWidget {
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      child: Text(title, style: TextStyle(fontSize: 12)),
+      child: Text(title, style: const TextStyle(fontSize: 12)),
     );
   }
   

@@ -208,7 +208,7 @@ class ConnectivityMonitor {
           }
         } catch (e) {
           client.close();
-          throw e;
+          rethrow;
         }
       } else {
         // Sem heartbeat, faz uma verificação simples
@@ -342,7 +342,7 @@ extension ConnectivityExtension<T> on Future<T> {
       (event) {
         if (event.status == ConnectivityStatus.online) {
           subscription.cancel();
-          this.then(completer.complete).catchError(completer.completeError);
+          then(completer.complete).catchError(completer.completeError);
         }
       },
     );
