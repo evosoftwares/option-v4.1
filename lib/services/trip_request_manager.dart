@@ -9,6 +9,7 @@ import '../models/supabase/trip_request.dart';
 import '../models/trip_request_data.dart';
 import '../services/driver_service.dart';
 import '../services/notification_service.dart';
+import '../services/platform_settings_service.dart';
 import '../services/transaction_service.dart';
 import '../services/trip_service.dart';
 
@@ -16,12 +17,14 @@ class TripRequestManager {
   TripRequestManager(this._supabase) :
     _tripService = TripService(_supabase),
     _driverService = DriverService(_supabase),
-    _notificationService = NotificationService(_supabase);
+    _notificationService = NotificationService(_supabase),
+    _platformSettingsService = PlatformSettingsService(_supabase);
 
   final SupabaseClient _supabase;
   final TripService _tripService;
   final DriverService _driverService;
   final NotificationService _notificationService;
+  final PlatformSettingsService _platformSettingsService;
   
   final Map<String, Timer> _activeTimers = {};
   final Map<String, StreamSubscription> _activeSubscriptions = {};
@@ -80,7 +83,7 @@ class TripRequestManager {
       
       // Iniciar timer de timeout se sistema de fallback habilitado
       if (FeatureFlags().enableFallbackSystem) {
-        _startTimeoutTimer(requestId, targetDriver.id);
+        await _startTimeoutTimer(requestId, targetDriver.id, tripData.vehicleCategory);
       }
       
       _logMatching('Solicitação $requestId criada com sucesso');
@@ -170,16 +173,30 @@ class TripRequestManager {
     }
   }
   
-  /// Inicia timer de timeout para solicitação
-  void _startTimeoutTimer(String requestId, String driverId) {
-    final timeoutDuration = Duration(seconds: FeatureFlags().timeoutSeconds);
-    
-    _activeTimers[requestId] = Timer(
-      timeoutDuration,
-      () => _handleTimeout(requestId, driverId),
-    );
-    
-    _logMatching('Timer de ${timeoutDuration.inSeconds}s iniciado para request $requestId');
+  /// Inicia timer de timeout para solicitação usando configuração dinâmica
+  Future<void> _startTimeoutTimer(String requestId, String driverId, String vehicleCategory) async {
+    try {
+      final timeoutSeconds = await _platformSettingsService.getDriverAcceptanceTimeoutSeconds(vehicleCategory);
+      final timeoutDuration = Duration(seconds: timeoutSeconds);
+      
+      _activeTimers[requestId] = Timer(
+        timeoutDuration,
+        () => _handleTimeout(requestId, driverId),
+      );
+      
+      _logMatching('Timer de ${timeoutDuration.inSeconds}s iniciado para request $requestId (categoria: $vehicleCategory)');
+    } catch (e) {
+      // Fallback para valor padrão em caso de erro
+      _logMatching('Erro ao buscar timeout da categoria $vehicleCategory: $e. Usando fallback de 10s.');
+      final timeoutDuration = const Duration(seconds: 10);
+      
+      _activeTimers[requestId] = Timer(
+        timeoutDuration,
+        () => _handleTimeout(requestId, driverId),
+      );
+      
+      _logMatching('Timer de ${timeoutDuration.inSeconds}s iniciado para request $requestId (fallback)');
+    }
   }
   
   /// Lida com timeout de solicitação
@@ -201,6 +218,7 @@ class TripRequestManager {
       final fallbackDrivers = List<String>.from(currentRequest['fallback_drivers'] ?? []);
       final currentIndex = currentRequest['current_fallback_index'] ?? 0;
       final timeoutCount = currentRequest['timeout_count'] ?? 0;
+      final vehicleCategory = currentRequest['vehicle_category'] ?? 'common_car';
       
       // Verificar se ainda há motoristas de fallback
       if (currentIndex < fallbackDrivers.length) {
@@ -208,13 +226,21 @@ class TripRequestManager {
         
         _logMatching('Redirecionando para driver fallback $nextDriverId (índice $currentIndex)');
         
+        // Buscar timeout dinâmico para a categoria do veículo
+        int timeoutSeconds = 10; // fallback
+        try {
+          timeoutSeconds = await _platformSettingsService.getDriverAcceptanceTimeoutSeconds(vehicleCategory);
+        } catch (e) {
+          _logMatching('Erro ao buscar timeout para categoria $vehicleCategory: $e. Usando fallback de 10s.');
+        }
+        
         // Atualizar request para próximo motorista
         await _supabase.from('trip_requests').update({
           'target_driver_id': nextDriverId,
           'current_fallback_index': currentIndex + 1,
           'timeout_count': isTimeout ? timeoutCount + 1 : timeoutCount,
           'expires_at': DateTime.now().add(
-            Duration(seconds: FeatureFlags().timeoutSeconds)
+            Duration(seconds: timeoutSeconds)
           ).toIso8601String(),
         }).eq('id', requestId);
         
@@ -225,7 +251,7 @@ class TripRequestManager {
         
         // Iniciar novo timer
         if (FeatureFlags().enableFallbackSystem) {
-          _startTimeoutTimer(requestId, nextDriverId);
+          await _startTimeoutTimer(requestId, nextDriverId, vehicleCategory);
         }
         
       } else {
@@ -378,6 +404,7 @@ class TripRequestManager {
 
       final fallbackDrivers = List<String>.from(requestData['fallback_drivers'] ?? []);
       final currentIndex = requestData['current_fallback_index'] ?? 0;
+      final vehicleCategory = requestData['vehicle_category'] ?? 'common_car';
 
       if (currentIndex < fallbackDrivers.length) {
         final nextDriverId = fallbackDrivers[currentIndex];
@@ -399,7 +426,7 @@ class TripRequestManager {
         
         // Iniciar novo timer de timeout
         if (FeatureFlags().enableFallbackSystem) {
-          _startTimeoutTimer(requestId, nextDriverId);
+          await _startTimeoutTimer(requestId, nextDriverId, vehicleCategory);
         }
       } else {
         // Não há mais motoristas de fallback disponíveis

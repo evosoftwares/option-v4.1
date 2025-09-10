@@ -46,6 +46,8 @@ class FeatureFlags {
   static const bool _enableFallbackSystem = true;
   
   /// Tempo limite em segundos para motorista responder a solicitação
+  /// DEPRECATED: Use PlatformSettingsService.getDriverAcceptanceTimeoutSeconds() instead
+  @Deprecated('Use PlatformSettingsService.getDriverAcceptanceTimeoutSeconds() for dynamic platform settings')
   static const int _timeoutSeconds = 10;
   
   /// Número máximo de motoristas de fallback por solicitação

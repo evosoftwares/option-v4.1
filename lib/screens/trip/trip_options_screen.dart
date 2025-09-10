@@ -171,7 +171,7 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
       final categories = await _driverService.getAvailableCategoriesInRegion(
         latitude: lat,
         longitude: lng,
-        radiusKm: 15,
+        // Removido parâmetro inválido radiusKm
       );
       
       if (mounted) {
