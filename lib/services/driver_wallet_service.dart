@@ -177,7 +177,7 @@ class DriverWalletService {
     required String driverId,
     required String tripId,
     required double tripAmount,
-    double platformCommissionPercent = 0.10, // 10% padrão
+    required double platformCommissionPercent, // Deve vir de platform_settings
   }) async {
     try {
       // Calcula o valor líquido para o motorista (após comissão)

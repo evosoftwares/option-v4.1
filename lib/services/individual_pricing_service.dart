@@ -94,8 +94,11 @@ class IndividualPricingService {
     // 6. PREÇO TOTAL: PreçoBase * MultiplicadorZona
     final totalPrice = basePrice * zoneMultiplier;
     
-    // Garantir preço mínimo (configurável via platform_settings)
-    return math.max(totalPrice, categoryData.minFare ?? 8.0);
+    // Garantir preço mínimo (sempre deve vir de platform_settings)
+    if (categoryData.minFare == null) {
+      throw Exception('Min fare not configured for vehicle category. Check platform_settings table.');
+    }
+    return math.max(totalPrice, categoryData.minFare!);
   }
 
   /// Versão síncrona para compatibilidade com código existente
@@ -133,8 +136,11 @@ class IndividualPricingService {
     // 4. PREÇO TOTAL: ComponenteDistancia + ComponenteTempo + TaxasAdicionais
     final totalPrice = distanceComponent + timeComponent + additionalFees;
     
-    // Garantir preço mínimo (configurável via platform_settings)
-    return math.max(totalPrice, categoryData.minFare ?? 8.0);
+    // Garantir preço mínimo (sempre deve vir de platform_settings)
+    if (categoryData.minFare == null) {
+      throw Exception('Min fare not configured for vehicle category. Check platform_settings table.');
+    }
+    return math.max(totalPrice, categoryData.minFare!);
   }
   
   /// Calcula o componente de distância da fórmula de precificação
@@ -386,8 +392,11 @@ class IndividualPricingService {
     // 6. PREÇO TOTAL: PreçoBase * MultiplicadorZona
     final totalPrice = basePrice * zoneMultiplier;
     
-    // Garantir preço mínimo (configurável via platform_settings)
-    final finalPrice = math.max(totalPrice, categoryData.minFare ?? 8.0);
+    // Garantir preço mínimo (sempre deve vir de platform_settings)
+    if (categoryData.minFare == null) {
+      throw Exception('Min fare not configured for vehicle category. Check platform_settings table.');
+    }
+    final finalPrice = math.max(totalPrice, categoryData.minFare!);
     
     return PricingBreakdownResult(
       totalPrice: finalPrice,

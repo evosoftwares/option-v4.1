@@ -141,47 +141,74 @@ class PlatformSettingsService {
   /// Métodos de conveniência para obter valores específicos
   Future<double> getBasePricePerKm([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
-    return settings?.basePricePerKm ?? 1.5; // Fallback hardcoded
+    if (settings?.basePricePerKm == null) {
+      throw Exception('Base price per km not found for category $category. Check platform_settings table.');
+    }
+    return settings!.basePricePerKm;
   }
 
   Future<double> getBasePricePerMinute([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
-    return settings?.basePricePerMinute ?? 0.20; // Fallback hardcoded
+    if (settings?.basePricePerMinute == null) {
+      throw Exception('Base price per minute not found for category $category. Check platform_settings table.');
+    }
+    return settings!.basePricePerMinute;
   }
 
   Future<double> getPlatformCommissionPercent([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
-    return settings?.platformCommissionPercent ?? 10.0; // Fallback hardcoded
+    if (settings?.platformCommissionPercent == null) {
+      throw Exception('Platform commission percent not found for category $category. Check platform_settings table.');
+    }
+    return settings!.platformCommissionPercent;
   }
 
   Future<double> getMinFare([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
-    return settings?.minFare ?? 8.0; // Fallback hardcoded
+    if (settings?.minFare == null) {
+      throw Exception('Min fare not found for category $category. Check platform_settings table.');
+    }
+    return settings!.minFare;
   }
 
   Future<double> getMinCancellationFee([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
-    return settings?.minCancellationFee ?? 10.0; // Fallback hardcoded
+    if (settings?.minCancellationFee == null) {
+      throw Exception('Min cancellation fee not found for category $category. Check platform_settings table.');
+    }
+    return settings!.minCancellationFee;
   }
 
   Future<double> getCancellationFeePercent([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
-    return settings?.cancellationFeePercent ?? 20.0; // Fallback hardcoded
+    if (settings?.cancellationFeePercent == null) {
+      throw Exception('Cancellation fee percent not found for category $category. Check platform_settings table.');
+    }
+    return settings!.cancellationFeePercent;
   }
 
   Future<int> getNoShowWaitMinutes([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
-    return settings?.noShowWaitMinutes ?? 3; // Fallback hardcoded
+    if (settings?.noShowWaitMinutes == null) {
+      throw Exception('No show wait minutes not found for category $category. Check platform_settings table.');
+    }
+    return settings!.noShowWaitMinutes;
   }
 
   Future<int> getDriverAcceptanceTimeoutSeconds([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
-    return settings?.driverAcceptanceTimeoutSeconds ?? 10; // Fallback hardcoded
+    if (settings?.driverAcceptanceTimeoutSeconds == null) {
+      throw Exception('Driver acceptance timeout not found for category $category. Check platform_settings table.');
+    }
+    return settings!.driverAcceptanceTimeoutSeconds;
   }
 
   Future<int> getSearchRadiusKm([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
-    return settings?.searchRadiusKm ?? 10; // Fallback hardcoded
+    if (settings?.searchRadiusKm == null) {
+      throw Exception('Search radius not found for category $category. Check platform_settings table.');
+    }
+    return settings!.searchRadiusKm;
   }
 
   /// Busca configurações para cálculo de preços de uma categoria de veículo
@@ -338,6 +365,7 @@ class PlatformSettingsService {
           'cancellation_fee_percent': 20.0,
           'no_show_wait_minutes': 3,
           'driver_acceptance_timeout_seconds': 10,
+          'search_radius_km': 10,
         },
         {
           'category': 'freight',
@@ -349,6 +377,7 @@ class PlatformSettingsService {
           'cancellation_fee_percent': 20.0,
           'no_show_wait_minutes': 5,
           'driver_acceptance_timeout_seconds': 15,
+          'search_radius_km': 15,
         },
         {
           'category': 'tow_truck',
@@ -360,6 +389,7 @@ class PlatformSettingsService {
           'cancellation_fee_percent': 20.0,
           'no_show_wait_minutes': 10,
           'driver_acceptance_timeout_seconds': 20,
+          'search_radius_km': 20,
         },
       ];
 

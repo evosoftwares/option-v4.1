@@ -10,6 +10,7 @@ import '../../models/vehicle_category.dart';
 import '../../services/cancellation_fee_service.dart';
 import '../../services/driver_service.dart';
 import '../../services/individual_pricing_service.dart';
+import '../../services/platform_settings_service.dart';
 import '../../services/trip_request_manager.dart';
 import '../../services/trip_service.dart';
 import '../../theme/app_colors.dart';
@@ -45,6 +46,7 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
   final _supabase = Supabase.instance.client;
   late final TripService _tripService;
   late final TripRequestManager _tripRequestManager;
+  late final PlatformSettingsService _platformSettingsService;
   late final AnimationController _pulseController;
   late final AnimationController _progressController;
   late final Animation<double> _pulseAnimation;
@@ -60,6 +62,8 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
   double _distanceComponent = 0.0;
   double _timeComponent = 0.0;
   double _additionalFees = 0.0;
+  double _platformCommission = 0.0;
+  double _driverEarnings = 0.0;
   
   // Estados de busca
   String _currentStatus = 'searching';
@@ -85,6 +89,7 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
     
     _tripService = TripService(_supabase);
     _tripRequestManager = TripRequestManager(_supabase);
+    _platformSettingsService = PlatformSettingsService(_supabase);
     _searchStartTime = DateTime.now();
     
     developer.log(
@@ -132,14 +137,14 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
     // Monitora mudanças em tempo real na solicitação
     _requestStatusSubscription = _tripRequestManager
         .monitorRequestStatus(widget.tripRequestId)
-        .listen((request) {
+        .listen((request) async {
       if (request != null && mounted) {
-        _updateFallbackProgress(request);
+        await _updateFallbackProgress(request);
       }
     });
   }
   
-  void _updateFallbackProgress(TripRequest request) {
+  Future<void> _updateFallbackProgress(TripRequest request) async {
     developer.log(
       'WaitingDriverScreen: Atualizando progresso - Status: ${request.status}, TargetDriver: ${request.targetDriverId}',
       name: 'WaitingDriverScreen',
@@ -198,15 +203,14 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
             );
           }
           
-          // Calcular tempo restante para timeout
+          // Calcular tempo restante para timeout usando configuração dinâmica
           if (request.expiresAt != null) {
             final timeLeft = request.expiresAt!.difference(DateTime.now());
             if (timeLeft.inSeconds > 0) {
               _progressController.reset();
-              _progressController.animateTo(
-                1.0 - (timeLeft.inSeconds / 10.0),
-                duration: Duration(seconds: timeLeft.inSeconds),
-              );
+              // Usar timeout dinâmico baseado na categoria do veículo
+              // Executar em paralelo para não bloquear o setState
+              _updateProgressWithDynamicTimeout(request, timeLeft);
             }
           }
         } else {
@@ -251,6 +255,44 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
         });
       }
     });
+  }
+
+  /// Atualiza a barra de progresso com timeout dinâmico baseado na categoria do veículo
+  Future<void> _updateProgressWithDynamicTimeout(TripRequest request, Duration timeLeft) async {
+    try {
+      // Obter timeout configurado para a categoria do veículo
+      final vehicleCategory = request.vehicleCategory ?? 'common_car';
+      final configuredTimeoutSeconds = await _platformSettingsService.getDriverAcceptanceTimeoutSeconds(vehicleCategory);
+      
+      developer.log(
+        'WaitingDriverScreen: Usando timeout dinâmico de ${configuredTimeoutSeconds}s para categoria $vehicleCategory',
+        name: 'WaitingDriverScreen',
+        level: 800,
+      );
+      
+      // Calcular progresso baseado no timeout configurado
+      final progress = timeLeft.inSeconds > 0 
+          ? 1.0 - (timeLeft.inSeconds / configuredTimeoutSeconds.toDouble())
+          : 1.0;
+      
+      _progressController.animateTo(
+        progress.clamp(0.0, 1.0),
+        duration: Duration(seconds: timeLeft.inSeconds),
+      );
+      
+    } catch (e) {
+      developer.log(
+        'WaitingDriverScreen: Erro ao obter timeout dinâmico, usando fallback: $e',
+        name: 'WaitingDriverScreen',
+        level: 800,
+      );
+      
+      // Fallback para timeout padrão de 10 segundos
+      _progressController.animateTo(
+        1.0 - (timeLeft.inSeconds / 10.0),
+        duration: Duration(seconds: timeLeft.inSeconds),
+      );
+    }
   }
 
   void _startRequestMonitoring() {
@@ -500,26 +542,55 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
         return;
       }
 
-      // Obter dados da categoria
-      final categoryData = VehicleCategoryData.defaultForCategory(vehicleCategory);
-      
-      // Calcular componentes do preço
-      final distanceComponent = categoryData.basePricePerKm * _tripRequest!.estimatedDistanceKm;
-      final timeComponent = categoryData.basePricePerMinute * _tripRequest!.estimatedDurationMinutes;
-      final additionalFees = IndividualPricingService.calculateGenericAdditionalFees(
-        needsPet: _tripRequest!.needsPet,
-        needsGrocerySpace: _tripRequest!.needsGrocerySpace,
-        isCondoOrigin: _tripRequest!.isCondoOrigin,
-        isCondoDestination: _tripRequest!.isCondoDestination,
-        numberOfStops: _tripRequest!.numberOfStops,
-      );
+      // Obter dados da categoria do Supabase
+      try {
+        final platformSettings = await _platformSettingsService.getSettingsByCategory(_tripRequest!.vehicleCategory);
+        if (platformSettings == null) {
+          developer.log(
+            'Platform settings não encontrado para categoria: ${_tripRequest!.vehicleCategory}',
+            name: 'WaitingDriverScreen',
+            level: 800,
+          );
+          return;
+        }
+        
+        final categoryData = VehicleCategoryData.fromPlatformSettings(
+          platformSettings: platformSettings.toJson(),
+          availableDrivers: 0,
+        );
+        
+        // Calcular componentes do preço usando dados do Supabase
+        final distanceComponent = categoryData.basePricePerKm * _tripRequest!.estimatedDistanceKm;
+        final timeComponent = categoryData.basePricePerMinute * _tripRequest!.estimatedDurationMinutes;
+        final additionalFees = IndividualPricingService.calculateGenericAdditionalFees(
+          needsPet: _tripRequest!.needsPet,
+          needsGrocerySpace: _tripRequest!.needsGrocerySpace,
+          isCondoOrigin: _tripRequest!.isCondoOrigin,
+          isCondoDestination: _tripRequest!.isCondoDestination,
+          numberOfStops: _tripRequest!.numberOfStops,
+        );
 
-      if (mounted) {
-        setState(() {
-          _distanceComponent = distanceComponent;
-          _timeComponent = timeComponent;
-          _additionalFees = additionalFees;
-        });
+        // Calcular comissão da plataforma
+        final totalFare = _tripRequest!.estimatedFare;
+        final platformCommissionPercent = await _platformSettingsService.getPlatformCommissionPercent(_tripRequest!.vehicleCategory);
+        final platformCommission = totalFare * (platformCommissionPercent / 100.0);
+        final driverEarnings = totalFare - platformCommission;
+
+        if (mounted) {
+          setState(() {
+            _distanceComponent = distanceComponent;
+            _timeComponent = timeComponent;
+            _additionalFees = additionalFees;
+            _platformCommission = platformCommission;
+            _driverEarnings = driverEarnings;
+          });
+        }
+      } catch (e) {
+        developer.log(
+          'Erro ao obter configurações da plataforma para breakdown: $e',
+          name: 'WaitingDriverScreen',
+          level: 800,
+        );
       }
     } catch (e) {
       developer.log(
@@ -605,6 +676,8 @@ class _WaitingDriverScreenState extends State<WaitingDriverScreen>
                       distanceComponent: _distanceComponent,
                       timeComponent: _timeComponent,
                       additionalFees: _additionalFees,
+                      platformCommission: _platformCommission,
+                      driverEarnings: _driverEarnings,
                     )
                   : const Center(child: Text('Solicitação não encontrada')),
     );
@@ -624,6 +697,8 @@ class _WaitingContent extends StatelessWidget {
     required this.distanceComponent,
     required this.timeComponent,
     required this.additionalFees,
+    required this.platformCommission,
+    required this.driverEarnings,
   });
 
   final TripRequest tripRequest;
@@ -637,6 +712,8 @@ class _WaitingContent extends StatelessWidget {
   final double distanceComponent;
   final double timeComponent;
   final double additionalFees;
+  final double platformCommission;
+  final double driverEarnings;
 
   String get _statusTitle {
     switch (currentStatus) {
@@ -745,6 +822,8 @@ class _WaitingContent extends StatelessWidget {
                     distanceComponent: distanceComponent,
                     timeComponent: timeComponent,
                     additionalFees: additionalFees,
+                    platformCommission: platformCommission,
+                    driverEarnings: driverEarnings,
                   ),
                 ],
               ),
@@ -1013,12 +1092,16 @@ class _TripInfoCard extends StatelessWidget {
     required this.distanceComponent,
     required this.timeComponent,
     required this.additionalFees,
+    required this.platformCommission,
+    required this.driverEarnings,
   });
 
   final TripRequest tripRequest;
   final double distanceComponent;
   final double timeComponent;
   final double additionalFees;
+  final double platformCommission;
+  final double driverEarnings;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1096,6 +1179,9 @@ class _TripInfoCard extends StatelessWidget {
             distanceComponent: distanceComponent,
             timeComponent: timeComponent,
             additionalFees: additionalFees,
+            platformCommission: platformCommission > 0 ? platformCommission : null,
+            driverEarnings: driverEarnings > 0 ? driverEarnings : null,
+            showCommissionBreakdown: platformCommission > 0,
           ),
         ],
       ),

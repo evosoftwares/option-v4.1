@@ -112,7 +112,9 @@ class VehicleCategoryData {
     );
   }
 
-  /// Cria uma instância com dados padrão para desenvolvimento
+  /// ⚠️ DEPRECATED: Cria uma instância com dados hardcoded APENAS para desenvolvimento
+  /// SEMPRE use fromPlatformSettings() em produção para obter dados do Supabase
+  @Deprecated('Use fromPlatformSettings() to get data from Supabase platform_settings')
   factory VehicleCategoryData.defaultForCategory(VehicleCategory category) {
     switch (category) {
       case VehicleCategory.commonCar:

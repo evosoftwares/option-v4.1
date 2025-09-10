@@ -7,6 +7,7 @@ import '../exceptions/app_exceptions.dart';
 import '../models/supabase/driver.dart';
 import '../models/supabase/trip.dart';
 import '../models/supabase/trip_request.dart';
+import 'platform_settings_service.dart';
 
 /// Resultado do cálculo de taxa de cancelamento
 class CancellationFeeResult {
@@ -55,14 +56,16 @@ class CancellationContext {
 /// Serviço para cálculo e aplicação de taxas de cancelamento
 /// Implementa as regras conforme especificação de negócio
 class CancellationFeeService {
-  CancellationFeeService(this._supabase);
+  CancellationFeeService(this._supabase, {PlatformSettingsService? platformSettingsService})
+    : _platformSettingsService = platformSettingsService ?? PlatformSettingsService(_supabase);
 
   final SupabaseClient _supabase;
+  final PlatformSettingsService _platformSettingsService;
 
   /// Calcula a taxa de cancelamento baseado no contexto
   /// 
   /// Implementa as regras:
-  /// - MultaBase = MÍNIMO((PreçoTotalEstimado * 0.20), 10.00)
+  /// - MultaBase = MÍNIMO((PreçoTotalEstimado * CancellationFeePercent%), MinCancellationFee)
   /// - FatorDeslocamento = DistânciaJáPercorrida / DistânciaTotalAtéOPassageiro
   /// - TaxaFinal = MultaBase * FatorDeslocamento
   /// - No-Show: FatorDeslocamento = 1 (100%)
@@ -82,21 +85,28 @@ class CancellationFeeService {
         );
       }
 
-      // 2. Calcular multa base
-      final baseFee = _calculateBaseFee(context.tripRequest.estimatedFare);
+      // 2. Obter categoria do veículo para usar configurações corretas
+      final vehicleCategory = context.tripRequest.vehicleCategory ?? 'common_car';
+      
+      // 3. Calcular multa base com configurações dinâmicas
+      final baseFee = await _calculateBaseFee(
+        context.tripRequest.estimatedFare, 
+        vehicleCategory,
+      );
       print('  🎯 Multa base: R\$ ${baseFee.toStringAsFixed(2)}');
 
-      // 3. Calcular fator de deslocamento
+      // 4. Calcular fator de deslocamento
       final displacementFactor = await _calculateDisplacementFactor(context);
       print('  📏 Fator deslocamento: ${(displacementFactor * 100).toStringAsFixed(1)}%');
 
-      // 4. Calcular taxa final
+      // 5. Calcular taxa final
       final finalFee = baseFee * displacementFactor;
       print('  💸 Taxa final: R\$ ${finalFee.toStringAsFixed(2)}');
 
-      // 5. Calcular ganhos do motorista (taxa menos comissão da plataforma)
-      const platformCommission = 0.10; // 10% de comissão
-      final driverEarnings = finalFee * (1 - platformCommission);
+      // 6. Calcular ganhos do motorista (taxa menos comissão da plataforma)
+      final platformCommissionPercent = await _platformSettingsService.getPlatformCommissionPercent(vehicleCategory);
+      final platformCommissionRate = platformCommissionPercent / 100.0;
+      final driverEarnings = finalFee * (1 - platformCommissionRate);
 
       return CancellationFeeResult(
         shouldChargeFee: true,
@@ -171,10 +181,25 @@ class CancellationFeeService {
     return (shouldCharge: true, reason: 'Passageiro cancelou após aceitação');
   }
 
-  /// Calcula a multa base: MÍNIMO((PreçoTotal * 0.20), 10.00)
-  double _calculateBaseFee(double estimatedFare) {
-    final percentageFee = estimatedFare * 0.20; // 20% do valor
-    return math.min(percentageFee, 10); // Máximo R$ 10,00
+  /// Calcula a multa base usando configurações dinâmicas
+  /// MÍNIMO((PreçoTotal * CancellationFeePercent%), MinCancellationFee)
+  Future<double> _calculateBaseFee(double estimatedFare, String vehicleCategory) async {
+    try {
+      // Obter configurações de cancelamento da categoria
+      final cancellationFeePercent = await _platformSettingsService.getCancellationFeePercent(vehicleCategory);
+      final minCancellationFee = await _platformSettingsService.getMinCancellationFee(vehicleCategory);
+      
+      // Calcular taxa baseada no percentual
+      final percentageFee = estimatedFare * (cancellationFeePercent / 100.0);
+      
+      // Retornar o máximo entre a taxa calculada e a taxa mínima
+      return math.max(percentageFee, minCancellationFee);
+    } catch (e) {
+      print('⚠️ Erro ao obter configurações de cancelamento: $e');
+      // Fallback para valores hardcoded
+      final percentageFee = estimatedFare * 0.20; // 20% do valor
+      return math.min(percentageFee, 10); // Máximo R$ 10,00
+    }
   }
 
   /// Calcula o fator de deslocamento do motorista

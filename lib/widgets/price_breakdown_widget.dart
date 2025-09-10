@@ -17,6 +17,9 @@ class PriceBreakdownWidget extends StatelessWidget {
     this.baseFare,
     this.showTotal = true,
     this.compact = false,
+    this.platformCommission,
+    this.driverEarnings,
+    this.showCommissionBreakdown = false,
   });
 
   /// Preço total da viagem
@@ -42,6 +45,15 @@ class PriceBreakdownWidget extends StatelessWidget {
 
   /// Modo compacto para espaços menores
   final bool compact;
+  
+  /// Comissão da plataforma (opcional)
+  final double? platformCommission;
+  
+  /// Ganhos do motorista (opcional)
+  final double? driverEarnings;
+  
+  /// Se deve mostrar breakdown de comissão
+  final bool showCommissionBreakdown;
 
   @override
   Widget build(BuildContext context) {
@@ -100,8 +112,43 @@ class PriceBreakdownWidget extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
           ],
 
+          // Breakdown da Comissão (se solicitado)
+          if (showCommissionBreakdown && platformCommission != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            const Divider(height: 1),
+            const SizedBox(height: AppSpacing.md),
+            
+            // Título da seção de comissão
+            Text(
+              'Distribuição do Valor',
+              style: AppTypography.titleSmall.copyWith(
+                fontWeight: AppTypography.semiBold,
+                color: AppColors.lightOnSurface,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            
+            // Ganhos do motorista
+            if (driverEarnings != null)
+              _buildPriceLine(
+                label: 'Motorista',
+                value: driverEarnings!,
+                icon: Icons.drive_eta,
+              ),
+            
+            // Comissão da plataforma
+            _buildPriceLine(
+              label: 'Taxa da Plataforma',
+              value: platformCommission!,
+              icon: Icons.business,
+            ),
+          ],
+          
           // Preço Total
           if (showTotal) ...[
+            const SizedBox(height: AppSpacing.md),
+            const Divider(height: 1),
+            const SizedBox(height: AppSpacing.md),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

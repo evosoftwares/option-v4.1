@@ -1296,10 +1296,11 @@ class DriverService {
 
   /// Busca categorias de veículos disponíveis em uma região
   /// Retorna dados baseados em platform_settings + contagem de motoristas ativos
+  /// O raio de busca deve vir de platform_settings.search_radius_km
   Future<List<VehicleCategoryData>> getAvailableCategoriesInRegion({
     required double latitude,
     required double longitude,
-    double radiusKm = 10.0,
+    String? category, // Categoria específica para obter seu raio
   }) async {
     try {
       // Buscar todas as categorias disponíveis diretamente do platform_settings
@@ -1328,13 +1329,18 @@ class DriverService {
         print('   - ${setting.category}: R\$ ${setting.basePricePerKm}/km');
       }
       
+      // Usar o raio padrão da primeira categoria ou 10km como fallback
+      final defaultRadius = platformSettings.isNotEmpty 
+          ? platformSettings.first.searchRadiusKm ?? 10 
+          : 10;
+      
       // Busca contagem de motoristas por categoria na região
       final response = await _supabase.rpc(
         'get_available_categories_stats',
         params: {
           'lat': latitude,
           'lng': longitude,
-          'radius_km': radiusKm,
+          'radius_km': defaultRadius,
         },
       );
 
@@ -1408,18 +1414,20 @@ class DriverService {
     VehicleCategory category, {
     required double latitude,
     required double longitude,
-    double radiusKm = 10.0,
   }) async {
     try {
       // Buscar preços da categoria no platform_settings
       final pricingConfig =
           await _platformSettingsService.getPricingConfig(category.id);
 
+      // Obter raio de busca do platform_settings para esta categoria
+      final searchRadius = await _platformSettingsService.getSearchRadiusKm(category.id);
+      
       // Contar motoristas disponíveis na região para esta categoria
       final drivers = await getAvailableDriversNearby(
         latitude: latitude,
         longitude: longitude,
-        radiusKm: radiusKm,
+        radiusKm: searchRadius.toDouble(),
         category: category.id,
       );
 

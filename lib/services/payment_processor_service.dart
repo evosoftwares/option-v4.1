@@ -4,6 +4,7 @@ import '../exceptions/app_exceptions.dart';
 import '../models/passenger_wallet_transaction.dart';
 import 'driver_wallet_service.dart';
 import 'passenger_payment_service.dart';
+import 'platform_settings_service.dart';
 import 'wallet_service.dart';
 
 /// Resultado do processamento de pagamento de viagem
@@ -29,16 +30,16 @@ class PaymentProcessorService {
     SupabaseClient? client,
     WalletService? walletService,
     PassengerPaymentService? passengerPaymentService,
+    PlatformSettingsService? platformSettingsService,
   }) : _supabase = client ?? Supabase.instance.client,
        _walletService = walletService ?? WalletService(),
-       _passengerPaymentService = passengerPaymentService ?? PassengerPaymentService();
+       _passengerPaymentService = passengerPaymentService ?? PassengerPaymentService(),
+       _platformSettingsService = platformSettingsService ?? PlatformSettingsService(Supabase.instance.client);
 
   final SupabaseClient _supabase;
   final WalletService _walletService;
   final PassengerPaymentService _passengerPaymentService;
-
-  /// Comissão da plataforma (10%)
-  static const double platformCommissionRate = 0.10;
+  final PlatformSettingsService _platformSettingsService;
 
   /// Processa pagamento completo da viagem
   /// Debita do passageiro e credita o motorista com desconto da comissão
@@ -49,6 +50,7 @@ class PaymentProcessorService {
     required double totalAmount,
     String? promoCodeId,
     double? discountApplied,
+    String? vehicleCategory,
 
   }) async {
     try {
@@ -56,20 +58,28 @@ class PaymentProcessorService {
       print('   📍 Trip ID: $tripId');
       print('   💰 Valor total: R\$ ${totalAmount.toStringAsFixed(2)}');
       
-      // 1. Calcular valor final após desconto
+      // 1. Obter comissão da plataforma dinamicamente
+      final category = vehicleCategory ?? 'common_car';
+      final platformCommissionPercent = await _platformSettingsService.getPlatformCommissionPercent(category);
+      final platformCommissionRate = platformCommissionPercent / 100.0; // Converter % para decimal
+      
+      print('   📊 Categoria: $category');
+      print('   🏦 Comissão configurada: ${platformCommissionPercent}%');
+      
+      // 2. Calcular valor final após desconto
       final finalAmount = discountApplied != null 
           ? (totalAmount - discountApplied).clamp(0.0, totalAmount)
           : totalAmount;
       
       print('   💸 Valor final (após desconto): R\$ ${finalAmount.toStringAsFixed(2)}');
       
-      // 2. Verificar se passageiro tem saldo suficiente
+      // 3. Verificar se passageiro tem saldo suficiente
       final hasBalance = await _walletService.hasEnoughBalance(passengerId, finalAmount);
       if (!hasBalance) {
         throw const DatabaseException('Saldo insuficiente na carteira do passageiro');
       }
       
-      // 3. Processar pagamento do passageiro
+      // 4. Processar pagamento do passageiro
     final passengerTransaction = await _passengerPaymentService.processTripPayment(
       passengerId: passengerId,
       tripId: tripId,
@@ -78,21 +88,22 @@ class PaymentProcessorService {
         discountApplied: discountApplied,
       );
       
-      // 4. Calcular ganhos do motorista (após comissão)
+      // 5. Calcular ganhos do motorista (após comissão)
       final platformCommission = totalAmount * platformCommissionRate;
       final driverEarnings = totalAmount - platformCommission;
       
       print('   🏦 Comissão da plataforma: R\$ ${platformCommission.toStringAsFixed(2)}');
       print('   🚗 Ganhos do motorista: R\$ ${driverEarnings.toStringAsFixed(2)}');
       
-      // 5. Creditar ganhos do motorista
+      // 6. Creditar ganhos do motorista
       await DriverWalletService.processTripPayment(
         driverId: driverId,
         tripId: tripId,
         tripAmount: totalAmount,
+        platformCommissionPercent: platformCommissionPercent,
       );
       
-      // 6. Atualizar status de pagamento da viagem
+      // 7. Atualizar status de pagamento da viagem
       await _updateTripPaymentStatus(tripId, 'completed');
       
       print('✅ [${DateTime.now()}] Pagamento processado com sucesso');
@@ -192,15 +203,20 @@ class PaymentProcessorService {
   }
 
   /// Obtém estatísticas de pagamento para uma viagem
-  Future<Map<String, dynamic>> getTripPaymentStats(String tripId) async {
+  Future<Map<String, dynamic>> getTripPaymentStats(String tripId, {String? vehicleCategory}) async {
     try {
       final tripData = await _supabase
           .from('trips')
-          .select('total_amount, payment_status, created_at')
+          .select('total_amount, payment_status, created_at, vehicle_category')
           .eq('id', tripId)
           .single();
 
       final totalAmount = (tripData['total_amount'] as num).toDouble();
+      final category = vehicleCategory ?? tripData['vehicle_category'] as String? ?? 'common_car';
+      
+      // Obter comissão dinâmica da configuração
+      final platformCommissionPercent = await _platformSettingsService.getPlatformCommissionPercent(category);
+      final platformCommissionRate = platformCommissionPercent / 100.0;
       final platformCommission = totalAmount * platformCommissionRate;
       final driverEarnings = totalAmount - platformCommission;
 
@@ -210,6 +226,8 @@ class PaymentProcessorService {
         'platform_commission': platformCommission,
         'driver_earnings': driverEarnings,
         'commission_rate': platformCommissionRate,
+        'commission_percent': platformCommissionPercent,
+        'vehicle_category': category,
         'payment_status': tripData['payment_status'],
         'created_at': tripData['created_at'],
       };

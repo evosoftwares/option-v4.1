@@ -4,6 +4,7 @@ import '../exceptions/app_exceptions.dart';
 import 'driver_wallet_service.dart';
 import 'passenger_payment_service.dart';
 import 'payment_processor_service.dart';
+import 'platform_settings_service.dart';
 import 'wallet_service.dart';
 
 // Exportar TripPaymentResult do PaymentProcessorService
@@ -17,18 +18,18 @@ class TripPaymentService {
     WalletService? walletService,
     PassengerPaymentService? passengerPaymentService,
     PaymentProcessorService? paymentProcessor,
+    PlatformSettingsService? platformSettingsService,
   }) : _supabase = client ?? Supabase.instance.client,
        _walletService = walletService ?? WalletService(),
        _passengerPaymentService = passengerPaymentService ?? PassengerPaymentService(),
-       _paymentProcessor = paymentProcessor ?? PaymentProcessorService();
+       _paymentProcessor = paymentProcessor ?? PaymentProcessorService(),
+       _platformSettingsService = platformSettingsService ?? PlatformSettingsService(Supabase.instance.client);
 
   final SupabaseClient _supabase;
   final WalletService _walletService;
   final PassengerPaymentService _passengerPaymentService;
   final PaymentProcessorService _paymentProcessor;
-
-  /// Comissão da plataforma (10%)
-  static const double platformCommissionRate = 0.10;
+  final PlatformSettingsService _platformSettingsService;
 
   /// Processa pagamento automático da viagem
   /// Debita do passageiro e credita o motorista com desconto da comissão
@@ -39,6 +40,7 @@ class TripPaymentService {
     required double totalAmount,
     String? promoCodeId,
     double? discountApplied,
+    String? vehicleCategory,
 
   }) async {
     try {
@@ -52,7 +54,7 @@ class TripPaymentService {
          totalAmount: totalAmount,
          promoCodeId: promoCodeId,
          discountApplied: discountApplied,
-   
+         vehicleCategory: vehicleCategory,
        );
        
        return result;
@@ -94,6 +96,7 @@ class TripPaymentService {
     required String tripId,
     required double amount,
     required double originalAmount,
+    required double commissionRate,
   }) async {
     try {
       await _supabase
@@ -107,7 +110,7 @@ class TripPaymentService {
             'metadata': {
               'trip_id': tripId,
               'original_amount': originalAmount,
-              'commission_rate': platformCommissionRate,
+              'commission_rate': commissionRate,
             },
             'created_at': DateTime.now().toIso8601String(),
           });
