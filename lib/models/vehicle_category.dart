@@ -1,29 +1,18 @@
 /// Enum que define as categorias de veículos disponíveis no sistema
 /// Baseado na coluna category da tabela platform_settings (referenciada por drivers.vehicle_category)
+/// ATENÇÃO: Os IDs devem corresponder exatamente aos valores na tabela platform_settings
 enum VehicleCategory {
   /// Categoria comum (mais básica e popular)
-  comum('Comum', 'Comum', 'Categoria padrão para veículos comuns'),
+  /// Corresponde ao valor 'common_car' na base de dados
+  commonCar('common_car', 'Carro Comum', 'Categoria padrão para veículos de passeio'),
   
-  /// Categoria econômica para viagens simples  
-  economico('economico', 'Econômico', 'Viagem simples e econômica'),
+  /// Categoria frete/carga para transporte de mercadorias
+  /// Corresponde ao valor 'freight' na base de dados
+  freight('freight', 'Frete', 'Transporte de mercadorias e cargas'),
   
-  /// Categoria standard com conforto equilibrado
-  standard('standard', 'Standard', 'Conforto equilibrado'),
-  
-  /// Categoria premium com veículos de luxo
-  premium('premium', 'Premium', 'Veículos de luxo'),
-  
-  /// Categoria SUV para veículos espaçosos
-  suv('suv', 'SUV', 'Veículos espaçosos'),
-  
-  /// Categoria executiva premium
-  executivo('executivo', 'Executivo', 'Categoria executiva'),
-  
-  /// Categoria van para grupos e bagagens
-  van('van', 'Van', 'Grupos e bagagens'),
-  
-  /// Categoria guincho
-  towTruck('tow_truck', 'Guincho', 'Veículos de guincho');
+  /// Categoria guincho para reboques e assistência
+  /// Corresponde ao valor 'tow_truck' na base de dados
+  towTruck('tow_truck', 'Guincho', 'Veículos de reboque e assistência');
 
   const VehicleCategory(this.id, this.displayName, this.description);
 
@@ -37,14 +26,47 @@ enum VehicleCategory {
   final String description;
 
   /// Retorna a categoria baseada no ID
+  /// Inclui mapeamento para compatibilidade com dados em português do Supabase
   static VehicleCategory? fromId(String? id) {
     if (id == null) {
       return null;
     }
+    
+    // Mapeamento para compatibilidade com dados do Supabase em português
+    final mappedId = _mapPortugueseToEnglish(id);
+    
     try {
-      return VehicleCategory.values.firstWhere((cat) => cat.id == id);
+      return VehicleCategory.values.firstWhere((cat) => cat.id == mappedId);
     } on Exception {
       return null;
+    }
+  }
+  
+  /// Mapeia categorias em português do Supabase para IDs em inglês
+  static String _mapPortugueseToEnglish(String id) {
+    switch (id.toLowerCase()) {
+      case 'comum':
+        return 'common_car';
+      case 'freight':
+        return 'freight';
+      case 'tow_truck':
+        return 'tow_truck';
+      default:
+        return id; // Retorna o ID original se não houver mapeamento
+    }
+  }
+  
+  /// Mapeia IDs em inglês para categorias em português do Supabase
+  static String mapEnglishToPortuguese(String id) {
+    switch (id.toLowerCase()) {
+      case 'common_car':
+        return 'Comum';
+      case 'freight':
+        return 'freight';
+      case 'tow_truck':
+        return 'tow_truck';
+      default:
+        return id; // Retorna o ID original se não houver mapeamento
     }
   }
 
@@ -53,20 +75,19 @@ enum VehicleCategory {
 
   /// Retorna as categorias mais comuns (para UI)
   static List<VehicleCategory> get popularCategories => [
-    VehicleCategory.comum,
-    VehicleCategory.economico,
-    VehicleCategory.standard,
-    VehicleCategory.premium,
-    VehicleCategory.suv,
+    VehicleCategory.commonCar,
+    VehicleCategory.freight,
+    VehicleCategory.towTruck,
   ];
 }
 
-/// Dados detalhados de uma categoria de veículo
-/// Inclui informações de preços e disponibilidade
+/// Dados detalhados de uma categoria de veículo 
+/// Carregados dinamicamente do Supabase platform_settings
 class VehicleCategoryData {
 
   const VehicleCategoryData({
-    required this.category,
+    required this.categoryId,
+    required this.categoryName,
     required this.basePricePerKm,
     required this.basePricePerMinute,
     this.surgeMultiplier = 1.0,
@@ -75,68 +96,53 @@ class VehicleCategoryData {
     this.minFare,
   });
 
+  /// Cria uma instância a partir dos dados do platform_settings do Supabase
+  factory VehicleCategoryData.fromPlatformSettings({
+    required Map<String, dynamic> platformSettings,
+    int availableDrivers = 0,
+  }) {
+    return VehicleCategoryData(
+      categoryId: platformSettings['category'] as String,
+      categoryName: platformSettings['category'] as String,
+      basePricePerKm: (platformSettings['base_price_per_km'] as num).toDouble(),
+      basePricePerMinute: (platformSettings['base_price_per_minute'] as num).toDouble(),
+      minFare: (platformSettings['min_fare'] as num?)?.toDouble(),
+      availableDrivers: availableDrivers,
+      isAvailable: availableDrivers > 0,
+    );
+  }
+
   /// Cria uma instância com dados padrão para desenvolvimento
   factory VehicleCategoryData.defaultForCategory(VehicleCategory category) {
     switch (category) {
-      case VehicleCategory.comum:
+      case VehicleCategory.commonCar:
         return VehicleCategoryData(
-          category: category,
-          basePricePerKm: 1.0,
-          basePricePerMinute: 0.12,
-          availableDrivers: 15,
-        );
-      case VehicleCategory.economico:
-        return VehicleCategoryData(
-          category: category,
-          basePricePerKm: 1.2,
-          basePricePerMinute: 0.15,
-          availableDrivers: 12,
-        );
-      case VehicleCategory.standard:
-        return VehicleCategoryData(
-          category: category,
+          categoryId: category.id,
+          categoryName: category.displayName,
           basePricePerKm: 1.5,
           basePricePerMinute: 0.20,
-          availableDrivers: 8,
+          availableDrivers: 15,
         );
-      case VehicleCategory.premium:
+      case VehicleCategory.freight:
         return VehicleCategoryData(
-          category: category,
-          basePricePerKm: 2.2,
-          basePricePerMinute: 0.35,
-          availableDrivers: 3,
-        );
-      case VehicleCategory.suv:
-        return VehicleCategoryData(
-          category: category,
-          basePricePerKm: 1.8,
-          basePricePerMinute: 0.25,
-          availableDrivers: 5,
-        );
-      case VehicleCategory.executivo:
-        return VehicleCategoryData(
-          category: category,
-          basePricePerKm: 2.8,
-          basePricePerMinute: 0.45,
-          availableDrivers: 2,
-        );
-      case VehicleCategory.van:
-        return VehicleCategoryData(
-          category: category,
-          basePricePerKm: 2,
+          categoryId: category.id,
+          categoryName: category.displayName,
+          basePricePerKm: 2.0,
           basePricePerMinute: 0.30,
-          availableDrivers: 1,
+          availableDrivers: 5,
         );
       case VehicleCategory.towTruck:
         return VehicleCategoryData(
-          category: category,
+          categoryId: category.id,
+          categoryName: category.displayName,
           basePricePerKm: 3.0,
           basePricePerMinute: 0.50,
-          availableDrivers: 1,
+          availableDrivers: 2,
         );
     }
   }
-  final VehicleCategory category;
+  final String categoryId;
+  final String categoryName; 
   final double basePricePerKm;
   final double basePricePerMinute;
   final double surgeMultiplier;
@@ -152,7 +158,8 @@ class VehicleCategoryData {
 
   /// Cria uma cópia com novos valores
   VehicleCategoryData copyWith({
-    VehicleCategory? category,
+    String? categoryId,
+    String? categoryName,
     double? basePricePerKm,
     double? basePricePerMinute,
     double? surgeMultiplier,
@@ -160,7 +167,8 @@ class VehicleCategoryData {
     bool? isAvailable,
     double? minFare,
   }) => VehicleCategoryData(
-      category: category ?? this.category,
+      categoryId: categoryId ?? this.categoryId,
+      categoryName: categoryName ?? this.categoryName,
       basePricePerKm: basePricePerKm ?? this.basePricePerKm,
       basePricePerMinute: basePricePerMinute ?? this.basePricePerMinute,
       surgeMultiplier: surgeMultiplier ?? this.surgeMultiplier,
@@ -170,5 +178,5 @@ class VehicleCategoryData {
     );
 
   @override
-  String toString() => 'VehicleCategoryData(${category.displayName}, drivers: $availableDrivers)';
+  String toString() => 'VehicleCategoryData($categoryName, drivers: $availableDrivers)';
 }

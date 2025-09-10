@@ -68,55 +68,65 @@ Based on direct API connection testing:
 
 **Recommendation**: Use Service Role Key for administrative operations or implement proper user authentication flow.
 
-## 🗃️ Complete Table Schema
+## 🗃️ Complete Database Schema
 
-## Tables
+### 📊 Database Statistics
+- **Total Tables**: 29 tabelas
+- **Total Views**: 4 views
+- **Total Functions**: 44 funções RPC
+- **Total Constraints**: 8 constraints
+- **RLS Policies**: Ativo em todas as tabelas principais
+
+## 📋 Tables
 
 ### activity_logs
-- id (uuid) **PRIMARY KEY**
-- user_id (uuid) **FOREIGN KEY** -> table='app_users' column='id'
-- action (text)
-- entity_type (text)
-- entity_id (uuid)
-- old_values (jsonb)
-- new_values (jsonb)
-- metadata (jsonb)
-- ip_address (inet)
-- user_agent (text)
-- created_at (timestamp with time zone) **DEFAULT** now()
+Registra todas as atividades do sistema
+- **id** (uuid) **PRIMARY KEY**
+- **user_id** (uuid) **FOREIGN KEY** -> [`app_users`](table='app_users' column='id')
+- **action** (text) - Ação realizada
+- **entity_type** (text) - Tipo de entidade afetada
+- **entity_id** (uuid) - ID da entidade
+- **old_values** (jsonb) - Valores anteriores
+- **new_values** (jsonb) - Novos valores
+- **metadata** (jsonb) - Metadados adicionais
+- **ip_address** (inet) - Endereço IP do usuário
+- **user_agent** (text) - User agent do navegador
+- **created_at** (timestamp with time zone) **DEFAULT** [`now()`]()
 
 ### app_users
-- id (uuid) **PRIMARY KEY**
-- email (text)
-- full_name (text)
-- phone (text) **DEFAULT** pending
-- photo_url (text)
-- user_type (text)
-- status (text) **DEFAULT** active
-- created_at (timestamp with time zone) **DEFAULT** now()
-- updated_at (timestamp with time zone) **DEFAULT** now()
-- user_id (uuid)
-- fcm_token (text)
-- device_id (text)
-- device_platform (text)
-- last_active_at (timestamp with time zone) **DEFAULT** now()
+Tabela principal de usuários do sistema
+- **id** (uuid) **PRIMARY KEY**
+- **email** (text) - Email do usuário
+- **full_name** (text) - Nome completo
+- **phone** (text) **DEFAULT** 'pending' - Telefone
+- **photo_url** (text) - URL da foto
+- **user_type** (text) - Tipo de usuário (driver/passenger/admin)
+- **status** (text) **DEFAULT** 'active' - Status da conta
+- **created_at** (timestamp with time zone) **DEFAULT** [`now()`]()
+- **updated_at** (timestamp with time zone) **DEFAULT** [`now()`]()
+- **user_id** (uuid) - ID do usuário de autenticação
+- **fcm_token** (text) - Token FCM para notificações
+- **device_id** (text) - ID do dispositivo
+- **device_platform** (text) - Plataforma do dispositivo
+- **last_active_at** (timestamp with time zone) **DEFAULT** [`now()`]()
 
 **RLS Policies:**
-- "Users can view own profile" (FOR SELECT USING auth.uid() = id)
-- "Users can update own profile" (FOR UPDATE USING auth.uid() = id)
-- "Enable insert for authenticated users only" (FOR INSERT WITH CHECK auth.uid() = id)
+- "Users can view own profile" (FOR SELECT USING [`auth.uid()`]() = id)
+- "Users can update own profile" (FOR UPDATE USING [`auth.uid()`]() = id)
+- "Enable insert for authenticated users only" (FOR INSERT WITH CHECK [`auth.uid()`]() = id)
 
 ### backup_app_users_migration
-- id (uuid)
-- email (text)
-- full_name (text)
-- phone (text)
-- photo_url (text)
-- user_type (text)
-- status (text)
-- created_at (timestamp with time zone)
-- updated_at (timestamp with time zone)
-- user_id (uuid)
+Backup de usuários durante migração
+- **id** (uuid)
+- **email** (text)
+- **full_name** (text)
+- **phone** (text)
+- **photo_url** (text)
+- **user_type** (text)
+- **status** (text)
+- **created_at** (timestamp with time zone)
+- **updated_at** (timestamp with time zone)
+- **user_id** (uuid)
 
 ### ~~working_hours~~ (REMOVIDA)
 **TABELA REMOVIDA NA MIGRAÇÃO PARA LÓGICA BASEADA EM DOCUMENTOS**
@@ -126,15 +136,16 @@ Based on direct API connection testing:
 - Status online depende apenas de: `online_intent` + `documentos aprovados`
 
 ### corrupted_users_backup
-- id (uuid) **PRIMARY KEY**
-- original_user_id (uuid)
-- original_full_name (text)
-- original_phone (text)
-- original_email (text)
-- correction_timestamp (timestamp with time zone) **DEFAULT** now()
-- correction_reason (text)
-- restored (boolean) **DEFAULT** false
-- restored_at (timestamp with time zone)
+Backup de usuários corrompidos
+- **id** (uuid) **PRIMARY KEY**
+- **original_user_id** (uuid) - ID original do usuário
+- **original_full_name** (text) - Nome original
+- **original_phone** (text) - Telefone original
+- **original_email** (text) - Email original
+- **correction_timestamp** (timestamp with time zone) **DEFAULT** [`now()`]() - Timestamp da correção
+- **correction_reason** (text) - Motivo da correção
+- **restored** (boolean) **DEFAULT** false - Se foi restaurado
+- **restored_at** (timestamp with time zone) - Quando foi restaurado
 
 ### trips
 - id (uuid) **PRIMARY KEY**

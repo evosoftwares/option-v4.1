@@ -25,7 +25,6 @@ class _VehicleScreenState extends State<VehicleScreen> {
   final _plateController = TextEditingController();
   
   int? _selectedYear;
-  VehicleCategory? _selectedCategory;
   String? _selectedCategoryId; // ID da categoria selecionada do platform_settings
   List<PlatformSettings> _availableCategories = [];
   bool _isLoading = true;
@@ -73,7 +72,6 @@ class _VehicleScreenState extends State<VehicleScreen> {
           _plateController.text = response['vehicle_plate'] ?? '';
           _selectedYear = response['vehicle_year'];
           if (response['vehicle_category'] != null) {
-            _selectedCategory = VehicleCategory.fromId(response['vehicle_category']);
             _selectedCategoryId = response['vehicle_category'];
           }
           _isLoading = false;
@@ -172,6 +170,7 @@ class _VehicleScreenState extends State<VehicleScreen> {
 
       // Usar o DriverService para atualizar
       final driverService = DriverService(supabase);
+          
       await DriverService.updateDriver(
         driverId,
         brand: _brandController.text,
@@ -521,8 +520,6 @@ class _VehicleScreenState extends State<VehicleScreen> {
           onChanged: (value) {
             setState(() {
               _selectedCategoryId = value;
-              // Manter compatibilidade com o código antigo
-              _selectedCategory = VehicleCategory.fromId(value);
             });
           },
           validator: (value) {

@@ -34,11 +34,13 @@ class PlacePickerScreen extends StatefulWidget {
     this.allowMultiple = false,
     this.initialPlaces,
     this.apiKey,
+    this.isOriginMode = false,
   });
   final String? title;
   final bool allowMultiple;
   final List<Map<String, dynamic>>? initialPlaces;
   final String? apiKey;
+  final bool isOriginMode;
 
   @override
   State<PlacePickerScreen> createState() => _PlacePickerScreenState();
@@ -137,6 +139,70 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
       _searchResults = locations;
       _isLoading = false;
     });
+  }
+
+  Future<void> _useCurrentLocation() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final currentLocation = await _locationService.getCurrentLocation();
+      if (currentLocation == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Não foi possível obter sua localização atual'),
+            ),
+          );
+        }
+        return;
+      }
+
+      final lat = currentLocation['lat'] as double;
+      final lng = currentLocation['lng'] as double;
+
+      final reverseGeocodeResult = await _locationService.reverseGeocode(
+        latitude: lat,
+        longitude: lng,
+      );
+
+      if (!mounted) return;
+
+      if (reverseGeocodeResult != null) {
+        final address = reverseGeocodeResult['formattedAddress'] as String? ?? 'Localização atual';
+        final currentLocationData = {
+          'id': 'current_location_${DateTime.now().millisecondsSinceEpoch}',
+          'name': 'Minha localização',
+          'address': address,
+          'type': 'other',
+          'latitude': lat,
+          'longitude': lng,
+          'placeId': 'current_location',
+          'userId': '',
+        };
+
+        setState(() {
+          _selectedLocation = currentLocationData;
+          _isLoading = false;
+        });
+
+        // Auto-save current location for origin mode
+        if (widget.isOriginMode && !widget.allowMultiple) {
+          Navigator.of(context).pop(currentLocationData);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro ao obter localização atual'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
 
@@ -254,23 +320,48 @@ class _PlacePickerScreenState extends State<PlacePickerScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              focusNode: _searchFocus,
-              onChanged: _searchPlaces,
-              style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
-              decoration: InputDecoration(
-                hintText: 'Digite o nome do local ou endereço...',
-                prefixIcon: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest,
-                hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  borderSide: BorderSide.none,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocus,
+                    onChanged: _searchPlaces,
+                    style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
+                    decoration: InputDecoration(
+                      hintText: 'Digite o nome do local ou endereço...',
+                      prefixIcon: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest,
+                      hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.xs * 3, horizontal: AppSpacing.md),
+                    ),
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.xs * 3, horizontal: AppSpacing.md),
-              ),
+                if (widget.isOriginMode) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Material(
+                    color: colorScheme.primary,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    child: InkWell(
+                      onTap: _isLoading ? null : _useCurrentLocation,
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.my_location,
+                          color: colorScheme.onPrimary,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           if (_isLoading)

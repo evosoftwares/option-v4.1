@@ -71,12 +71,23 @@ class SearchStatusService {
 
   /// Atualiza o estado da busca
   void updateState(SearchState newState) {
+    print('🔄 [SEARCH_STATUS] Estado atualizado: ${_currentState.status} -> ${newState.status}');
+    print('📝 [SEARCH_STATUS] Mensagem: ${newState.message}');
+    if (newState.errorDetails != null) {
+      print('🚨 [SEARCH_STATUS] Detalhes do erro: ${newState.errorDetails}');
+    }
+    if (newState.driversFound != null) {
+      print('📊 [SEARCH_STATUS] Motoristas encontrados: ${newState.driversFound}');
+    }
+    
     _currentState = newState;
     _stateController.add(newState);
+    print('📡 [SEARCH_STATUS] Estado transmitido para listeners');
   }
 
   /// Inicia a busca por motoristas
   void startSearch({String? message}) {
+    print('🔍 [SEARCH_STATUS] Iniciando busca por motoristas');
     updateState(SearchState(
       status: SearchStatus.searching,
       message: message ?? 'Buscando motoristas disponíveis...',
@@ -85,6 +96,7 @@ class SearchStatusService {
 
   /// Marca a busca como bem-sucedida
   void markSuccess({required int driversFound, String? message}) {
+    print('✅ [SEARCH_STATUS] Busca bem-sucedida - $driversFound motoristas encontrados');
     updateState(SearchState(
       status: SearchStatus.success,
       driversFound: driversFound,
@@ -94,6 +106,7 @@ class SearchStatusService {
 
   /// Marca que nenhum motorista foi encontrado
   void markNoDriversFound({String? message}) {
+    print('⚠️ [SEARCH_STATUS] Nenhum motorista encontrado');
     updateState(SearchState(
       status: SearchStatus.noDriversFound,
       message: message ?? 'Nenhum motorista disponível no momento',
@@ -102,6 +115,10 @@ class SearchStatusService {
 
   /// Marca erro na busca
   void markError({required String message, String? errorDetails}) {
+    print('❌ [SEARCH_STATUS] Erro na busca: $message');
+    if (errorDetails != null) {
+      print('📍 [SEARCH_STATUS] Detalhes do erro: $errorDetails');
+    }
     updateState(SearchState(
       status: SearchStatus.error,
       message: message,
@@ -111,6 +128,7 @@ class SearchStatusService {
 
   /// Reseta o estado para idle
   void reset() {
+    print('🔄 [SEARCH_STATUS] Resetando estado para idle');
     updateState(const SearchState(status: SearchStatus.idle));
   }
 

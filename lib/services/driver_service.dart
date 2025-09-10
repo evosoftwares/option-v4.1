@@ -48,6 +48,7 @@ class DriverService {
     
     AppLogger.process('Iniciando busca de motorista por ID', tag: 'DRIVER_SERVICE');
     AppLogger.read('Driver', driverId, tag: 'DRIVER_SERVICE');
+    print('🔍 [DRIVER_SERVICE] Buscando perfil do motorista por ID: $driverId');
 
     try {
       final response = await _supabase
@@ -58,6 +59,7 @@ class DriverService {
 
       if (response == null) {
         AppLogger.warning('Motorista não encontrado', tag: 'DRIVER_SERVICE');
+        print('⚠️ [DRIVER_SERVICE] Motorista não encontrado: $driverId');
         return null;
       }
 
@@ -66,10 +68,12 @@ class DriverService {
       
       AppLogger.performance('get_driver_by_id', duration, tag: 'DRIVER_SERVICE');
       AppLogger.success('Motorista encontrado', tag: 'DRIVER_SERVICE');
+      print('✅ [DRIVER_SERVICE] Motorista encontrado: ${driver.id} - Online: ${driver.isOnline}, Categoria: ${driver.category}');
       
       return driver;
     } catch (e) {
       AppLogger.error('Erro ao buscar motorista', tag: 'DRIVER_SERVICE', error: e);
+      print('❌ [DRIVER_SERVICE] Erro ao buscar motorista $driverId: $e');
       return null;
     }
   }
@@ -629,18 +633,27 @@ class DriverService {
 
   // Get driver's active trips
   Future<List<Trip>> getDriverActiveTrips(String driverId) async {
+    print('🔍 [DRIVER_SERVICE] Verificando viagens ativas para motorista: $driverId');
     try {
+      final startTime = DateTime.now();
       final response = await _supabase
           .from('trips')
           .select()
           .eq('driver_id', driverId)
           .or('status.eq.accepted,status.eq.in_progress')
           .order('created_at', ascending: false);
-
-      return response.map(Trip.fromJson).toList();
+      final endTime = DateTime.now();
+      final duration = endTime.difference(startTime);
+      
+      final trips = response.map(Trip.fromJson).toList();
+      print('✅ [DRIVER_SERVICE] ${trips.length} viagens ativas encontradas para motorista $driverId em ${duration.inMilliseconds}ms');
+      
+      return trips;
     } on PostgrestException catch (e) {
+      print('❌ [DRIVER_SERVICE] PostgrestException ao buscar viagens ativas: ${e.message}');
       throw PostgrestErrorMapper.mapError(e);
     } catch (e) {
+      print('❌ [DRIVER_SERVICE] Erro inesperado ao buscar viagens ativas: $e');
       throw const DatabaseException('Erro inesperado ao buscar viagens ativas');
     }
   }
@@ -798,8 +811,8 @@ class DriverService {
     String? destinationState,
     int? limit,
   }) async {
-    print('🔍 [${DateTime.now()}] Iniciando getAvailableDriversNearby...');
-    print('📍 Parâmetros de busca:');
+    print('🔍 [DRIVER_SERVICE] [${DateTime.now()}] Iniciando getAvailableDriversNearby...');
+    print('📍 [DRIVER_SERVICE] Parâmetros de busca:');
     print('  - latitude: $latitude');
     print('  - longitude: $longitude');
     print('  - radiusKm: $radiusKm');
@@ -819,7 +832,7 @@ class DriverService {
               .abs()
               .clamp(0.0001, double.infinity);
 
-      print('📐 [${DateTime.now()}] Calculando bounding box:');
+      print('📐 [DRIVER_SERVICE] [${DateTime.now()}] Calculando bounding box:');
       print('  - latDelta: $latDelta');
       print('  - lngDelta: $lngDelta');
       print('  - lat range: ${latitude - latDelta} to ${latitude + latDelta}');
@@ -832,40 +845,40 @@ class DriverService {
 
       try {
         print(
-            '🚀 [${DateTime.now()}] Tentando usar available_drivers_view otimizada...');
+            '🚀 [DRIVER_SERVICE] [${DateTime.now()}] Tentando usar available_drivers_view otimizada...');
 
         dynamic query = _supabase
             .from('available_drivers_view')
             .select()
             .eq('is_online', true);
         print(
-            '🔧 [${DateTime.now()}] Query inicial criada: available_drivers_view online');
+            '🔧 [DRIVER_SERVICE] [${DateTime.now()}] Query inicial criada: available_drivers_view online');
 
         // Filtro de categoria
         if (category != null && category.isNotEmpty) {
           query = query.eq('vehicle_category', category);
           print(
-              '🚗 [${DateTime.now()}] Filtro de categoria aplicado: $category');
+              '🚗 [DRIVER_SERVICE] [${DateTime.now()}] Filtro de categoria aplicado: $category');
         }
 
         // Preferências
         if (needsPet ?? false) {
           query = query.eq('accepts_pet', true);
-          print('🐕 [${DateTime.now()}] Filtro pet aplicado');
+          print('🐕 [DRIVER_SERVICE] [${DateTime.now()}] Filtro pet aplicado');
         }
         if (needsGrocerySpace ?? false) {
           query = query.eq('accepts_grocery', true);
-          print('🛒 [${DateTime.now()}] Filtro grocery aplicado');
+          print('🛒 [DRIVER_SERVICE] [${DateTime.now()}] Filtro grocery aplicado');
         }
         if ((isCondoOrigin ?? false) || (isCondoDestination ?? false)) {
           query = query.eq('accepts_condo', true);
-          print('🏢 [${DateTime.now()}] Filtro condo aplicado');
+          print('🏢 [DRIVER_SERVICE] [${DateTime.now()}] Filtro condo aplicado');
         }
 
         // Filtro de ar-condicionado
         if (needsAc ?? false) {
           query = query.or('ac_policy.eq.always_on,ac_policy.eq.on_request');
-          print('❄️ [${DateTime.now()}] Filtro ar-condicionado aplicado');
+          print('❄️ [DRIVER_SERVICE] [${DateTime.now()}] Filtro ar-condicionado aplicado');
         }
 
         // Bounding box
@@ -875,55 +888,59 @@ class DriverService {
             .gte('current_longitude', longitude - lngDelta)
             .lte('current_longitude', longitude + lngDelta)
             .order('average_rating', ascending: false);
-        print('📍 [${DateTime.now()}] Filtro de localização aplicado');
+        print('📍 [DRIVER_SERVICE] [${DateTime.now()}] Filtro de localização aplicado');
 
         if (limit != null && limit > 0) {
           query = query.limit(limit);
-          print('🔢 [${DateTime.now()}] Limite aplicado: $limit');
+          print('🔢 [DRIVER_SERVICE] [${DateTime.now()}] Limite aplicado: $limit');
         }
 
+        final queryStartTime = DateTime.now();
         response = await query;
+        final queryEndTime = DateTime.now();
+        final queryDuration = queryEndTime.difference(queryStartTime);
+        
         usedOptimizedView = true;
         print(
-            '✅ [${DateTime.now()}] View otimizada utilizada com sucesso! Registros retornados: ${(response as List).length}');
+            '✅ [DRIVER_SERVICE] [${DateTime.now()}] View otimizada utilizada com sucesso! Registros retornados: ${(response as List).length} em ${queryDuration.inMilliseconds}ms');
       } catch (e) {
         print(
-            '⚠️ [${DateTime.now()}] View otimizada não disponível, usando fallback para tabela drivers: $e');
+            '⚠️ [DRIVER_SERVICE] [${DateTime.now()}] View otimizada não disponível, usando fallback para tabela drivers: $e');
 
         // Fallback para a tabela drivers original
         dynamic query =
             _supabase.from('drivers').select().eq('is_online', true);
-        print('🔧 [${DateTime.now()}] Query fallback criada: drivers online');
+        print('🔧 [DRIVER_SERVICE] [${DateTime.now()}] Query fallback criada: drivers online');
 
         // Somente aprovados
         query = query.or('approval_status.eq.approved,approval_status.is.null');
-        print('✅ [${DateTime.now()}] Filtro de aprovação aplicado');
+        print('✅ [DRIVER_SERVICE] [${DateTime.now()}] Filtro de aprovação aplicado');
 
         // Filtro de categoria
         if (category != null && category.isNotEmpty) {
           query = query.eq('vehicle_category', category);
           print(
-              '🚗 [${DateTime.now()}] Filtro de categoria aplicado: $category');
+              '🚗 [DRIVER_SERVICE] [${DateTime.now()}] Filtro de categoria aplicado: $category');
         }
 
         // Preferências
         if (needsPet ?? false) {
           query = query.eq('accepts_pet', true);
-          print('🐕 [${DateTime.now()}] Filtro pet aplicado');
+          print('🐕 [DRIVER_SERVICE] [${DateTime.now()}] Filtro pet aplicado');
         }
         if (needsGrocerySpace ?? false) {
           query = query.eq('accepts_grocery', true);
-          print('🛒 [${DateTime.now()}] Filtro grocery aplicado');
+          print('🛒 [DRIVER_SERVICE] [${DateTime.now()}] Filtro grocery aplicado');
         }
         if ((isCondoOrigin ?? false) || (isCondoDestination ?? false)) {
           query = query.eq('accepts_condo', true);
-          print('🏢 [${DateTime.now()}] Filtro condo aplicado');
+          print('🏢 [DRIVER_SERVICE] [${DateTime.now()}] Filtro condo aplicado');
         }
 
         // Filtro de ar-condicionado
         if (needsAc ?? false) {
           query = query.or('ac_policy.eq.always_on,ac_policy.eq.on_request');
-          print('❄️ [${DateTime.now()}] Filtro ar-condicionado aplicado');
+          print('❄️ [DRIVER_SERVICE] [${DateTime.now()}] Filtro ar-condicionado aplicado');
         }
 
         // Bounding box
@@ -932,16 +949,21 @@ class DriverService {
             .lte('current_latitude', latitude + latDelta)
             .gte('current_longitude', longitude - lngDelta)
             .lte('current_longitude', longitude + lngDelta);
-        print('📍 [${DateTime.now()}] Filtro de localização aplicado');
+        print('📍 [DRIVER_SERVICE] [${DateTime.now()}] Filtro de localização aplicado');
 
         if (limit != null && limit > 0) {
           query = query.limit(limit);
-          print('🔢 [${DateTime.now()}] Limite aplicado: $limit');
+          print('🔢 [DRIVER_SERVICE] [${DateTime.now()}] Limite aplicado: $limit');
         }
 
         try {
           query = query.order('average_rating', ascending: false);
+          final queryStartTime = DateTime.now();
           response = await query;
+          final queryEndTime = DateTime.now();
+          final queryDuration = queryEndTime.difference(queryStartTime);
+          print(
+              '📊 [DRIVER_SERVICE] [${DateTime.now()}] Query fallback executada com sucesso em ${queryDuration.inMilliseconds}ms. Registros retornados: ${(response as List).length}');
         } on PostgrestException catch (e2) {
           // Fallback sem ordenação por average_rating se a coluna não existir
           final msg = (e2.message ?? '').toLowerCase();
@@ -974,22 +996,26 @@ class DriverService {
                 .gte('current_longitude', longitude - lngDelta)
                 .lte('current_longitude', longitude + lngDelta);
             if (limit != null && limit > 0) fb = fb.limit(limit);
+            final queryStartTime = DateTime.now();
             response = await fb;
+            final queryEndTime = DateTime.now();
+            final queryDuration = queryEndTime.difference(queryStartTime);
+            print(
+                '📊 [DRIVER_SERVICE] [${DateTime.now()}] Query fallback sem ordenação executada com sucesso em ${queryDuration.inMilliseconds}ms. Registros retornados: ${(response as List).length}');
           } else {
             rethrow;
           }
         }
-
-        print(
-            '📊 [${DateTime.now()}] Query fallback executada com sucesso. Registros retornados: ${(response as List).length}');
       }
 
-      print('🔄 [${DateTime.now()}] Processando dados dos motoristas...');
+      print('🔄 [DRIVER_SERVICE] [${DateTime.now()}] Processando dados dos motoristas...');
       var drivers = <Driver>[];
 
       if (usedOptimizedView) {
         // Converter dados da view para objetos Driver
-        for (final json in response) {
+        print('🔄 [DRIVER_SERVICE] [${DateTime.now()}] Convertendo dados da view para objetos Driver...');
+        for (int i = 0; i < (response as List).length; i++) {
+          final json = response[i];
           final driverData = json as Map<String, dynamic>;
           // Mapear campos da view para campos esperados pelo modelo Driver
           final mappedData = {
@@ -1027,27 +1053,31 @@ class DriverService {
           };
 
           try {
-            drivers.add(Driver.fromJson(mappedData));
+            final driver = Driver.fromJson(mappedData);
+            drivers.add(driver);
+            print('➕ [DRIVER_SERVICE] [${DateTime.now()}] Motorista ${driver.id} adicionado da view');
           } catch (e) {
-            print('⚠️ Erro ao mapear motorista da view: $e');
+            print('⚠️ [DRIVER_SERVICE] Erro ao mapear motorista da view: $e');
             // Continuar com outros motoristas
           }
         }
       } else {
         // Dados já no formato esperado da tabela drivers
+        print('🔄 [DRIVER_SERVICE] [${DateTime.now()}] Convertendo dados da tabela drivers...');
         drivers = response
             .map((json) => Driver.fromJson(json as Map<String, dynamic>))
             .toList();
+        print('✅ [DRIVER_SERVICE] [${DateTime.now()}] ${drivers.length} motoristas convertidos da tabela drivers');
       }
 
       print(
-          '✅ [${DateTime.now()}] ${drivers.length} motoristas processados com sucesso');
+          '✅ [DRIVER_SERVICE] [${DateTime.now()}] ${drivers.length} motoristas processados com sucesso');
 
       // Filtrar motoristas que excluíram a zona de destino
       if (destinationNeighborhood != null &&
           destinationCity != null &&
           destinationState != null) {
-        print('🚫 [${DateTime.now()}] Aplicando filtro de zonas excluídas...');
+        print('🚫 [DRIVER_SERVICE] [${DateTime.now()}] Aplicando filtro de zonas excluídas...');
         final originalCount = drivers.length;
         drivers = await _filterDriversByExcludedZones(
           drivers,
@@ -1056,11 +1086,11 @@ class DriverService {
           destinationState,
         );
         print(
-            '📉 [${DateTime.now()}] Filtro de zonas aplicado: $originalCount -> ${drivers.length} motoristas');
+            '📉 [DRIVER_SERVICE] [${DateTime.now()}] Filtro de zonas aplicado: $originalCount -> ${drivers.length} motoristas');
       }
 
       // Calcular distância real para cada motorista e ordenar por proximidade
-      print('📏 [${DateTime.now()}] Calculando distâncias reais...');
+      print('📏 [DRIVER_SERVICE] [${DateTime.now()}] Calculando distâncias reais...');
       final driversWithDistance = <DriverWithDistance>[];
 
       for (final driver in drivers) {
@@ -1090,23 +1120,23 @@ class DriverService {
           driversWithDistance.take(10).map((dwd) => dwd.driver).toList();
 
       print(
-          '🎯 [${DateTime.now()}] Busca finalizada com ${limitedDrivers.length} motoristas mais próximos');
+          '🎯 [DRIVER_SERVICE] [${DateTime.now()}] Busca finalizada com ${limitedDrivers.length} motoristas mais próximos');
       if (driversWithDistance.isNotEmpty) {
         print(
-            '📊 Distâncias: ${driversWithDistance.take(5).map((d) => '${d.distanceKm.toStringAsFixed(2)}km').join(', ')}');
+            '📊 [DRIVER_SERVICE] Distâncias: ${driversWithDistance.take(5).map((d) => '${d.distanceKm.toStringAsFixed(2)}km').join(', ')}');
       }
 
       return limitedDrivers;
     } on PostgrestException catch (e) {
       print(
-          '❌ [${DateTime.now()}] PostgrestException em getAvailableDriversNearby:');
+          '❌ [DRIVER_SERVICE] [${DateTime.now()}] PostgrestException em getAvailableDriversNearby:');
       print('  - Código: ${e.code}');
       print('  - Mensagem: ${e.message}');
       print('  - Detalhes: ${e.details}');
       throw PostgrestErrorMapper.mapError(e);
     } catch (e, stackTrace) {
       print(
-          '❌ [${DateTime.now()}] Erro inesperado em getAvailableDriversNearby:');
+          '❌ [DRIVER_SERVICE] [${DateTime.now()}] Erro inesperado em getAvailableDriversNearby:');
       print('  - Tipo: ${e.runtimeType}');
       print('  - Mensagem: $e');
       print('  - Stack trace: $stackTrace');
@@ -1272,6 +1302,32 @@ class DriverService {
     double radiusKm = 10.0,
   }) async {
     try {
+      // Buscar todas as categorias disponíveis diretamente do platform_settings
+      final platformSettings = await _platformSettingsService.getAllSettings();
+      
+      print('🔍 [DRIVER_SERVICE] platformSettings recebido: ${platformSettings.length} registros');
+      if (platformSettings.isEmpty) {
+        print('⚠️ [DRIVER_SERVICE] PROBLEMA: platformSettings está vazio!');
+        print('📋 [DRIVER_SERVICE] Isso significa que a tabela platform_settings não tem dados ou há problema de RLS');
+        print('🔄 [DRIVER_SERVICE] Vou usar fallback com categorias padrão...');
+        
+        // Usar fallback com categorias do enum se platform_settings estiver vazio
+        final fallbackCategoryDataList = <VehicleCategoryData>[];
+        for (final category in VehicleCategory.allCategories) {
+          final fallbackData = VehicleCategoryData.defaultForCategory(category);
+          fallbackCategoryDataList.add(fallbackData);
+          print('📝 [DRIVER_SERVICE] Adicionado fallback para ${category.displayName}');
+        }
+        
+        print('✅ [DRIVER_SERVICE] Retornando ${fallbackCategoryDataList.length} categorias com dados padrão');
+        return fallbackCategoryDataList;
+      }
+      
+      print('✅ [DRIVER_SERVICE] Dados encontrados em platform_settings:');
+      for (final setting in platformSettings) {
+        print('   - ${setting.category}: R\$ ${setting.basePricePerKm}/km');
+      }
+      
       // Busca contagem de motoristas por categoria na região
       final response = await _supabase.rpc(
         'get_available_categories_stats',
@@ -1282,30 +1338,27 @@ class DriverService {
         },
       );
 
-      // Buscar preços base de cada categoria do platform_settings
       final categoryDataList = <VehicleCategoryData>[];
 
-      for (final category in VehicleCategory.popularCategories) {
-        // Buscar configurações da categoria específica ou usar padrão
-        final pricingConfig =
-            await _platformSettingsService.getPricingConfig(category.id);
-
+      for (final setting in platformSettings) {
         // Encontrar contagem de motoristas para esta categoria
         int driverCount = 0;
         if (response != null && response is List) {
           final categoryStats = (response)
-              .where((stat) => stat['vehicle_category'] == category.id)
+              .where((stat) => stat['vehicle_category'] == setting.category)
               .firstOrNull;
           driverCount = categoryStats?['driver_count'] as int? ?? 0;
         }
 
-        categoryDataList.add(VehicleCategoryData(
-          category: category,
-          basePricePerKm: pricingConfig['basePricePerKm'] as double,
-          basePricePerMinute: pricingConfig['basePricePerMinute'] as double,
+        // Criar dados da categoria diretamente do platform_settings
+        categoryDataList.add(VehicleCategoryData.fromPlatformSettings(
+          platformSettings: {
+            'category': setting.category,
+            'base_price_per_km': setting.basePricePerKm,
+            'base_price_per_minute': setting.basePricePerMinute,
+            'min_fare': setting.minFare,
+          },
           availableDrivers: driverCount,
-          isAvailable: driverCount > 0,
-          minFare: pricingConfig['minFare'] as double,
         ));
       }
 
@@ -1332,13 +1385,14 @@ class DriverService {
         final pricingConfig =
             await _platformSettingsService.getPricingConfig(category.id);
 
-        categoryDataList.add(VehicleCategoryData(
-          category: category,
-          basePricePerKm: pricingConfig['basePricePerKm'] as double,
-          basePricePerMinute: pricingConfig['basePricePerMinute'] as double,
+        categoryDataList.add(VehicleCategoryData.fromPlatformSettings(
+          platformSettings: {
+            'category': category.id,
+            'base_price_per_km': pricingConfig['basePricePerKm'] as double,
+            'base_price_per_minute': pricingConfig['basePricePerMinute'] as double,
+            'min_fare': pricingConfig['minFare'] as double,
+          },
           availableDrivers: 5, // Valor padrão assumindo disponibilidade
-          isAvailable: true,
-          minFare: pricingConfig['minFare'] as double,
         ));
       } catch (e) {
         // Fallback para dados hardcoded se platform_settings falhar
@@ -1370,7 +1424,8 @@ class DriverService {
       );
 
       return VehicleCategoryData(
-        category: category,
+        categoryId: category.id,
+        categoryName: category.displayName,
         basePricePerKm: pricingConfig['basePricePerKm'] as double,
         basePricePerMinute: pricingConfig['basePricePerMinute'] as double,
         availableDrivers: drivers.length,

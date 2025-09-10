@@ -71,24 +71,56 @@ class _SearchFeedbackWidgetState extends State<SearchFeedbackWidget>
   }
 
   void _handleStateChange(SearchState state) {
+    print('🎨 [SEARCH_FEEDBACK] Manipulando mudança de estado: ${state.status}');
+    print('📝 [SEARCH_FEEDBACK] Mensagem: ${state.message}');
+    
     switch (state.status) {
       case SearchStatus.searching:
+        print('🔍 [SEARCH_FEEDBACK] Iniciando animação de busca');
         _pulseController.repeat(reverse: true);
         _slideController.forward();
         break;
       case SearchStatus.success:
-      case SearchStatus.error:
-      case SearchStatus.noDriversFound:
+        print('✅ [SEARCH_FEEDBACK] Exibindo feedback de sucesso - ${state.driversFound} motoristas');
         _pulseController.stop();
         _slideController.forward();
         // Auto-hide após 3 segundos para estados finais
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted) {
+            print('🔄 [SEARCH_FEEDBACK] Ocultando feedback de sucesso');
+            _slideController.reverse();
+          }
+        });
+        break;
+      case SearchStatus.error:
+        print('❌ [SEARCH_FEEDBACK] Exibindo feedback de erro');
+        if (state.errorDetails != null) {
+          print('📍 [SEARCH_FEEDBACK] Detalhes do erro: ${state.errorDetails}');
+        }
+        _pulseController.stop();
+        _slideController.forward();
+        // Auto-hide após 3 segundos para estados finais
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            print('🔄 [SEARCH_FEEDBACK] Ocultando feedback de erro');
+            _slideController.reverse();
+          }
+        });
+        break;
+      case SearchStatus.noDriversFound:
+        print('⚠️ [SEARCH_FEEDBACK] Exibindo feedback de nenhum motorista encontrado');
+        _pulseController.stop();
+        _slideController.forward();
+        // Auto-hide após 3 segundos para estados finais
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            print('🔄 [SEARCH_FEEDBACK] Ocultando feedback de nenhum motorista encontrado');
             _slideController.reverse();
           }
         });
         break;
       case SearchStatus.idle:
+        print('🔄 [SEARCH_FEEDBACK] Resetando para estado idle');
         _pulseController.stop();
         _slideController.reverse();
         break;

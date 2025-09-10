@@ -64,10 +64,18 @@ class DriverAvailabilityService {
   }
   
   /// Processa atualizações da tabela drivers
-  void _handleDriversUpdate(List<Map<String, dynamic>> drivers) {
+  Future<void> _handleDriversUpdate(List<Map<String, dynamic>> drivers) async {
     for (final driver in drivers) {
       final driverId = driver['id'] as String;
-      final isOnline = driver['is_online'] as bool? ?? false;
+      
+      // Usar nova lógica baseada em driver_status
+      final driverStatusResponse = await _supabase
+          .from('driver_effective_status')
+          .select('effective_online')
+          .eq('driver_id', driver['id'])
+          .maybeSingle();
+      
+      final isOnline = driverStatusResponse?['effective_online'] as bool? ?? false;
       final isApproved = driver['approval_status'] == 'approved';
       final lastUpdate = driver['last_location_update'] as String?;
       

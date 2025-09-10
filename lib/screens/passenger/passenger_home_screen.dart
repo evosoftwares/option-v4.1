@@ -132,7 +132,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> with TickerPr
   Future<void> _pickOrigin() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const PlacePickerScreen(title: 'Escolher origem')),
+      MaterialPageRoute(builder: (_) => const PlacePickerScreen(title: 'Escolher origem', isOriginMode: true)),
     );
     if (result is Map<String, dynamic>) {
       setState(() => _origin = result);

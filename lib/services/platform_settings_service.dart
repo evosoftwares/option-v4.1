@@ -7,19 +7,13 @@ class PlatformSettingsService {
   PlatformSettingsService(this._supabase);
   final SupabaseClient _supabase;
 
-  // Cache para evitar múltiplas consultas
-  static final Map<String, PlatformSettings> _settingsCache = {};
-  static DateTime? _lastCacheUpdate;
-  static const Duration _cacheTimeout = Duration(minutes: 5);
+  // Sem cache - sempre consulta o Supabase diretamente
 
-  /// Busca configurações por categoria com cache
+  /// Busca configurações por categoria - SEMPRE consulta o Supabase
   Future<PlatformSettings?> getSettingsByCategory(String category) async {
     try {
-      // Verifica cache
-      if (_isValidCache(category)) {
-        return _settingsCache[category];
-      }
-
+      print('🔍 [PLATFORM-SETTINGS] Consultando categoria: $category');
+      
       final response = await _supabase
           .from('platform_settings')
           .select()
@@ -27,14 +21,12 @@ class PlatformSettingsService {
           .maybeSingle();
 
       if (response == null) {
+        print('⚠️ [PLATFORM-SETTINGS] Categoria $category não encontrada');
         return null;
       }
 
       final settings = PlatformSettings.fromJson(response);
-      
-      // Atualiza cache
-      _settingsCache[category] = settings;
-      _lastCacheUpdate = DateTime.now();
+      print('✅ [PLATFORM-SETTINGS] Categoria $category carregada: R\$ ${settings.basePricePerKm}/km');
 
       return settings;
     } on PostgrestException catch (e) {
@@ -49,10 +41,10 @@ class PlatformSettingsService {
     }
   }
 
-  /// Busca todas as configurações
+  /// Busca todas as configurações - SEMPRE consulta o Supabase
   Future<List<PlatformSettings>> getAllSettings() async {
     final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
-    print('⚙️ [PLATFORM-SETTINGS-$sessionId] Iniciando getAllSettings()');
+    print('⚙️ [PLATFORM-SETTINGS-$sessionId] Consultando platform_settings diretamente (sem cache)');
     
     try {
       // Log do usuário atual
@@ -83,19 +75,37 @@ class PlatformSettingsService {
         print('   📋 [$i] ${setting.category}: km=${setting.basePricePerKm}, min=${setting.minFare}');
       }
 
-      // Atualiza cache com todas as configurações
-      for (final setting in settings) {
-        _settingsCache[setting.category] = setting;
-        print('💾 [PLATFORM-SETTINGS-$sessionId] Cached: ${setting.category}');
+      // Se não houver configurações, criar as básicas
+      if (settings.isEmpty) {
+        print('⚠️ [PLATFORM-SETTINGS-$sessionId] Tabela vazia! Tentando criar configurações básicas...');
+        await _createDefaultSettings();
+        print('🔄 [PLATFORM-SETTINGS-$sessionId] Tentando buscar novamente após criação...');
+        
+        // Tentar buscar novamente
+        final retryResponse = await _supabase
+            .from('platform_settings')
+            .select()
+            .order('category', ascending: true);
+            
+        final retrySettings = (retryResponse as List<dynamic>)
+            .map((json) => PlatformSettings.fromJson(json as Map<String, dynamic>))
+            .toList();
+            
+        print('📋 [PLATFORM-SETTINGS-$sessionId] Settings após retry: ${retrySettings.length}');
+        return retrySettings;
       }
-      _lastCacheUpdate = DateTime.now();
-      print('✅ [PLATFORM-SETTINGS-$sessionId] Cache atualizado');
 
       return settings;
     } on PostgrestException catch (e) {
       print('❌ [PLATFORM-SETTINGS-$sessionId] PostgrestException: ${e.code} - ${e.message}');
       print('❌ [PLATFORM-SETTINGS-$sessionId] Details: ${e.details}');
       print('❌ [PLATFORM-SETTINGS-$sessionId] Hint: ${e.hint}');
+      
+      // Se o erro é de permissão (usuário não autenticado), relança erro
+      if (e.code == '42501' || e.code == 'PGRST301' || e.message.contains('permission denied')) {
+        print('🔄 [PLATFORM-SETTINGS-$sessionId] Erro de permissão - não usando fallback hardcoded');
+      }
+      
       throw DatabaseException(
         'Erro ao buscar configurações da plataforma. Por favor, tente novamente mais tarde.',
         e.code,
@@ -104,15 +114,22 @@ class PlatformSettingsService {
       print('❌ [PLATFORM-SETTINGS-$sessionId] Erro inesperado: ${e.toString()}');
       print('❌ [PLATFORM-SETTINGS-$sessionId] Tipo do erro: ${e.runtimeType}');
       print('❌ [PLATFORM-SETTINGS-$sessionId] Stack trace: ${StackTrace.current}');
+      
+      // Para outros erros, não usar fallback hardcoded
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        print('🔄 [PLATFORM-SETTINGS-$sessionId] Usuário não autenticado - não usando fallback hardcoded');
+      }
+      
       throw const DatabaseException(
         'Erro inesperado ao buscar configurações da plataforma. Por favor, tente novamente mais tarde.',
       );
     }
   }
 
-  /// Busca configurações padrão (categoria 'Comum')
+  /// Busca configurações padrão (categoria 'common_car')
   Future<PlatformSettings> getDefaultSettings() async {
-    final settings = await getSettingsByCategory('Comum');
+    final settings = await getSettingsByCategory('common_car');
     if (settings == null) {
       throw const DatabaseException(
         'Configurações padrão da plataforma não encontradas.',
@@ -122,47 +139,47 @@ class PlatformSettingsService {
   }
 
   /// Métodos de conveniência para obter valores específicos
-  Future<double> getBasePricePerKm([String category = 'Comum']) async {
+  Future<double> getBasePricePerKm([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.basePricePerKm ?? 1.5; // Fallback hardcoded
   }
 
-  Future<double> getBasePricePerMinute([String category = 'Comum']) async {
+  Future<double> getBasePricePerMinute([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.basePricePerMinute ?? 0.20; // Fallback hardcoded
   }
 
-  Future<double> getPlatformCommissionPercent([String category = 'Comum']) async {
+  Future<double> getPlatformCommissionPercent([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.platformCommissionPercent ?? 10.0; // Fallback hardcoded
   }
 
-  Future<double> getMinFare([String category = 'Comum']) async {
+  Future<double> getMinFare([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.minFare ?? 8.0; // Fallback hardcoded
   }
 
-  Future<double> getMinCancellationFee([String category = 'Comum']) async {
+  Future<double> getMinCancellationFee([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.minCancellationFee ?? 10.0; // Fallback hardcoded
   }
 
-  Future<double> getCancellationFeePercent([String category = 'Comum']) async {
+  Future<double> getCancellationFeePercent([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.cancellationFeePercent ?? 20.0; // Fallback hardcoded
   }
 
-  Future<int> getNoShowWaitMinutes([String category = 'Comum']) async {
+  Future<int> getNoShowWaitMinutes([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.noShowWaitMinutes ?? 3; // Fallback hardcoded
   }
 
-  Future<int> getDriverAcceptanceTimeoutSeconds([String category = 'Comum']) async {
+  Future<int> getDriverAcceptanceTimeoutSeconds([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.driverAcceptanceTimeoutSeconds ?? 10; // Fallback hardcoded
   }
 
-  Future<int> getSearchRadiusKm([String category = 'Comum']) async {
+  Future<int> getSearchRadiusKm([String category = 'common_car']) async {
     final settings = await getSettingsByCategory(category);
     return settings?.searchRadiusKm ?? 10; // Fallback hardcoded
   }
@@ -193,22 +210,7 @@ class PlatformSettingsService {
     }
   }
 
-  /// Limpa o cache (útil para forçar atualização)
-  void clearCache() {
-    _settingsCache.clear();
-    _lastCacheUpdate = null;
-  }
-
-  /// Verifica se o cache é válido para uma categoria
-  bool _isValidCache(String category) {
-    if (!_settingsCache.containsKey(category) || _lastCacheUpdate == null) {
-      return false;
-    }
-    
-    final now = DateTime.now();
-    final cacheAge = now.difference(_lastCacheUpdate!);
-    return cacheAge < _cacheTimeout;
-  }
+  /// Sem cache - sempre consulta dados frescos do Supabase
 
   /// Atualiza uma configuração (apenas para administradores)
   Future<PlatformSettings> updateSettings({
@@ -253,8 +255,7 @@ class PlatformSettingsService {
 
       final settings = PlatformSettings.fromJson(response);
       
-      // Limpa cache após atualização
-      clearCache();
+      // Sem cache - dados sempre atualizados
       
       return settings;
     } on PostgrestException catch (e) {
@@ -305,8 +306,7 @@ class PlatformSettingsService {
 
       final settings = PlatformSettings.fromJson(response);
       
-      // Limpa cache após criação
-      clearCache();
+      // Sem cache - dados sempre atualizados
       
       return settings;
     } on PostgrestException catch (e) {
@@ -318,6 +318,69 @@ class PlatformSettingsService {
       throw const DatabaseException(
         'Erro inesperado ao criar configurações. Por favor, tente novamente mais tarde.',
       );
+    }
+  }
+
+
+  /// Cria configurações padrão na tabela platform_settings se estiver vazia
+  Future<void> _createDefaultSettings() async {
+    try {
+      print('🔧 [PLATFORM-SETTINGS] Criando configurações padrão...');
+      
+      final defaultSettings = [
+        {
+          'category': 'common_car',
+          'base_price_per_km': 1.50,
+          'base_price_per_minute': 0.20,
+          'platform_commission_percent': 10.0,
+          'min_fare': 8.0,
+          'min_cancellation_fee': 10.0,
+          'cancellation_fee_percent': 20.0,
+          'no_show_wait_minutes': 3,
+          'driver_acceptance_timeout_seconds': 10,
+        },
+        {
+          'category': 'freight',
+          'base_price_per_km': 2.0,
+          'base_price_per_minute': 0.30,
+          'platform_commission_percent': 10.0,
+          'min_fare': 12.0,
+          'min_cancellation_fee': 15.0,
+          'cancellation_fee_percent': 20.0,
+          'no_show_wait_minutes': 5,
+          'driver_acceptance_timeout_seconds': 15,
+        },
+        {
+          'category': 'tow_truck',
+          'base_price_per_km': 3.0,
+          'base_price_per_minute': 0.50,
+          'platform_commission_percent': 10.0,
+          'min_fare': 20.0,
+          'min_cancellation_fee': 25.0,
+          'cancellation_fee_percent': 20.0,
+          'no_show_wait_minutes': 10,
+          'driver_acceptance_timeout_seconds': 20,
+        },
+      ];
+
+      for (final setting in defaultSettings) {
+        try {
+          await _supabase.from('platform_settings').insert(setting);
+          print('✅ [PLATFORM-SETTINGS] Configuração criada: ${setting['category']}');
+        } on PostgrestException catch (e) {
+          // Se der erro de constraint único, ignora (já existe)
+          if (e.code == '23505') {
+            print('ℹ️ [PLATFORM-SETTINGS] Configuração já existe: ${setting['category']}');
+          } else {
+            print('❌ [PLATFORM-SETTINGS] Erro ao criar ${setting['category']}: $e');
+          }
+        }
+      }
+      
+      print('✅ [PLATFORM-SETTINGS] Configurações padrão processadas');
+    } catch (e) {
+      print('❌ [PLATFORM-SETTINGS] Erro geral ao criar configurações: $e');
+      // Não relança o erro para não quebrar o fluxo principal
     }
   }
 }

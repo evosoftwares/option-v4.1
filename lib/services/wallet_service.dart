@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/error_handling/postgrest_error_mapper.dart';
 import '../core/error_handling/error_logger.dart';
 import '../core/error_handling/app_error.dart';
+import '../core/resilience/resilient_supabase_client.dart';
+import '../core/resilience/network_error_interceptor.dart';
 import '../exceptions/app_exceptions.dart';
 import '../exceptions/wallet_exceptions.dart';
 import '../models/passenger_wallet.dart';
@@ -20,9 +22,29 @@ class WalletService {
 
   WalletService({SupabaseClient? client, AsaasService? asaas})
       : _supabase = client ?? Supabase.instance.client,
-        _asaas = asaas ?? AsaasService();
+        _asaas = asaas ?? AsaasService(),
+        _networkInterceptor = NetworkErrorInterceptor() {
+    _initializeResilientClient();
+  }
+  
   final SupabaseClient _supabase;
   final AsaasService _asaas;
+  final NetworkErrorInterceptor _networkInterceptor;
+  late final ResilientSupabaseClient _resilientClient;
+  
+  /// Inicializa o cliente resiliente
+  Future<void> _initializeResilientClient() async {
+    _resilientClient = ResilientSupabaseClient(
+      client: _supabase,
+      config: const ResilientClientConfig(
+        enableCache: true,
+        cacheExpiration: Duration(minutes: 2),
+        enableOfflineMode: true,
+        enableFallback: true,
+      ),
+    );
+    await _resilientClient.initialize();
+  }
 
   /// Busca o ID do motorista para um usuário com validações de segurança
   Future<String?> getDriverIdForUser(String userId) async {
@@ -48,13 +70,14 @@ class WalletService {
       
       AppLogger.security('wallet_driver_access_validated', userId: currentUserId);
       
-      // Add timeout to prevent hanging
-      final data = await _supabase
-          .from('drivers')
-          .select('id')
-          .eq('user_id', userId)
-          .maybeSingle()
-          .timeout(const Duration(seconds: 10));
+      // Usar cliente resiliente com cache e retry
+      final data = await _resilientClient.select(
+        'drivers',
+        select: 'id',
+        filters: {'user_id': userId},
+        limit: 1,
+        operationName: 'get_driver_by_user',
+      ).then((results) => results.isNotEmpty ? results.first : null);
       
       if (data != null) {
         final driverId = data['id'] as String;
@@ -67,9 +90,8 @@ class WalletService {
         return driverId;
       }
       
-      // If no driver record found, try to create one automatically with timeout
-      return await _autoCreateDriverRecord(userId)
-          .timeout(const Duration(seconds: 15));
+      // If no driver record found, try to create one automatically
+      return await _autoCreateDriverRecord(userId);
     } on TimeoutException {
       print('❌ Timeout ao buscar/criar motorista para usuário: $userId');
       throw const DatabaseException('Operação demorou muito para completar. Verifique sua conexão e tente novamente.');
@@ -124,11 +146,13 @@ class WalletService {
       final currentUserId = AuthService.getCurrentUserId();
       
       // Buscar o user_id do motorista para validação
-      final driverData = await _supabase
-          .from('drivers')
-          .select('user_id')
-          .eq('id', driverId)
-          .maybeSingle();
+      final driverData = await _resilientClient.select(
+        'drivers',
+        select: 'user_id',
+        filters: {'id': driverId},
+        limit: 1,
+        operationName: 'get_driver_user_id',
+      ).then((results) => results.isNotEmpty ? results.first : null);
       
       if (driverData == null) {
         throw const DatabaseException('Motorista não encontrado');
@@ -139,11 +163,12 @@ class WalletService {
         resourceUserId: driverData['user_id'],
         operation: 'read_wallet',
       );
-      final data = await _supabase
-          .from('driver_wallets')
-          .select()
-          .eq('driver_id', driverId)
-          .maybeSingle();
+      final data = await _resilientClient.select(
+        'driver_wallets',
+        filters: {'driver_id': driverId},
+        limit: 1,
+        operationName: 'get_driver_wallet',
+      ).then((results) => results.isNotEmpty ? results.first : null);
       // Log de auditoria
       await AuthService.logSecurityEvent(
         eventType: 'DRIVER_WALLET_ACCESSED',
@@ -166,11 +191,13 @@ class WalletService {
   Future<String?> _autoCreateDriverRecord(String userId) async {
     try {
       // First check if user is actually a driver
-      final userData = await _supabase
-          .from('app_users')
-          .select('user_type, email, full_name')
-          .eq('id', userId)
-          .maybeSingle();
+      final userData = await _resilientClient.select(
+        'app_users',
+        select: 'user_type, email, full_name',
+        filters: {'id': userId},
+        limit: 1,
+        operationName: 'get_user_type',
+      ).then((results) => results.isNotEmpty ? results.first : null);
       
       if (userData == null || userData['user_type']?.toLowerCase() != 'driver') {
         return null; // User is not a driver, so no driver record needed
@@ -215,11 +242,11 @@ class WalletService {
         'last_location_update': null,
       };
 
-      final result = await _supabase
-          .from('drivers')
-          .insert(driverData)
-          .select('id')
-          .single();
+      final result = await _resilientClient.insert(
+        'drivers',
+        driverData,
+        operationName: 'auto_create_driver',
+      );
           
       print('✅ Registro de motorista criado automaticamente com ID: ${result['id']}');
       return result['id'] as String;
@@ -242,11 +269,13 @@ class WalletService {
       }
       
       // Buscar o user_id do motorista para validação
-      final driverData = await _supabase
-          .from('drivers')
-          .select('user_id')
-          .eq('id', driverId)
-          .maybeSingle();
+      final driverData = await _resilientClient.select(
+        'drivers',
+        select: 'user_id',
+        filters: {'id': driverId},
+        limit: 1,
+        operationName: 'get_driver_for_transactions',
+      ).then((results) => results.isNotEmpty ? results.first : null);
       
       if (driverData == null) {
         throw const DatabaseException('Motorista não encontrado');
@@ -258,12 +287,14 @@ class WalletService {
         operation: 'read_wallet_transactions',
       );
       
-      final data = await _supabase
-          .from('wallet_transactions')
-          .select()
-          .eq('wallet_id', driverId)
-          .order('created_at', ascending: false)
-          .limit(limit);
+      final data = await _resilientClient.select(
+        'wallet_transactions',
+        filters: {'wallet_id': driverId},
+        orderBy: 'created_at',
+        ascending: false,
+        limit: limit,
+        operationName: 'get_wallet_transactions',
+      );
       
       // Log de auditoria
       await AuthService.logSecurityEvent(
@@ -318,11 +349,13 @@ class WalletService {
       }
       
       // Buscar o user_id do motorista para validação
-      final driverData = await _supabase
-          .from('drivers')
-          .select('user_id')
-          .eq('id', driverId)
-          .maybeSingle();
+      final driverData = await _resilientClient.select(
+        'drivers',
+        select: 'user_id',
+        filters: {'id': driverId},
+        limit: 1,
+        operationName: 'get_driver_for_withdrawal',
+      ).then((results) => results.isNotEmpty ? results.first : null);
       
       if (driverData == null) {
         throw const DatabaseException('Motorista não encontrado');
@@ -344,11 +377,11 @@ class WalletService {
         'requested_at': DateTime.now().toIso8601String(),
       };
       
-      final data = await _supabase
-          .from('withdrawals')
-          .insert(payload)
-          .select()
-          .single();
+      final data = await _resilientClient.insert(
+        'withdrawals',
+        payload,
+        operationName: 'request_withdrawal',
+      );
       
       // Log de auditoria
       await AuthService.logSecurityEvent(
@@ -398,22 +431,22 @@ class WalletService {
         resourceUserId: userId,
         operation: 'read_passenger_info',
       );
-      // First, try to find existing passenger record with timeout
-      final data = await _supabase
-          .from('passengers')
-          .select('id')
-          .eq('user_id', userId)
-          .maybeSingle()
-          .timeout(const Duration(seconds: 10));
+      // First, try to find existing passenger record
+      final data = await _resilientClient.select(
+        'passengers',
+        select: 'id',
+        filters: {'user_id': userId},
+        limit: 1,
+        operationName: 'get_passenger_by_user',
+      ).then((results) => results.isNotEmpty ? results.first : null);
           
       if (data != null) {
         return data['id'] as String;
       }
       
       // If no passenger record exists, check if this is a passenger-type user
-      // and auto-create the missing passenger record with timeout
-      return await _autoCreateMissingPassengerRecord(userId)
-          .timeout(const Duration(seconds: 15));
+      // and auto-create the missing passenger record
+      return await _autoCreateMissingPassengerRecord(userId);
     } on TimeoutException {
       print('❌ Timeout ao buscar/criar passageiro para usuário: $userId');
       throw const DatabaseException('Operação demorou muito para completar. Verifique sua conexão e tente novamente.');
@@ -435,11 +468,13 @@ class WalletService {
       }
       
       // Buscar o user_id do passageiro para validação
-      final passengerData = await _supabase
-          .from('passengers')
-          .select('user_id')
-          .eq('id', passengerId)
-          .maybeSingle();
+      final passengerData = await _resilientClient.select(
+        'passengers',
+        select: 'user_id',
+        filters: {'id': passengerId},
+        limit: 1,
+        operationName: 'get_passenger_user_id',
+      ).then((results) => results.isNotEmpty ? results.first : null);
       
       if (passengerData == null) {
         throw const DatabaseException('Passageiro não encontrado');
@@ -450,11 +485,12 @@ class WalletService {
         resourceUserId: passengerData['user_id'],
         operation: 'read_passenger_wallet',
       );
-      final data = await _supabase
-          .from('passenger_wallets')
-          .select()
-          .eq('passenger_id', passengerId)
-          .maybeSingle();
+      final data = await _resilientClient.select(
+        'passenger_wallets',
+        filters: {'passenger_id': passengerId},
+        limit: 1,
+        operationName: 'get_passenger_wallet',
+      ).then((results) => results.isNotEmpty ? results.first : null);
       // Log de auditoria
       await AuthService.logSecurityEvent(
         eventType: 'PASSENGER_WALLET_ACCESSED',
@@ -483,11 +519,11 @@ class WalletService {
         'total_spent': 0.0,
 
       };
-      final data = await _supabase
-          .from('passenger_wallets')
-          .insert(payload)
-          .select()
-          .single();
+      final data = await _resilientClient.insert(
+        'passenger_wallets',
+        payload,
+        operationName: 'create_passenger_wallet',
+      );
       return PassengerWallet.fromMap(data);
     } on PostgrestException catch (e) {
       throw PostgrestErrorMapper.mapError(e, context: {'operation': 'createPassengerWallet', 'passengerId': passengerId, 'userId': userId});

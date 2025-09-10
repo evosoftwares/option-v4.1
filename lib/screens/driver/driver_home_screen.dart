@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -58,6 +59,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<List<Trip>>? _tripSub;
   String? _currentTripId;
+  Timer? _approvalStatusTimer;
+  Timer? _bannerUpdateTimer;
 
   bool _revertingOnlineDueToPermission = false;
   bool _isProcessingStatusChange = false;
@@ -75,18 +78,61 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   @override
   void initState() {
     super.initState();
+    print('🚀 [DRIVER_HOME] Iniciando tela principal do motorista');
+    
     _initControllers();
     _initServices();
     _loadCarIcon();
     _checkDocumentsStatus();
-    _initLocation();
-    _initActiveTrips();
+    
+    // Iniciar timer automático para atualização do banner a cada 5 segundos
+    _startBannerUpdateTimer();
+    
+    // Aguardar um frame para garantir que o widget está montado
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initActiveTrips();
+      }
+    });
+  }
+
+  /// Creates a custom marker icon from a Material icon
+  Future<BitmapDescriptor> _createMarkerFromIcon(IconData icon,
+      {Color color = Colors.blue, double size = 50}) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    
+    final Paint paint = Paint()..color = color;
+    
+    // Draw a circle background
+    canvas.drawCircle(Offset(size/2, size/2), size/2, paint);
+    
+    // Draw the icon
+    final textPainter = TextPainter(textDirection: TextDirection.ltr);
+    final iconStr = String.fromCharCode(icon.codePoint);
+    final textStyle = TextStyle(
+      fontFamily: icon.fontFamily,
+      package: icon.fontPackage,
+      color: Colors.white, // White icon on colored background
+      fontSize: size * 0.6, // Make icon slightly smaller than the circle
+    );
+    
+    textPainter.text = TextSpan(text: iconStr, style: textStyle);
+    textPainter.layout();
+    textPainter.paint(canvas, Offset(size * 0.2, size * 0.2));
+    
+    final ui.Image img = await pictureRecorder.endRecording().toImage(size.toInt(), size.toInt());
+    final ByteData? data = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.bytes(data!.buffer.asUint8List());
   }
 
   Future<void> _loadCarIcon() async {
-    // Inicializar ícone preto de fallback
-    _blackCarIcon = BitmapDescriptor.defaultMarkerWithHue(
-        0); // 0 = vermelho, mais escuro disponível
+    // Create a default attractive icon as fallback
+    _blackCarIcon = await _createMarkerFromIcon(
+      Icons.local_taxi, // Use taxi icon as fallback
+      color: Colors.deepOrange, // Attractive orange color
+      size: 50,
+    );
 
     try {
       _carIcon = await BitmapDescriptor.asset(
@@ -94,8 +140,17 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
         'assets/images/car_marker.png',
       );
     } catch (e) {
-      // Usar ícone preto de fallback se não houver o asset
-      _carIcon = _blackCarIcon;
+      // Create a Material icon as fallback instead of black marker
+      try {
+        _carIcon = await _createMarkerFromIcon(
+          Icons.directions_car, // Use car icon
+          color: Colors.blue, // Blue color for the marker
+          size: 50, // Size of the marker
+        );
+      } catch (e) {
+        // Fallback to attractive taxi icon if car icon creation fails
+        _carIcon = _blackCarIcon;
+      }
     }
   }
 
@@ -139,25 +194,50 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     _buttonController.dispose();
     _positionSub?.cancel();
     _tripSub?.cancel();
+    _approvalStatusTimer?.cancel();
+    _bannerUpdateTimer?.cancel();
     _mapController?.dispose();
     super.dispose();
   }
 
   Future<void> _initLocation() async {
-    final current = await _locationService.getCurrentLocation();
-    if (!mounted) return;
-    if (current != null) {
-      final controller = await _ensureController();
-      final latLng = LatLng(
-        (current['lat'] as num).toDouble(),
-        (current['lng'] as num).toDouble(),
-      );
-      await controller.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(target: latLng, zoom: 15),
-        ),
-      );
-      _restartPositionStream();
+    try {
+      final current = await _locationService.getCurrentLocation();
+      if (!mounted) return;
+      
+      if (current != null) {
+        final controller = await _ensureController();
+        final latLng = LatLng(
+          (current['lat'] as num).toDouble(),
+          (current['lng'] as num).toDouble(),
+        );
+        await controller.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(target: latLng, zoom: 15),
+          ),
+        );
+        _restartPositionStream();
+      } else {
+        // Fallback para São Paulo se não conseguir obter localização
+        print('🗺️ [DRIVER_HOME] Usando localização padrão (São Paulo)');
+        final controller = await _ensureController();
+        await controller.animateCamera(
+          CameraUpdate.newCameraPosition(_initialPos),
+        );
+      }
+    } catch (e) {
+      print('⚠️ [DRIVER_HOME] Erro ao inicializar localização: $e');
+      // Garantir que o mapa seja exibido mesmo com erro de localização
+      if (mounted) {
+        try {
+          final controller = await _ensureController();
+          await controller.animateCamera(
+            CameraUpdate.newCameraPosition(_initialPos),
+          );
+        } catch (e2) {
+          print('⚠️ [DRIVER_HOME] Erro ao aplicar posição inicial: $e2');
+        }
+      }
     }
   }
 
@@ -203,8 +283,25 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   }
 
   Future<GoogleMapController> _ensureController() async {
-    if (_mapController != null) return _mapController!;
-    return _mapControllerCompleter.future;
+    if (_mapController != null) {
+      print('🗺️ [DRIVER_HOME] Usando controller existente');
+      return _mapController!;
+    }
+    
+    print('🗺️ [DRIVER_HOME] Aguardando controller do mapa...');
+    try {
+      final controller = await _mapControllerCompleter.future.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Timeout aguardando controller do mapa');
+        },
+      );
+      print('🗺️ [DRIVER_HOME] Controller do mapa obtido com sucesso');
+      return controller;
+    } catch (e) {
+      print('⚠️ [DRIVER_HOME] Erro ao obter controller do mapa: $e');
+      rethrow;
+    }
   }
 
   void _restartPositionStream() {
@@ -407,12 +504,23 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     );
   }
 
-  void _onMapCreated(GoogleMapController controller) {
+  void _onMapCreated(GoogleMapController controller) async {
     _mapController = controller;
     if (!_mapControllerCompleter.isCompleted) {
       _mapControllerCompleter.complete(controller);
     }
-    MapStyleService.applyForContext(controller, context);
+    
+    try {
+      // Aplicar estilo do mapa
+      if (mounted) {
+        await MapStyleService.applyForContext(controller, context);
+      }
+      
+      // Garantir que o mapa seja inicializado com a localização atual
+      await _initLocation();
+    } catch (e) {
+      print('⚠️ [DRIVER_HOME] Erro ao configurar mapa: $e');
+    }
   }
 
   Future<void> _buildTripRoute(Trip trip) async {
@@ -575,16 +683,37 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   /// Verifica status dos documentos do motorista
   Future<void> _checkDocumentsStatus() async {
     try {
+      print('🚀 [DRIVER_HOME] === INICIANDO VERIFICAÇÃO DE DOCUMENTOS ===');
+      
       // Obter driver ID
       final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        print('❌ [DRIVER_HOME] Usuário não autenticado');
+        return;
+      }
+      print('👤 [DRIVER_HOME] Usuário autenticado: ${user.id}');
 
       final driverId = await WalletService().getDriverIdForUser(user.id);
-      if (driverId == null) return;
+      if (driverId == null) {
+        print('❌ [DRIVER_HOME] Driver ID não encontrado para usuário ${user.id}');
+        return;
+      }
+      print('🚗 [DRIVER_HOME] Driver ID encontrado: $driverId');
 
       _driverId = driverId;
 
-      // Verificar status dos documentos
+      // PRIMEIRO: Verificar se o motorista já está aprovado na tabela drivers
+      print('🔍 [DRIVER_HOME] Verificando status geral do motorista...');
+      await _checkGeneralDriverApproval(driverId);
+
+      // Se já foi detectado como aprovado, não precisamos verificar documentos
+      if (!_hasDocumentsPending) {
+        print('✅ [DRIVER_HOME] Motorista já aprovado - pulando verificação de documentos');
+        return;
+      }
+
+      // SEGUNDO: Verificar status individual dos documentos
+      print('📋 [DRIVER_HOME] Verificando status individual dos documentos...');
       final documentsStatus =
           await DriverDocumentService.getDocumentationStatus(driverId);
 
@@ -592,19 +721,336 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
       final missingDocs = documentsStatus['missingDocuments'] as List;
       final pendingDocs = documentsStatus['pendingDocuments'] as List;
       final rejectedDocs = documentsStatus['rejectedDocuments'] as List;
+      final approvedDocs = documentsStatus['approvedDocuments'] as List;
 
-      final totalPending =
-          missingDocs.length + pendingDocs.length + rejectedDocs.length;
+      final totalPending = missingDocs.length + pendingDocs.length + rejectedDocs.length;
+
+      print('📊 [DRIVER_HOME] RESULTADO DA VERIFICAÇÃO:');
+      print('   - isComplete: $isComplete');
+      print('   - totalPending: $totalPending');
+      print('   - missingDocs: $missingDocs');
+      print('   - pendingDocs: $pendingDocs');
+      print('   - rejectedDocs: $rejectedDocs');
+      print('   - approvedDocs: $approvedDocs');
 
       if (mounted) {
+        final wasDocumentsPending = _hasDocumentsPending;
+        
         setState(() {
           _hasDocumentsPending = !isComplete;
           _pendingDocsCount = totalPending;
         });
+        
+        print('🔄 [DRIVER_HOME] Estado atualizado:');
+        print('   - _hasDocumentsPending: $_hasDocumentsPending');
+        print('   - _pendingDocsCount: $_pendingDocsCount');
+        
+        // Gerenciar estado do banner
+        if (!_hasDocumentsPending && wasDocumentsPending) {
+          // Banner foi removido - parar timer automático
+          print('✅ [DRIVER_HOME] Banner removido - parando timer automático');
+          _stopBannerUpdateTimer();
+          _stopApprovalStatusTimer();
+        }
       }
+      
+      print('🏁 [DRIVER_HOME] === VERIFICAÇÃO DE DOCUMENTOS CONCLUÍDA ===');
     } catch (e) {
       print('⚠️ [DRIVER_HOME] Erro ao verificar documentos: $e');
     }
+  }
+
+  /// Verifica o status geral do motorista na tabela drivers
+  Future<void> _checkGeneralDriverApproval(String driverId) async {
+    try {
+      print('🔍 [DRIVER_HOME] Consultando tabela drivers...');
+      
+      // Consultar dados completos do motorista
+      final response = await Supabase.instance.client
+          .from('drivers')
+          .select('id, approval_status, approved_by, approved_at')
+          .eq('id', driverId)
+          .single();
+
+      print('📋 [DRIVER_HOME] Dados do motorista:');
+      print('   - id: ${response['id']}');
+      print('   - approval_status: ${response['approval_status']}');
+      print('   - approved_by: ${response['approved_by']}');
+      print('   - approved_at: ${response['approved_at']}');
+
+      final approvalStatus = response['approval_status'] as String?;
+      final approvedBy = response['approved_by'];
+      final approvedAt = response['approved_at'];
+
+      // Verificar múltiplas condições de aprovação
+      bool isGenerallyApproved = false;
+      String approvalReason = '';
+
+      if (approvalStatus == 'approved') {
+        isGenerallyApproved = true;
+        approvalReason = 'approval_status = approved';
+      } else if (approvedBy != null && approvedAt != null) {
+        isGenerallyApproved = true;
+        approvalReason = 'tem approved_by e approved_at preenchidos';
+      }
+
+      if (isGenerallyApproved) {
+        print('✅ [DRIVER_HOME] MOTORISTA APROVADO GERALMENTE!');
+        print('   - Razão: $approvalReason');
+        
+        if (mounted) {
+          setState(() {
+            _hasDocumentsPending = false;
+            _pendingDocsCount = 0;
+          });
+          _stopApprovalStatusTimer();
+          _stopBannerUpdateTimer(); // Parar timer automático também
+          
+          // Mostrar notificação de aprovação
+          _showDriverApprovedNotification();
+        }
+      } else {
+        print('⏳ [DRIVER_HOME] Motorista ainda não aprovado geralmente');
+        print('   - approval_status: $approvalStatus');
+        print('   - approved_by: $approvedBy');
+        print('   - approved_at: $approvedAt');
+      }
+    } catch (e) {
+      print('⚠️ [DRIVER_HOME] Erro ao verificar aprovação geral: $e');
+      // Continuar com verificação de documentos
+    }
+  }
+
+  /// Inicia o timer para atualização automática do banner a cada 5 segundos
+  void _startBannerUpdateTimer() {
+    _stopBannerUpdateTimer(); // Cancela timer anterior se existir
+    
+    print('🔄 [DRIVER_HOME] Iniciando timer automático de atualização do banner (5s)');
+    _bannerUpdateTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) async {
+        if (mounted) {
+          print('⏰ [DRIVER_HOME] Timer automático - verificando status...');
+          await _checkDocumentsStatus();
+        }
+      },
+    );
+  }
+
+  /// Para o timer de atualização automática do banner
+  void _stopBannerUpdateTimer() {
+    if (_bannerUpdateTimer?.isActive == true) {
+      print('⏹️ [DRIVER_HOME] Parando timer automático de atualização');
+      _bannerUpdateTimer?.cancel();
+      _bannerUpdateTimer = null;
+    }
+  }
+
+
+  /// Para o timer de verificação de status
+  void _stopApprovalStatusTimer() {
+    if (_approvalStatusTimer?.isActive == true) {
+      print('⏹️ [DRIVER_HOME] Parando timer de verificação de aprovação');
+      _approvalStatusTimer?.cancel();
+      _approvalStatusTimer = null;
+    }
+  }
+
+  /// Verifica o status de aprovação do motorista no banco de dados
+  Future<void> _checkDriverApprovalStatus() async {
+    if (_driverId == null) return;
+    
+    try {
+      print('🔍 [DRIVER_HOME] Verificando status de aprovação do motorista $_driverId');
+      
+      // Consultar todas as colunas relevantes da tabela drivers
+      final response = await Supabase.instance.client
+          .from('drivers')
+          .select('id, approval_status, approved_by, approved_at')
+          .eq('id', _driverId!)
+          .single();
+
+      print('📋 [DRIVER_HOME] Dados completos do driver: $response');
+      
+      final approvalStatus = response['approval_status'] as String?;
+      final approvedBy = response['approved_by'];
+      final approvedAt = response['approved_at'];
+      
+      print('📊 [DRIVER_HOME] Status detalhado:');
+      print('   - approval_status: $approvalStatus');
+      print('   - approved_by: $approvedBy');
+      print('   - approved_at: $approvedAt');
+
+      // Verificar se está aprovado (várias possibilidades)
+      bool isApproved = false;
+      
+      if (approvalStatus == 'approved') {
+        isApproved = true;
+        print('✅ [DRIVER_HOME] Aprovado via approval_status');
+      } else if (approvedBy != null) {
+        isApproved = true;
+        print('✅ [DRIVER_HOME] Aprovado via approved_by (não-nulo)');
+      }
+
+      if (isApproved) {
+        print('🎉 [DRIVER_HOME] Motorista está aprovado! Ocultando banner');
+        
+        if (mounted) {
+          setState(() {
+            _hasDocumentsPending = false;
+            _pendingDocsCount = 0;
+          });
+          _stopApprovalStatusTimer();
+          _stopBannerUpdateTimer();
+          
+          // Mostrar uma notificação de sucesso
+          _showDriverApprovedNotification();
+        }
+      } else {
+        print('⏳ [DRIVER_HOME] Motorista ainda não aprovado - continuando verificação');
+      }
+    } catch (e) {
+      print('⚠️ [DRIVER_HOME] Erro ao verificar status de aprovação: $e');
+      print('🔧 [DRIVER_HOME] Tentativa alternativa...');
+      
+      // Tentativa alternativa: verificar se existe uma coluna 'status' simples
+      try {
+        final altResponse = await Supabase.instance.client
+            .from('drivers')
+            .select('id')
+            .eq('id', _driverId!)
+            .single();
+        
+        print('✅ [DRIVER_HOME] Driver existe no banco: ${altResponse['id']}');
+        
+        // Verificar documentos aprovados como alternativa
+        await _checkDocumentationApprovalStatus();
+        
+      } catch (altError) {
+        print('❌ [DRIVER_HOME] Erro na verificação alternativa: $altError');
+      }
+    }
+  }
+
+  /// Verifica se todos os documentos estão aprovados como alternativa
+  Future<void> _checkDocumentationApprovalStatus() async {
+    if (_driverId == null) return;
+    
+    try {
+      print('📄 [DRIVER_HOME] Verificando status dos documentos como alternativa...');
+      
+      final docsResponse = await Supabase.instance.client
+          .from('driver_documents')
+          .select('document_type, status')
+          .eq('driver_id', _driverId!)
+          .eq('is_current', true);
+
+      print('📑 [DRIVER_HOME] Documentos encontrados: $docsResponse');
+      
+      if (docsResponse.isEmpty) {
+        print('📄 [DRIVER_HOME] Nenhum documento encontrado');
+        return;
+      }
+      
+      // Verificar se todos os documentos estão aprovados
+      final allApproved = docsResponse.every((doc) => doc['status'] == 'approved');
+      
+      if (allApproved) {
+        print('✅ [DRIVER_HOME] Todos os documentos estão aprovados!');
+        
+        if (mounted) {
+          setState(() {
+            _hasDocumentsPending = false;
+            _pendingDocsCount = 0;
+          });
+          _stopApprovalStatusTimer();
+          _stopBannerUpdateTimer();
+          
+          // Mostrar uma notificação de sucesso
+          _showDriverApprovedNotification();
+        }
+      } else {
+        print('⏳ [DRIVER_HOME] Nem todos os documentos estão aprovados ainda');
+        for (final doc in docsResponse) {
+          print('   - ${doc['document_type']}: ${doc['status']}');
+        }
+      }
+      
+    } catch (e) {
+      print('⚠️ [DRIVER_HOME] Erro ao verificar documentos: $e');
+    }
+  }
+
+  /// Mostra notificação visual quando o motorista é aprovado
+  void _showDriverApprovedNotification() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 200),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.verified_rounded,
+                  size: 32,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Aprovado!',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Seus documentos foram aprovados!\nVocê já pode ficar online.',
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Auto close after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+    });
   }
 
   /// Mostra notificação visual de sucesso ao ficar online
@@ -1147,6 +1593,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    print('🏗️ [DRIVER_HOME] BUILD CHAMADO:');
+    print('   - _hasDocumentsPending: $_hasDocumentsPending');
+    print('   - _pendingDocsCount: $_pendingDocsCount');
+    print('   - Banner será exibido: $_hasDocumentsPending');
+    
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -1158,12 +1609,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
             child: GoogleMap(
               onMapCreated: _onMapCreated,
               initialCameraPosition: _initialPos,
+              myLocationEnabled: false,
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
               mapToolbarEnabled: false,
+              compassEnabled: true,
+              rotateGesturesEnabled: true,
+              scrollGesturesEnabled: true,
+              tiltGesturesEnabled: true,
+              zoomGesturesEnabled: true,
               markers: _markers,
               polylines: _polylines,
-              style: '',
+              mapType: MapType.normal,
             ),
           ),
 
@@ -1231,7 +1688,15 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
           ),
 
           // Banner de documentos pendentes
-          if (_hasDocumentsPending)
+          if (_hasDocumentsPending) ...[
+            Builder(builder: (context) {
+              print('🚨 [DRIVER_HOME] RENDERIZANDO BANNER!');
+              print('   - _hasDocumentsPending: $_hasDocumentsPending');
+              print('   - _pendingDocsCount: $_pendingDocsCount');
+              print('   - _driverId: $_driverId');
+              print('   - Timer ativo: ${_approvalStatusTimer?.isActive}');
+              return Container(); // Widget vazio apenas para debug
+            }),
             Positioned(
               bottom:
                   MediaQuery.of(context).padding.bottom + AppSpacing.xl + 140,
@@ -1242,6 +1707,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                 child: _buildDocumentsPendingBanner(),
               ),
             ),
+          ],
 
           // Bottom "IR" button
           Positioned(

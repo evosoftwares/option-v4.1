@@ -150,11 +150,11 @@ class TripRequestManager {
       _cancelSubscription(requestId);
       
       if (accepted) {
-        // Criar viagem a partir da solicitação
-        await _createTripFromRequest(requestId);
+        // PRIMEIRO: Atualizar status da solicitação com driver que aceitou
+        await _acceptRequest(requestId, driverId);
         
-        // Atualizar status da solicitação
-        await _updateRequestStatus(requestId, 'accepted');
+        // SEGUNDO: Criar viagem a partir da solicitação (agora com accepted_by_driver_id preenchido)
+        await _createTripFromRequest(requestId);
         
         _logMatching('Viagem criada com sucesso a partir da solicitação $requestId');
       } else {
@@ -315,7 +315,9 @@ class TripRequestManager {
           .single();
 
       // Criar viagem usando os dados da solicitação
+      final estimatedFare = requestData['estimated_fare'] ?? 0.0;
       final tripData = {
+        'request_id': requestId,
         'passenger_id': requestData['passenger_id'],
         'driver_id': requestData['accepted_by_driver_id'],
         'origin_address': requestData['origin_address'],
@@ -325,9 +327,17 @@ class TripRequestManager {
         'destination_latitude': requestData['destination_latitude'],
         'destination_longitude': requestData['destination_longitude'],
         'vehicle_category': requestData['vehicle_category'],
-        'estimated_fare': requestData['estimated_fare'],
+        'needs_pet': requestData['needs_pet'] ?? false,
+        'needs_grocery_space': requestData['needs_grocery_space'] ?? false,
+        'is_condo_origin': requestData['is_condo_origin'] ?? false,
+        'is_condo_destination': requestData['is_condo_destination'] ?? false,
+        'needs_ac': requestData['needs_ac'] ?? false,
+        'number_of_stops': requestData['number_of_stops'] ?? 0,
+        'estimated_fare': estimatedFare,
         'estimated_distance_km': requestData['estimated_distance_km'],
         'estimated_duration_minutes': requestData['estimated_duration_minutes'],
+        'base_fare': estimatedFare, // Campo obrigatório - usar estimated_fare como base
+        'total_fare': estimatedFare, // Campo obrigatório - usar estimated_fare como total inicial
         'status': 'requested',
         'created_at': DateTime.now().toIso8601String(),
       };
@@ -482,7 +492,16 @@ class TripRequestManager {
           .eq('id', driverId)
           .single();
       
-      if (driverData['is_online'] != true || driverData['approval_status'] != 'approved') {
+      // Verificar se motorista está efetivamente online (nova lógica)
+      final driverStatusResponse = await _supabase
+          .from('driver_effective_status')
+          .select('effective_online')
+          .eq('driver_id', driverId)
+          .maybeSingle();
+      
+      final isEffectivelyOnline = driverStatusResponse?['effective_online'] as bool? ?? false;
+      
+      if (!isEffectivelyOnline || driverData['approval_status'] != 'approved') {
         return false;
       }
       

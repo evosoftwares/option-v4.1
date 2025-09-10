@@ -14,6 +14,7 @@ import '../../services/driver_matching_service.dart';
 import '../../services/driver_operation_zones_service.dart';
 import '../../services/driver_service.dart';
 import '../../services/individual_pricing_service.dart';
+import '../../services/search_status_service.dart';
 import '../../services/trip_request_manager.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/price_breakdown_widget.dart';
@@ -135,6 +136,7 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
   final TripRequestManager _tripRequestManager = TripRequestManager(Supabase.instance.client);
   final DriverOperationZonesService _operationZonesService = DriverOperationZonesService(Supabase.instance.client);
   late final DriverAvailabilityService _availabilityService;
+  late final SearchStatusService _searchStatusService;
 
   List<DriverWithUserData> _driversWithUserData = [];
   bool _isLoading = true;
@@ -148,6 +150,7 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
   void initState() {
     super.initState();
     _availabilityService = DriverAvailabilityService(Supabase.instance.client);
+    _searchStatusService = SearchStatusService();
     _loadDriversWithUserData();
   }
 
@@ -184,14 +187,21 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
 
   Future<void> _loadDriversWithUserData() async {
     try {
-      print('🔍 _loadDriversWithUserData iniciado');
-      print('🔍 Position: ${widget.userPosition.latitude}, ${widget.userPosition.longitude}');
-      print('🔍 TripData: ${widget.tripRequestData.vehicleCategory}');
+      print('🔍 [DRIVER_SELECTION] _loadDriversWithUserData iniciado');
+      print('📍 [DRIVER_SELECTION] Position: ${widget.userPosition.latitude}, ${widget.userPosition.longitude}');
+      print('🚗 [DRIVER_SELECTION] TripData: ${widget.tripRequestData.vehicleCategory}');
+      print('🐕 [DRIVER_SELECTION] Needs Pet: ${widget.tripRequestData.needsPet}');
+      print('❄️ [DRIVER_SELECTION] Needs AC: ${widget.tripRequestData.needsAc}');
+      print('🛒 [DRIVER_SELECTION] Needs Grocery: ${widget.tripRequestData.needsGrocerySpace}');
+      print('🏢 [DRIVER_SELECTION] Needs Condo: ${widget.tripRequestData.isCondoOrigin || widget.tripRequestData.isCondoDestination}');
+      print('📍 [DRIVER_SELECTION] Origem: ${widget.tripRequestData.originAddress}');
+      print('📍 [DRIVER_SELECTION] Destino: ${widget.tripRequestData.destinationAddress}');
       
       setState(() {
         _isLoading = true;
         _errorMessage = null;
       });
+      print('🔄 [DRIVER_SELECTION] Estado de loading ativado');
 
       // Buscar motoristas disponíveis próximos
       final criteria = MatchingCriteria(
@@ -204,34 +214,65 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
           needsCondo: widget.tripRequestData.isCondoOrigin || widget.tripRequestData.isCondoDestination,
         );
         
-      print('🔍 Criteria criado: $criteria');
+      print('🔍 [DRIVER_SELECTION] Criteria criado: $criteria');
         
-        final driversWithDistance = await _driverMatchingService.findBestDrivers(criteria);
-
+      final startTime = DateTime.now();
+      print('⏱️ [DRIVER_SELECTION] Iniciando busca de motoristas...');
+      final driversWithDistance = await _driverMatchingService.findBestDrivers(criteria);
+      final endTime = DateTime.now();
+      final duration = endTime.difference(startTime);
+      
+      print('✅ [DRIVER_SELECTION] Busca de motoristas concluída em ${duration.inMilliseconds}ms');
+      print('📊 [DRIVER_SELECTION] Motoristas encontrados: ${driversWithDistance.length}');
+      
       if (driversWithDistance.isEmpty) {
+        print('⚠️ [DRIVER_SELECTION] Nenhum motorista encontrado');
+        _searchStatusService.markNoDriversFound();
         setState(() {
           _driversWithUserData = [];
           _isLoading = false;
         });
         return;
       }
+      
+      print('🎉 [DRIVER_SELECTION] ${driversWithDistance.length} motoristas encontrados, iniciando carregamento de dados');
+      _searchStatusService.markSuccess(driversFound: driversWithDistance.length);
 
       // Buscar dados dos usuários dos motoristas
       final driversWithUserData = <DriverWithUserData>[];
+      print('👥 [DRIVER_SELECTION] Carregando dados dos usuários dos motoristas...');
       
-      for (final driverWithDistance in driversWithDistance) {
+      for (int i = 0; i < driversWithDistance.length; i++) {
+        final driverWithDistance = driversWithDistance[i];
         try {
+          print('👤 [DRIVER_SELECTION] Buscando dados do motorista ${i+1}/${driversWithDistance.length}: ${driverWithDistance.driver.id}');
+          final startTime = DateTime.now();
           final driverWithUser = await _driverService.getDriverWithUserData(driverWithDistance.driver.id);
+          final endTime = DateTime.now();
+          final duration = endTime.difference(startTime);
+          print('⏱️ [DRIVER_SELECTION] Dados do motorista ${driverWithDistance.driver.id} carregados em ${duration.inMilliseconds}ms');
           
           if (driverWithUser != null) {
+            print('📄 [DRIVER_SELECTION] Dados do usuário encontrados para motorista ${driverWithDistance.driver.id}');
+            
+            // Buscar dados reais da categoria do platform_settings
+            print('⚙️ [DRIVER_SELECTION] Buscando dados da categoria ${widget.tripRequestData.vehicleCategory}');
+            final vehicleCategory = VehicleCategory.fromId(widget.tripRequestData.vehicleCategory) ?? VehicleCategory.commonCar;
+            final categoryData = await _driverService.getCategoryData(
+              vehicleCategory,
+              latitude: widget.tripRequestData.originLatitude,
+              longitude: widget.tripRequestData.originLongitude,
+            ) ?? VehicleCategoryData.defaultForCategory(vehicleCategory);
+            print('✅ [DRIVER_SELECTION] Dados da categoria carregados');
+            
             // Calcular preço individual para este motorista COM multiplicadores de zona
+            print('💰 [DRIVER_SELECTION] Calculando preço para motorista ${driverWithDistance.driver.id}');
+            final pricingStartTime = DateTime.now();
             final pricingResult = await IndividualPricingService.calculateDriverPriceWithBreakdown(
               driver: driverWithDistance.driver,
               totalDistanceKm: driverWithDistance.distanceKm + widget.tripRequestData.estimatedDistanceKm,
               totalDurationMinutes: driverWithDistance.estimatedArrivalMinutes + widget.tripRequestData.estimatedDurationMinutes,
-              categoryData: VehicleCategoryData.defaultForCategory(
-                 VehicleCategory.fromId(widget.tripRequestData.vehicleCategory) ?? VehicleCategory.economico,
-               ),
+              categoryData: categoryData,
               preferences: TripPreferences(
                 needsPet: widget.tripRequestData.needsPet,
                 needsGrocerySpace: widget.tripRequestData.needsGrocerySpace,
@@ -249,6 +290,9 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
               ),
               operationZonesService: _operationZonesService,
             );
+            final pricingEndTime = DateTime.now();
+            final pricingDuration = pricingEndTime.difference(pricingStartTime);
+            print('✅ [DRIVER_SELECTION] Preço calculado em ${pricingDuration.inMilliseconds}ms - Total: R\${pricingResult.totalPrice.toStringAsFixed(2)}');
 
             driversWithUserData.add(DriverWithUserData(
               driver: driverWithDistance.driver,
@@ -259,31 +303,49 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
               estimatedFare: pricingResult.totalPrice,
               pricingBreakdown: pricingResult,
             ));
+            print('➕ [DRIVER_SELECTION] Motorista ${driverWithDistance.driver.id} adicionado à lista - Distância: ${driverWithDistance.distanceKm.toStringAsFixed(2)}km, ETA: ${driverWithDistance.estimatedArrivalMinutes}min');
+          } else {
+            print('⚠️ [DRIVER_SELECTION] Dados do usuário não encontrados para motorista ${driverWithDistance.driver.id}');
           }
-        } catch (e) {
-          print('Erro ao buscar dados do motorista ${driverWithDistance.driver.id}: $e');
+        } catch (e, stackTrace) {
+          print('❌ [DRIVER_SELECTION] Erro ao buscar dados do motorista ${driverWithDistance.driver.id}: $e');
+          print('📍 [DRIVER_SELECTION] Stack trace: $stackTrace');
           // Continuar com o próximo motorista em caso de erro
         }
       }
 
+      print('✅ [DRIVER_SELECTION] Dados de ${driversWithUserData.length} motoristas carregados com sucesso');
       setState(() {
         _driversWithUserData = driversWithUserData;
         _isLoading = false;
       });
+      print('🔄 [DRIVER_SELECTION] Estado atualizado: ${driversWithUserData.length} motoristas, loading: false');
       
       // Configurar listener em tempo real após carregar os motoristas
       final driverIds = driversWithUserData.map((d) => d.driver.id).toList();
       if (driverIds.isNotEmpty) {
+        print('📡 [DRIVER_SELECTION] Configurando listener em tempo real para ${driverIds.length} motoristas');
         _setupRealtimeListener(driverIds);
+        print('✅ [DRIVER_SELECTION] Listener em tempo real configurado');
+      } else {
+        print('⚠️ [DRIVER_SELECTION] Nenhum ID de motorista para configurar listener');
       }
     } catch (e, stackTrace) {
-      print('❌ ERRO EM _loadDriversWithUserData: $e');
-      print('❌ StackTrace: $stackTrace');
+      print('❌ [DRIVER_SELECTION] ERRO EM _loadDriversWithUserData: $e');
+      print('📍 [DRIVER_SELECTION] StackTrace: $stackTrace');
       
       setState(() {
         _errorMessage = 'Erro ao carregar motoristas: $e';
         _isLoading = false;
       });
+      print('🔄 [DRIVER_SELECTION] Estado de erro atualizado');
+      
+      // Registrar erro no serviço de busca
+      _searchStatusService.markError(
+        message: 'Erro ao carregar motoristas',
+        errorDetails: e.toString(),
+      );
+      print('🚨 [DRIVER_SELECTION] Estado de erro registrado no SearchStatusService');
     }
   }
 

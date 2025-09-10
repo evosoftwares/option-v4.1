@@ -12,7 +12,7 @@ import '../../services/passenger_promo_service.dart';
 import '../../services/promo_code_service.dart';
 import '../../services/search_status_service.dart';
 import '../../services/user_service.dart';
-import '../../widgets/price_breakdown_widget.dart';
+
 import '../../widgets/logo_branding.dart';
 import '../../widgets/search_feedback_widget.dart';
 import 'driver_selection_screen.dart';
@@ -72,7 +72,7 @@ class TripOptionsScreen extends StatefulWidget {
 
 class _TripOptionsScreenState extends State<TripOptionsScreen>
     with TickerProviderStateMixin {
-  VehicleCategory _selectedCategory = VehicleCategory.standard;
+  String? _selectedCategoryId;
   bool _needsPet = false;
   bool _needsGrocerySpace = false;
   bool _isCondoOrigin = false;
@@ -177,6 +177,10 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
       if (mounted) {
         setState(() {
           _categoryData = categories;
+          // Define a primeira categoria disponível como selecionada se ainda não houver seleção
+          if (_selectedCategoryId == null && categories.isNotEmpty) {
+            _selectedCategoryId = categories.first.categoryId;
+          }
           _isLoading = false;
         });
       }
@@ -201,94 +205,81 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
       backgroundColor: colorScheme.surface,
       appBar: const StandardAppBar(title: 'Opções da viagem'),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const _SectionTitle(title: 'Categoria do veículo'),
-              const SizedBox(height: 8),
-              if (_isLoading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              else
-                SizedBox(
-                  height: 120,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _categoryData.length,
-                    itemBuilder: (context, index) {
-                      final data = _categoryData[index];
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          right: index < _categoryData.length - 1 ? 12 : 0,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _SectionTitle(title: 'Categoria do veículo'),
+                    const SizedBox(height: 8),
+                    if (_isLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(),
                         ),
-                        child: _categoryCard(data.category, data),
-                      );
-                    },
-                  ),
+                      )
+                    else
+                      SizedBox(
+                        height: 140,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _categoryData.length,
+                          itemBuilder: (context, index) {
+                            final data = _categoryData[index];
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                right: index < _categoryData.length - 1 ? 12 : 0,
+                              ),
+                              child: _categoryCard(data),
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    const _SectionTitle(title: 'Preferências'),
+                    const SizedBox(height: 8),
+                    _prefTile(
+                      title: 'Levo pet',
+                      value: _needsPet,
+                      onChanged: (v) => setState(() => _needsPet = v),
+                    ),
+                    _prefTile(
+                      title: 'Espaço para compras',
+                      value: _needsGrocerySpace,
+                          onChanged: (v) => setState(() => _needsGrocerySpace = v),
+                    ),
+                    _prefTile(
+                      title: 'Condomínio (acesso facilitado)',
+                      value: _isCondoOrigin || _isCondoDestination,
+                          onChanged: (v) => setState(() {
+                            _isCondoOrigin = v;
+                            _isCondoDestination = v;
+                          }),
+                    ),
+                    const SizedBox(height: 16),
+                    const _SectionTitle(title: 'Código promocional'),
+                    const SizedBox(height: 8),
+                    _promoCodeSection(),
+                    const SizedBox(height: 16),
+                    
+                    // Widget de feedback visual para busca
+                    const SearchFeedbackWidget(
+                      showOnlyWhenActive: true,
+                      compact: true,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                 ),
-              const SizedBox(height: 16),
-              const _SectionTitle(title: 'Preferências'),
-              const SizedBox(height: 8),
-              _prefTile(
-                title: 'Levo pet',
-                value: _needsPet,
-                onChanged: (v) => setState(() => _needsPet = v),
               ),
-              _prefTile(
-                title: 'Espaço para compras',
-                value: _needsGrocerySpace,
-                    onChanged: (v) => setState(() => _needsGrocerySpace = v),
-              ),
-              _prefTile(
-                title: 'Condomínio (acesso facilitado)',
-                value: _isCondoOrigin || _isCondoDestination,
-                    onChanged: (v) => setState(() {
-                      _isCondoOrigin = v;
-                      _isCondoDestination = v;
-                    }),
-              ),
-              const SizedBox(height: 16),
-              const _SectionTitle(title: 'Código promocional'),
-              const SizedBox(height: 8),
-              _promoCodeSection(),
-              const SizedBox(height: 16),
-              
-              // Price breakdown section
-              if (_estimatedPrice != null) ...[
-                const _SectionTitle(title: 'Preço estimado'),
-                const SizedBox(height: 8),
-                PriceBreakdownWidget(
-                  totalPrice: _estimatedPrice!,
-                  distanceComponent: _distanceComponent!,
-                  timeComponent: _timeComponent!,
-                  additionalFees: _additionalFees!,
-                  compact: true,
-                ),
-                const SizedBox(height: 16),
-              ] else if (_isCalculatingPrice) ...[
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-              
-              const Spacer(),
-              // Widget de feedback visual para busca
-              const SearchFeedbackWidget(
-                showOnlyWhenActive: true,
-                compact: true,
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
+            ),
+            // Botão fixo na parte inferior
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
                 height: 56,
                 child: AnimatedBuilder(
                   animation: _buttonScaleAnimation,
@@ -311,35 +302,38 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  IconData _getCategoryIcon(VehicleCategory category) {
-    switch (category) {
-      case VehicleCategory.standard:
+  IconData _getCategoryIconByName(String categoryName) {
+    switch (categoryName.toLowerCase()) {
+      case 'comum':
+      case 'common_car':
+      case 'carro comum':
         return Icons.directions_car;
-      case VehicleCategory.premium:
-        return Icons.directions_car_outlined;
-      case VehicleCategory.suv:
-        return Icons.airport_shuttle;
-      case VehicleCategory.van:
-        return Icons.commute;
+      case 'freight':
+      case 'frete':
+      case 'carga':
+        return Icons.local_shipping;
+      case 'tow_truck':
+      case 'guincho':
+        return Icons.build;
       default:
-        return Icons.directions_car;
+        return Icons.directions_car; // Ícone padrão
     }
   }
 
-  Widget _categoryCard(VehicleCategory category, VehicleCategoryData data) {
+  Widget _categoryCard(VehicleCategoryData data) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final selected = _selectedCategory == category;
+    final selected = _selectedCategoryId == data.categoryId;
     
     return GestureDetector(
-      onTap: () => setState(() => _selectedCategory = category),
+      onTap: () => setState(() => _selectedCategoryId = data.categoryId),
       child: Container(
         width: 130,
         padding: const EdgeInsets.all(12),
@@ -363,23 +357,46 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              _getCategoryIcon(category),
-              size: 28,
+              _getCategoryIconByName(data.categoryName),
+              size: 24,
               color: selected ? colorScheme.onPrimaryContainer : colorScheme.primary,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
-              category.displayName,
+              data.categoryName,
               style: textTheme.titleSmall?.copyWith(
                 color: selected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
-                fontSize: 13,
+                fontSize: 12,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
+            if (data.availableDrivers > 0) ...[
+              const SizedBox(height: 1),
+              Text(
+                '${data.availableDrivers} ${data.availableDrivers == 1 ? 'motorista' : 'motoristas'}',
+                style: textTheme.bodySmall?.copyWith(
+                  color: selected ? colorScheme.onPrimaryContainer : colorScheme.primary,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w400,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ] else ...[
+              const SizedBox(height: 1),
+              Text(
+                'Indisponível',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.error,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ],
         ),
       ),
@@ -632,9 +649,11 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
       }
       
       // Calculate price components using generic pricing formula
+      if (_selectedCategoryId == null) return;
+      
       final categoryData = _categoryData.firstWhere(
-        (data) => data.category == _selectedCategory,
-        orElse: () => VehicleCategoryData.defaultForCategory(_selectedCategory),
+        (data) => data.categoryId == _selectedCategoryId,
+        orElse: () => _categoryData.first, // fallback para primeira categoria disponível
       );
       
       // Calculate components using platform base prices
@@ -738,8 +757,13 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
     });
     
     try {
-      print('🚀 NAVEGANDO para DriverSelectionScreen');
-      print('🚀 Argumentos: ${widget.origin}');
+      print('🚀 [TRIP_OPTIONS] Botão "Buscar Motoristas" pressionado');
+      print('🚀 [TRIP_OPTIONS] Iniciando navegação para DriverSelectionScreen');
+      print('🚀 [TRIP_OPTIONS] Argumentos de origem: ${widget.origin}');
+      print('🚀 [TRIP_OPTIONS] Argumentos de destino: ${widget.destination}');
+      print('🚀 [TRIP_OPTIONS] Categoria selecionada: ${_selectedCategoryId ?? (_categoryData.isNotEmpty ? _categoryData.first.categoryId : 'Comum')}');
+      print('🚀 [TRIP_OPTIONS] Preferências: pet=$_needsPet, grocery=$_needsGrocerySpace, condo=$_isCondoOrigin/$_isCondoDestination');
+      print('🚀 [TRIP_OPTIONS] Código promocional: $_appliedPromoCode (desconto: $_promoDiscount)');
       
       await Navigator.pushNamed(
         context,
@@ -747,30 +771,38 @@ class _TripOptionsScreenState extends State<TripOptionsScreen>
         arguments: {
           'origin': widget.origin,
           'destination': widget.destination,
-          'vehicle_category': _selectedCategory.id,
+          'vehicle_category': _selectedCategoryId ?? (_categoryData.isNotEmpty ? _categoryData.first.categoryId : 'Comum'),
           'needsPet': _needsPet,
-        'needsGrocerySpace': _needsGrocerySpace,
-        'isCondoOrigin': _isCondoOrigin,
-        'isCondoDestination': _isCondoDestination,
+          'needsGrocerySpace': _needsGrocerySpace,
+          'isCondoOrigin': _isCondoOrigin,
+          'isCondoDestination': _isCondoDestination,
           // Removed invalid 'additionalStop': false (expects String?)
           'appliedPromoCode': _appliedPromoCode,
           'promoDiscount': _promoDiscount,
         },
       );
       
+      print('✅ [TRIP_OPTIONS] Navegação para DriverSelectionScreen concluída com sucesso');
+      
       // Reset do estado após navegação bem-sucedida
       _searchStatusService.reset();
-    } catch (e) {
+      print('🔄 [TRIP_OPTIONS] Estado de busca resetado');
+    } catch (e, stackTrace) {
+      print('❌ [TRIP_OPTIONS] Erro ao navegar para busca de motoristas: $e');
+      print('📍 [TRIP_OPTIONS] Stack trace: $stackTrace');
+      
       // Tratar erro de navegação
       _searchStatusService.markError(
         message: 'Erro ao navegar para busca de motoristas',
         errorDetails: e.toString(),
       );
+      print('🚨 [TRIP_OPTIONS] Estado de erro marcado no SearchStatusService');
     } finally {
       if (mounted) {
         setState(() {
           _isNavigating = false;
         });
+        print('🔄 [TRIP_OPTIONS] Estado de navegação resetado: $_isNavigating');
       }
     }
   }

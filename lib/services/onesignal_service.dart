@@ -307,7 +307,7 @@ class OneSignalService {
         await Supabase.instance.client
             .from('drivers')
             .update({
-              'onesignal_player_id': playerId,
+              'fcm_token': playerId,
               'device_platform': platform,
               'token_updated_at': DateTime.now().toIso8601String(),
               'token_active': true,
@@ -323,7 +323,7 @@ class OneSignalService {
         await Supabase.instance.client
             .from('app_users')
             .update({
-              'onesignal_player_id': playerId,
+              'fcm_token': playerId,
               'token_updated_at': DateTime.now().toIso8601String(),
               'token_active': true,
               'last_active_at': DateTime.now().toIso8601String(),
@@ -374,7 +374,7 @@ class OneSignalService {
         await Supabase.instance.client
             .from('drivers')
             .update({
-              'push_token': pushToken,
+              'fcm_token': pushToken,
               'token_updated_at': DateTime.now().toIso8601String(),
               'token_active': true,
             })
@@ -389,7 +389,7 @@ class OneSignalService {
         await Supabase.instance.client
             .from('app_users')
             .update({
-              'push_token': pushToken,
+              'fcm_token': pushToken,
               'token_updated_at': DateTime.now().toIso8601String(),
               'token_active': true,
               'last_active_at': DateTime.now().toIso8601String(),
@@ -982,22 +982,22 @@ class OneSignalService {
       // Verificar se é motorista
       final driverResponse = await Supabase.instance.client
           .from('drivers')
-          .select('onesignal_player_id')
+          .select('fcm_token')
           .eq('user_id', userId)
           .maybeSingle();
       
-      if (driverResponse != null && driverResponse['onesignal_player_id'] != null) {
-        return driverResponse['onesignal_player_id'];
+      if (driverResponse != null && driverResponse['fcm_token'] != null) {
+        return driverResponse['fcm_token'];
       }
       
       // Verificar se é passageiro
       final userResponse = await Supabase.instance.client
           .from('app_users')
-          .select('onesignal_player_id')
+          .select('fcm_token')
           .eq('user_id', userId)
           .maybeSingle();
       
-      return userResponse?['onesignal_player_id'];
+      return userResponse?['fcm_token'];
       
     } catch (e) {
       _logger.e('Erro ao buscar Player ID do usuário', error: e);

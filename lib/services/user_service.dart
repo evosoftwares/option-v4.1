@@ -619,7 +619,7 @@ class UserService {
         'vehicle_color': 'PENDENTE',
         'vehicle_plate': 'PENDENTE_${user.id.substring(0, 8)}',
         'vehicle_category':
-            VehicleCategory.comum.id, // Usar enum para garantir consistência
+            VehicleCategory.commonCar.id, // Usar enum para garantir consistência
         'approval_status': 'pending',
         'approved_by': null,
         'approved_at': null,

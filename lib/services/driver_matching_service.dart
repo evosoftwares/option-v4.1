@@ -102,7 +102,7 @@ class DriverMatchingService {
 
   /// Encontra os melhores motoristas para uma solicitação
   Future<List<DriverMatchResult>> findBestDrivers(MatchingCriteria criteria) async {
-    print('🎯 [${DateTime.now()}] Iniciando matching com critérios:');
+    print('🎯 [DRIVER_MATCHING] [${DateTime.now()}] Iniciando matching com critérios:');
     print('  📍 Origem: (${criteria.passengerLatitude}, ${criteria.passengerLongitude})');
     print('  🎯 Destino: ${criteria.destinationNeighborhood ?? "N/A"}, ${criteria.destinationCity ?? "N/A"}');
     print('  🚗 Categoria: ${criteria.vehicleCategory ?? "Qualquer"}');
@@ -114,53 +114,82 @@ class DriverMatchingService {
 
     try {
       // 1. Buscar motoristas disponíveis na região
+      print('🔍 [DRIVER_MATCHING] [${DateTime.now()}] Etapa 1: Buscando motoristas disponíveis na região...');
+      final startTime = DateTime.now();
       final availableDrivers = await _getAvailableDriversInRegion(criteria);
-      print('✅ [${DateTime.now()}] ${availableDrivers.length} motoristas encontrados na região');
+      final endTime = DateTime.now();
+      final duration = endTime.difference(startTime);
+      print('✅ [DRIVER_MATCHING] [${DateTime.now()}] Etapa 1 concluída em ${duration.inMilliseconds}ms - ${availableDrivers.length} motoristas encontrados na região');
 
       if (availableDrivers.isEmpty) {
-        print('❌ [${DateTime.now()}] Nenhum motorista disponível na região');
+        print('❌ [DRIVER_MATCHING] [${DateTime.now()}] Nenhum motorista disponível na região');
         return [];
       }
 
       // 2. Aplicar filtros de preferências
+      print('🔍 [DRIVER_MATCHING] [${DateTime.now()}] Etapa 2: Aplicando filtros de preferências...');
+      final filterStartTime = DateTime.now();
       final filteredByPreferences = await _filterByPreferences(availableDrivers, criteria);
-      print('✅ [${DateTime.now()}] ${filteredByPreferences.length} motoristas após filtro de preferências');
+      final filterEndTime = DateTime.now();
+      final filterDuration = filterEndTime.difference(filterStartTime);
+      print('✅ [DRIVER_MATCHING] [${DateTime.now()}] Etapa 2 concluída em ${filterDuration.inMilliseconds}ms - ${filteredByPreferences.length} motoristas após filtro de preferências');
 
       if (filteredByPreferences.isEmpty) {
-        print('❌ [${DateTime.now()}] Nenhum motorista atende às preferências');
+        print('❌ [DRIVER_MATCHING] [${DateTime.now()}] Nenhum motorista atende às preferências');
         return [];
       }
 
       // 3. Filtrar por zonas de exclusão
+      print('🔍 [DRIVER_MATCHING] [${DateTime.now()}] Etapa 3: Filtrando por zonas de exclusão...');
+      final zoneFilterStartTime = DateTime.now();
       final filteredByZones = await _filterByExclusionZones(filteredByPreferences, criteria);
-      print('✅ [${DateTime.now()}] ${filteredByZones.length} motoristas após filtro de zonas de exclusão');
+      final zoneFilterEndTime = DateTime.now();
+      final zoneFilterDuration = zoneFilterEndTime.difference(zoneFilterStartTime);
+      print('✅ [DRIVER_MATCHING] [${DateTime.now()}] Etapa 3 concluída em ${zoneFilterDuration.inMilliseconds}ms - ${filteredByZones.length} motoristas após filtro de zonas de exclusão');
 
       if (filteredByZones.isEmpty) {
-        print('❌ [${DateTime.now()}] Nenhum motorista disponível após filtro de zonas');
+        print('❌ [DRIVER_MATCHING] [${DateTime.now()}] Nenhum motorista disponível após filtro de zonas');
         return [];
       }
 
       // 4. Verificar disponibilidade em tempo real
+      print('🔍 [DRIVER_MATCHING] [${DateTime.now()}] Etapa 4: Verificando disponibilidade em tempo real...');
+      final availabilityStartTime = DateTime.now();
       final realTimeAvailable = await _verifyRealTimeAvailability(filteredByZones);
-      print('✅ [${DateTime.now()}] ${realTimeAvailable.length} motoristas disponíveis em tempo real');
+      final availabilityEndTime = DateTime.now();
+      final availabilityDuration = availabilityEndTime.difference(availabilityStartTime);
+      print('✅ [DRIVER_MATCHING] [${DateTime.now()}] Etapa 4 concluída em ${availabilityDuration.inMilliseconds}ms - ${realTimeAvailable.length} motoristas disponíveis em tempo real');
 
       // 5. Calcular scores e ordenar
+      print('🔍 [DRIVER_MATCHING] [${DateTime.now()}] Etapa 5: Calculando scores e ordenando...');
+      final scoreStartTime = DateTime.now();
       final matchResults = await _calculateMatchScores(realTimeAvailable, criteria);
-      print('✅ [${DateTime.now()}] Scores calculados para ${matchResults.length} motoristas');
+      final scoreEndTime = DateTime.now();
+      final scoreDuration = scoreEndTime.difference(scoreStartTime);
+      print('✅ [DRIVER_MATCHING] [${DateTime.now()}] Etapa 5 concluída em ${scoreDuration.inMilliseconds}ms - Scores calculados para ${matchResults.length} motoristas');
 
       // 6. Ordenar por score e limitar resultado
+      print('🔍 [DRIVER_MATCHING] [${DateTime.now()}] Etapa 6: Ordenando por score e limitando resultado...');
+      final sortStartTime = DateTime.now();
       matchResults.sort((a, b) => b.matchScore.compareTo(a.matchScore));
       final finalResults = matchResults.take(criteria.maxDrivers).toList();
+      final sortEndTime = DateTime.now();
+      final sortDuration = sortEndTime.difference(sortStartTime);
+      print('✅ [DRIVER_MATCHING] [${DateTime.now()}] Etapa 6 concluída em ${sortDuration.inMilliseconds}ms');
 
-      print('🎉 [${DateTime.now()}] Matching finalizado com ${finalResults.length} motoristas');
+      print('🎉 [DRIVER_MATCHING] [${DateTime.now()}] Matching finalizado com ${finalResults.length} motoristas');
       if (finalResults.isNotEmpty) {
-        print('📊 Top 3 scores: ${finalResults.take(3).map((r) => r.matchScore.toStringAsFixed(1)).join(", ")}');
+        print('📊 [DRIVER_MATCHING] Top 3 scores: ${finalResults.take(3).map((r) => r.matchScore.toStringAsFixed(1)).join(", ")}');
+        for (int i = 0; i < finalResults.length && i < 3; i++) {
+          final result = finalResults[i];
+          print('   ${i+1}. Motorista ${result.driver.id}: ${result.matchScore.toStringAsFixed(1)} pontos, ${result.distanceKm.toStringAsFixed(2)}km, ${result.estimatedArrivalMinutes}min');
+        }
       }
 
       return finalResults;
     } catch (e, stackTrace) {
-      print('❌ [${DateTime.now()}] Erro no matching: $e');
-      print('📍 Stack trace: $stackTrace');
+      print('❌ [DRIVER_MATCHING] [${DateTime.now()}] Erro no matching: $e');
+      print('📍 [DRIVER_MATCHING] Stack trace: $stackTrace');
       throw DatabaseException('Erro ao buscar motoristas: $e');
     }
   }
@@ -204,19 +233,29 @@ class DriverMatchingService {
   }
 
   /// Filtra motoristas por preferências do passageiro
-  Future<List<Driver>> _filterByPreferences(List<Driver> drivers, MatchingCriteria criteria) async => drivers.where((driver) {
+  Future<List<Driver>> _filterByPreferences(List<Driver> drivers, MatchingCriteria criteria) async {
+    print('🔍 [DRIVER_MATCHING] [${DateTime.now()}] Filtrando ${drivers.length} motoristas por preferências...');
+    print('  🐕 Pet necessário: ${criteria.needsPet}');
+    print('  ❄️ AC necessário: ${criteria.needsAC}');
+    print('  🛒 Mercado necessário: ${criteria.needsGrocery}');
+    print('  🏢 Condomínio necessário: ${criteria.needsCondo}');
+    
+    final filteredDrivers = drivers.where((driver) {
       // Filtro de Pet
       if (criteria.needsPet && !(driver.acceptsPet ?? false)) {
+        print('  🚫 [DRIVER_MATCHING] Motorista ${driver.id} rejeitado - não aceita pet');
         return false;
       }
 
       // Filtro de Mercado/Grocery
       if (criteria.needsGrocery && !(driver.acceptsGrocery ?? false)) {
+        print('  🚫 [DRIVER_MATCHING] Motorista ${driver.id} rejeitado - não aceita mercado');
         return false;
       }
 
       // Filtro de Condomínio
       if (criteria.needsCondo && !(driver.acceptsCondo ?? false)) {
+        print('  🚫 [DRIVER_MATCHING] Motorista ${driver.id} rejeitado - não aceita condomínio');
         return false;
       }
 
@@ -224,12 +263,18 @@ class DriverMatchingService {
       if (criteria.needsAC) {
         final acPolicy = driver.acPolicy?.toLowerCase();
         if (acPolicy == null || acPolicy == 'never' || acPolicy == 'nunca') {
+          print('  🚫 [DRIVER_MATCHING] Motorista ${driver.id} rejeitado - não tem AC (${driver.acPolicy})');
           return false;
         }
       }
 
+      print('  ✅ [DRIVER_MATCHING] Motorista ${driver.id} aprovado em todos os filtros');
       return true;
     }).toList();
+    
+    print('✅ [DRIVER_MATCHING] [${DateTime.now()}] ${filteredDrivers.length} motoristas passaram no filtro de preferências');
+    return filteredDrivers;
+  }
 
   /// Filtra motoristas baseado nas zonas excluídas (sistema otimizado)
   /// Verifica origem e destino em uma única chamada SQL
@@ -473,105 +518,167 @@ class DriverMatchingService {
 
   /// Verifica disponibilidade em tempo real dos motoristas
   Future<List<Driver>> _verifyRealTimeAvailability(List<Driver> drivers) async {
+    print('🔍 [DRIVER_MATCHING] [${DateTime.now()}] Verificando disponibilidade em tempo real de ${drivers.length} motoristas...');
     final availableDrivers = <Driver>[];
+    int activeTripsCount = 0;
+    int offlineCount = 0;
+    int errorCount = 0;
 
-    for (final driver in drivers) {
+    for (int i = 0; i < drivers.length; i++) {
+      final driver = drivers[i];
+      print('  🔍 [DRIVER_MATCHING] Verificando motorista ${i+1}/${drivers.length}: ${driver.id}');
+      
       try {
         // Verificar se o motorista não está em viagem ativa
         final activeTrips = await _driverService.getDriverActiveTrips(driver.id);
+        print('    🚗 [DRIVER_MATCHING] Viagens ativas para ${driver.id}: ${activeTrips.length}');
         
         if (activeTrips.isEmpty) {
           // Verificar se ainda está online (pode ter ficado offline recentemente)
           final currentDriver = await _driverService.getDriver(driver.id);
+          print('    🟢 [DRIVER_MATCHING] Status online para ${driver.id}: ${currentDriver?.isOnline ?? false}');
+          
           if (currentDriver?.isOnline ?? false) {
             availableDrivers.add(driver);
+            print('    ✅ [DRIVER_MATCHING] Motorista ${driver.id} disponível');
+          } else {
+            offlineCount++;
+            print('    ⚫ [DRIVER_MATCHING] Motorista ${driver.id} offline');
           }
+        } else {
+          activeTripsCount++;
+          print('    🚫 [DRIVER_MATCHING] Motorista ${driver.id} em viagem ativa');
         }
       } catch (e) {
         // Em caso de erro, assume que está disponível para não impactar a funcionalidade
-        print('⚠️ Erro ao verificar disponibilidade do motorista ${driver.id}: $e');
-        availableDrivers.add(driver);
+        print('⚠️ [DRIVER_MATCHING] Erro ao verificar disponibilidade do motorista ${driver.id}: $e');
+        errorCount++;
+        availableDrivers.add(driver); // Assume disponível em caso de erro
+        print('    ✅ [DRIVER_MATCHING] Motorista ${driver.id} assumido como disponível (erro)');
       }
     }
 
+    print('✅ [DRIVER_MATCHING] [${DateTime.now()}] Verificação concluída:');
+    print('  - Disponíveis: ${availableDrivers.length}');
+    print('  - Em viagem: $activeTripsCount');
+    print('  - Offline: $offlineCount');
+    print('  - Erros: $errorCount');
+    
     return availableDrivers;
   }
 
   /// Calcula scores de matching para cada motorista
   Future<List<DriverMatchResult>> _calculateMatchScores(List<Driver> drivers, MatchingCriteria criteria) async {
+    print('🔍 [DRIVER_MATCHING] [${DateTime.now()}] Calculando scores de matching para ${drivers.length} motoristas...');
     final results = <DriverMatchResult>[];
 
-    for (final driver in drivers) {
+    for (int i = 0; i < drivers.length; i++) {
+      final driver = drivers[i];
+      print('  📊 [DRIVER_MATCHING] Calculando score para motorista ${i+1}/${drivers.length}: ${driver.id}');
+      
       if (driver.currentLatitude == null || driver.currentLongitude == null) {
+        print('    ⚠️ [DRIVER_MATCHING] Motorista ${driver.id} sem localização, pulando...');
         continue; // Pula motoristas sem localização
       }
 
       // Calcular distância
+      print('    📍 [DRIVER_MATCHING] Calculando distância...');
       final distance = _calculateHaversineDistance(
         criteria.passengerLatitude,
         criteria.passengerLongitude,
         driver.currentLatitude!,
         driver.currentLongitude!,
       );
+      print('    📏 [DRIVER_MATCHING] Distância: ${distance.toStringAsFixed(2)}km');
 
       // Calcular ETA estimado (baseado em 30km/h médio no trânsito urbano)
+      print('    ⏱️ [DRIVER_MATCHING] Calculando ETA...');
       final etaMinutes = (distance * 2).round(); // 30km/h = 0.5km/min
+      print('    ⏱️ [DRIVER_MATCHING] ETA estimado: ${etaMinutes}min');
 
       // Calcular score de matching
+      print('    🎯 [DRIVER_MATCHING] Calculando score de matching...');
       final score = _calculateMatchScore(driver, distance, criteria);
+      print('    🎯 [DRIVER_MATCHING] Score final: ${score.toStringAsFixed(1)}');
 
-      results.add(DriverMatchResult(
+      final result = DriverMatchResult(
         driver: driver,
         distanceKm: distance,
         estimatedArrivalMinutes: etaMinutes,
         matchScore: score,
         isAvailable: true,
-      ));
+      );
+      
+      results.add(result);
+      print('    ✅ [DRIVER_MATCHING] Resultado adicionado para motorista ${driver.id}');
     }
 
+    print('✅ [DRIVER_MATCHING] [${DateTime.now()}] Scores calculados para ${results.length} motoristas');
     return results;
   }
 
   /// Calcula score de matching baseado em múltiplos critérios
   double _calculateMatchScore(Driver driver, double distance, MatchingCriteria criteria) {
+    print('    🎯 [DRIVER_MATCHING] Calculando score detalhado para motorista ${driver.id}:');
     var score = 0.0;
 
     // 1. Score de distância (40% do peso total) - mais próximo = melhor
     if (criteria.prioritizeDistance) {
       final maxDistance = criteria.maxRadiusKm;
       final distanceScore = ((maxDistance - distance) / maxDistance) * 40;
-      score += math.max(0.0, distanceScore);
+      final finalDistanceScore = math.max(0.0, distanceScore);
+      score += finalDistanceScore;
+      print('      📍 Distância (${distance.toStringAsFixed(2)}km): ${finalDistanceScore.toStringAsFixed(1)}pts');
     }
 
     // 2. Score de rating (30% do peso total)
     if (criteria.prioritizeRating && driver.ratings > 0) {
       final ratingScore = (driver.ratings / 5.0) * 30;
       score += ratingScore;
+      print('      ⭐ Rating (${driver.ratings.toStringAsFixed(1)}): ${ratingScore.toStringAsFixed(1)}pts');
     } else {
       // Motoristas sem rating recebem score neutro
       score += 15.0;
+      print('      ⭐ Rating (N/A): 15.0pts (neutro)');
     }
 
     // 3. Score de experiência (20% do peso total)
     final totalTrips = driver.trips;
     final experienceScore = math.min(totalTrips / 100.0, 1) * 20; // Max 100 viagens para score máximo
     score += experienceScore;
+    print('      🏆 Experiência (${totalTrips} viagens): ${experienceScore.toStringAsFixed(1)}pts');
 
     // 4. Score de confiabilidade (10% do peso total)
     final cancellations = driver.cancellations;
     final reliabilityScore = math.max(0, (5 - cancellations) / 5.0) * 10;
     score += reliabilityScore;
+    print('      🔒 Confiabilidade (${cancellations} cancelamentos): ${reliabilityScore.toStringAsFixed(1)}pts');
 
     // Bônus por preferências atendidas
-    if (criteria.needsPet && (driver.acceptsPet ?? false)) score += 2.0;
-    if (criteria.needsGrocery && (driver.acceptsGrocery ?? false)) score += 2.0;
-    if (criteria.needsCondo && (driver.acceptsCondo ?? false)) score += 2.0;
+    double bonusScore = 0.0;
+    if (criteria.needsPet && (driver.acceptsPet ?? false)) {
+      bonusScore += 2.0;
+      print('      🐕 Bônus pet: +2.0pts');
+    }
+    if (criteria.needsGrocery && (driver.acceptsGrocery ?? false)) {
+      bonusScore += 2.0;
+      print('      🛒 Bônus mercado: +2.0pts');
+    }
+    if (criteria.needsCondo && (driver.acceptsCondo ?? false)) {
+      bonusScore += 2.0;
+      print('      🏢 Bônus condomínio: +2.0pts');
+    }
     if (criteria.needsAC && driver.acPolicy != null && 
         !['never', 'nunca'].contains(driver.acPolicy!.toLowerCase())) {
-      score += 2.0;
+      bonusScore += 2.0;
+      print('      ❄️ Bônus AC (${driver.acPolicy}): +2.0pts');
     }
-
-    return math.min(100, score); // Score máximo de 100
+    
+    score += bonusScore;
+    final finalScore = math.min(100.0, score); // Score máximo de 100
+    print('      🎯 Score total: ${finalScore.toStringAsFixed(1)}pts (limite máximo: 100pts)');
+    
+    return finalScore.toDouble();
   }
 
   /// Calcula a distância entre dois pontos usando a fórmula de Haversine
